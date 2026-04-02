@@ -19,8 +19,6 @@ export function LightningPanel() {
       <DataRow label="Clearnet"     value={formatLargeNumber(ln.clearnetNodes ?? 0)} />
       <DataRow label="Avg Channel"  value={formatPrice(ln.avgChannelSize, 4)} suffix="BTC" />
       <DataRow label="Med Channel"  value={formatPrice(ln.medCapacityBTC ?? 0, 4)} suffix="BTC" />
-      <DataRow label="Avg Fee Rate" value={(ln.avgFeeRate ?? 0).toLocaleString()} suffix="ppm" />
-      <DataRow label="Avg Base Fee" value={(ln.avgBaseFee ?? 0).toLocaleString()} suffix="msat" />
     </div>
   );
 }
