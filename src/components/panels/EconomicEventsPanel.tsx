@@ -80,7 +80,7 @@ export function EconomicEventsPanel() {
       <div
         className="shrink-0 px-3 text-xs uppercase tracking-wider font-medium"
         style={{
-          color: 'var(--border-primary)',
+          color: 'var(--text-panel-title)',
           fontFamily: 'var(--font-heading)',
           letterSpacing: '0.08em',
           fontSize: '10px',

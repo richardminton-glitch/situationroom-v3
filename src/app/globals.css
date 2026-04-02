@@ -180,10 +180,10 @@ h1, h2, h3, h4, h5, h6 {
 [data-theme="parchment"] .panel-card.panel-editing:not(.panel-bar) {
   border: 1px dashed var(--border-primary) !important;
 }
-/* Ticker bars keep background + border in parchment */
+/* Ticker bars match main background in parchment */
 [data-theme="parchment"] .panel-bar {
-  background-color: var(--bg-card) !important;
-  border-color: var(--border-primary) !important;
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-subtle) !important;
 }
 /* Keep sidebar and header opaque in parchment */
 [data-theme="parchment"] aside {
