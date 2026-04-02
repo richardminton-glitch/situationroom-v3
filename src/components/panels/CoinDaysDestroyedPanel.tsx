@@ -237,57 +237,6 @@ export function CoinDaysDestroyedPanel() {
         boxSizing:     'border-box',
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          display:        'flex',
-          justifyContent: 'space-between',
-          alignItems:     'baseline',
-          marginBottom:   4,
-          paddingBottom:  4,
-          borderBottom:   `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
-          flexShrink:     0,
-        }}
-      >
-        <div>
-          <span
-            style={{
-              fontFamily:    'var(--font-heading)',
-              fontSize:      11,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color:         C.axisTick,
-            }}
-          >
-            Value of Coin Days Destroyed
-          </span>
-          <span
-            style={{
-              display:       'block',
-              fontFamily:    'var(--font-mono)',
-              fontSize:      9,
-              color:         isDark ? '#4a6b66' : '#b0956a',
-              letterSpacing: '0.03em',
-              marginTop:     1,
-            }}
-          >
-            Coin days destroyed × USD price at time of spend
-          </span>
-        </div>
-        <span
-          style={{
-            fontFamily:    'var(--font-mono)',
-            fontSize:      9,
-            color:         isDark ? '#4a6b66' : '#b0956a',
-            letterSpacing: '0.04em',
-            flexShrink:    0,
-            marginLeft:    8,
-          }}
-        >
-          90D · BRK
-        </span>
-      </div>
-
       {/* ── Signal banner (shown only when regime is active) ───────────────── */}
       {signal.level && (
         <div

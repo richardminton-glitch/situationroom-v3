@@ -235,41 +235,6 @@ export function LTHSTHSupplyPanel() {
         boxSizing: 'border-box',
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 6,
-          paddingBottom: 4,
-          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 11,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: C.axisTick,
-          }}
-        >
-          LTH / STH Supply
-        </span>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: isDark ? '#4a6b66' : '#b0956a',
-            letterSpacing: '0.04em',
-          }}
-        >
-          1YR · BRK
-        </span>
-      </div>
-
       {/* ── Status badge ───────────────────────────────────────────────────── */}
       <div
         style={{

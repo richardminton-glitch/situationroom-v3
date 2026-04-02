@@ -216,58 +216,6 @@ export function URPDPanel() {
         boxSizing:     'border-box',
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          display:        'flex',
-          justifyContent: 'space-between',
-          alignItems:     'flex-start',
-          marginBottom:   6,
-          paddingBottom:  4,
-          borderBottom:   `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
-          flexShrink:     0,
-        }}
-      >
-        <div>
-          <span
-            style={{
-              display:       'block',
-              fontFamily:    'var(--font-heading)',
-              fontSize:      11,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color:         C.axisTick,
-            }}
-          >
-            Supply at Cost Basis
-          </span>
-          <span
-            style={{
-              display:       'block',
-              fontFamily:    'var(--font-mono)',
-              fontSize:      9,
-              color:         isDark ? '#4a6b66' : '#b0956a',
-              letterSpacing: '0.03em',
-              marginTop:     1,
-            }}
-          >
-            BTC supply grouped by last-moved price (URPD)
-          </span>
-        </div>
-        <span
-          style={{
-            fontFamily:    'var(--font-mono)',
-            fontSize:      9,
-            color:         isDark ? '#4a6b66' : '#b0956a',
-            letterSpacing: '0.04em',
-            whiteSpace:    'nowrap',
-            marginLeft:    8,
-          }}
-        >
-          {todayLabel} · BRK
-        </span>
-      </div>
-
       {/* ── Profit/loss split bar ───────────────────────────────────────────── */}
       <div style={{ flexShrink: 0, marginBottom: 6 }}>
         <div

@@ -317,40 +317,6 @@ export function UTXOAgeDistributionPanel() {
         boxSizing: 'border-box',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 4,
-          paddingBottom: 4,
-          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 11,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: isDark ? '#8aaba6' : '#8b7355',
-          }}
-        >
-          UTXO Age Distribution
-        </span>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: isDark ? '#4a6b66' : '#b0956a',
-            letterSpacing: '0.04em',
-          }}
-        >
-          BTC SUPPLY BY AGE · 90D · BRK
-        </span>
-      </div>
-
       {/* Legend */}
       <LegendToggle hidden={hidden} onToggle={handleToggle} isDark={isDark} colors={colors} />
 
