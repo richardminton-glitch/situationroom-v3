@@ -134,12 +134,21 @@ export interface RSSHeadline {
   time: number;
 }
 
+// ── Module-level cache shared by ALL callers (route handler + briefing pipeline) ──
+let _cache: { events: RSSEvent[]; headlines: RSSHeadline[] } | null = null;
+let _cacheTime = 0;
+const CACHE_DURATION = 300_000; // 5 minutes — same as dashboard header poll interval
+
 /**
  * Unified fetch — single pass fetches all RSS feeds, returns both
  * geolocated events (for globe) and all headlines (for feed + wire).
- * Avoids double-fetching the same feeds.
+ * Cache is shared: the dashboard header and the briefing pipeline always
+ * compute threat level from the same dataset.
  */
 export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: RSSHeadline[] }> {
+  if (_cache && Date.now() - _cacheTime < CACHE_DURATION) {
+    return _cache;
+  }
   const allEvents: RSSEvent[] = [];
   const allHeadlines: RSSHeadline[] = [];
 
@@ -186,10 +195,15 @@ export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: RS
   allEvents.sort((a, b) => b.time - a.time);
   allHeadlines.sort((a, b) => b.time - a.time);
 
-  return {
+  const result = {
     events: deduplicateHeadlines(allEvents).slice(0, 100),
     headlines: deduplicateHeadlines(allHeadlines).slice(0, 150),
   };
+
+  _cache = result;
+  _cacheTime = Date.now();
+
+  return result;
 }
 
 // Keep legacy exports for backward compat
