@@ -303,30 +303,33 @@ export async function fetchCommodities(): Promise<Record<string, TickerData>> {
 // ════════════════════════════════════════════════════════
 
 const FX_PAIRS = [
-  { id: 'eur', pair: 'USD_EUR', name: 'EUR/USD' },
-  { id: 'gbp', pair: 'USD_GBP', name: 'GBP/USD' },
-  { id: 'jpy', pair: 'USD_JPY', name: 'USD/JPY' },
-  { id: 'cny', pair: 'USD_CNY', name: 'USD/CNY' },
+  // invert=true: API returns USD_EUR (USD per EUR), we display EUR/USD (EUR per USD) = 1/rate
+  { id: 'eur', pair: 'USD_EUR', name: 'EUR / USD', invert: true  },
+  { id: 'gbp', pair: 'USD_GBP', name: 'GBP / USD', invert: true  },
+  { id: 'jpy', pair: 'USD_JPY', name: 'USD / JPY', invert: false },
+  { id: 'cny', pair: 'USD_CNY', name: 'USD / CNY', invert: false },
 ];
 
 export async function fetchFX(): Promise<Record<string, TickerData>> {
   const results: Record<string, TickerData> = {};
 
   const data = await Promise.allSettled(
-    FX_PAIRS.map(({ id, pair, name }) =>
+    FX_PAIRS.map(({ id, pair, name, invert }) =>
       fetchApiNinjas<{ exchange_rate: number }>(
         `/exchangerate?pair=${pair}`,
         `fx-${id}`,
         1_800_000
-      ).then((d) => ({ id, name, data: d }))
+      ).then((d) => ({ id, name, invert, data: d }))
     )
   );
 
   for (const result of data) {
     if (result.status === 'fulfilled') {
-      const { id, name, data: d } = result.value;
-      const changePct = await trackChange('fx', id, d.exchange_rate);
-      results[id] = { name, price: d.exchange_rate, changePct: changePct ?? 0 };
+      const { id, name, invert, data: d } = result.value;
+      const rawRate = d.exchange_rate;
+      const displayRate = invert && rawRate ? 1 / rawRate : rawRate;
+      const changePct = await trackChange('fx', id, displayRate);
+      results[id] = { name, price: displayRate, changePct: changePct ?? 0 };
     }
   }
 
