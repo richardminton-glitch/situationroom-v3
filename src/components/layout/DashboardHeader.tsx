@@ -187,7 +187,7 @@ export function DashboardHeader() {
               className="inline-flex items-center gap-1.5"
               style={{ padding: '1px 7px', border: '1px solid var(--border-subtle)', borderRadius: '3px' }}
             >
-              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2a6e2a' }} />
+              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2a6e2a', animation: 'viewer-pulse 2s ease-in-out infinite' }} />
               <span style={{ color: 'var(--text-secondary)' }}>
                 {viewers ?? '-'}
               </span>

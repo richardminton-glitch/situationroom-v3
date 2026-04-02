@@ -11,7 +11,7 @@
   --bg-card: #faf7f2;
   --bg-card-hover: #f0ebe0;
 
-  --text-primary: #2c2416;
+  --text-primary: #1a1a1a;
   --text-secondary: #5a4e3c;
   --text-muted: #8a7e6c;
 
@@ -40,8 +40,8 @@
 [data-theme="dark"] {
   --bg-primary: #0a0f14;
   --bg-secondary: #111920;
-  --bg-card: #151d25;
-  --bg-card-hover: #1a2530;
+  --bg-card: #0e1118;
+  --bg-card-hover: #131820;
 
   --text-primary: #c8e6e3;       /* teal-tinted white — data values */
   --text-secondary: #8aaba6;     /* muted teal — secondary text */
@@ -130,6 +130,12 @@ h1, h2, h3, h4, h5, h6 {
 .event-dot.economy    { fill: #2a2a2a; }
 .event-dot.political  { fill: #555; }
 
+/* Viewer dot pulse — matches V2 viewer-pulse */
+@keyframes viewer-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
 /* Ticker scroll animation — used by Wire and Tikr */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }
@@ -188,12 +194,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="dark"] .panel-card {
-  border-color: #1a3a3a;
-  box-shadow: 0 0 1px rgba(0,212,200,0.1);
+  border-color: rgba(255,255,255,0.06);
+  box-shadow: none;
 }
 [data-theme="dark"] .panel-card:hover {
-  border-color: #1a4a4a;
-  box-shadow: 0 0 6px rgba(0,212,200,0.08);
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: none;
 }
 
 /* Data display */

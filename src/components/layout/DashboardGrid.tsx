@@ -186,7 +186,7 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
                   )}
                 </div>
               </div>
-              <div style={{ margin: '0 10px', height: '1px', backgroundColor: 'var(--text-panel-title)' }} />
+              <div style={{ margin: '0 10px', height: '1px', backgroundColor: 'var(--border-primary)' }} />
               </div>
             )}
 
