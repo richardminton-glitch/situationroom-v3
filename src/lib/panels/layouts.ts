@@ -139,7 +139,7 @@ export const LAYOUT_PRESETS: DashboardLayout[] = [
       { panelId: 'central-bank',   x:   0, y: 572, w: 264, h:  88, collapsed: false, resizable: false },
       { panelId: 'btc-hero',       x: 264, y:   0, w: 260, h: 120, collapsed: false, resizable: false },
       { panelId: 'fear-greed',     x: 528, y:   0, w: 260, h: 160, collapsed: false, resizable: false },
-      { panelId: 'cb-asset-chart', x: 264, y:  88, w: 528, h: 660, collapsed: false, resizable: true  },
+      { panelId: 'cb-asset-chart', x: 264, y: 132, w: 528, h: 660, collapsed: false, resizable: true  },
       { panelId: 'inflation-chart',x: 792, y:   0, w: 660, h: 396, collapsed: false, resizable: true  },
       { panelId: 'cb-rates-chart', x: 792, y: 396, w: 660, h: 396, collapsed: false, resizable: true  },
     ],
