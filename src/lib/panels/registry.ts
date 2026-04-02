@@ -143,6 +143,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'onchain',
   },
   {
+    id: 'urpd',
+    name: 'THE HOLDERS — Supply at Cost Basis (URPD)',
+    category: 'onchain',
+    defaultW: 528, defaultH: 440, minW: 352, minH: 308,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: 'UTXO Realised Price Distribution — horizontal bar chart of BTC supply by cost basis with profit/loss zones',
+    icon: 'onchain',
+  },
+  {
     id: 'cdd',
     name: 'Value of Coin Days Destroyed',
     category: 'onchain',

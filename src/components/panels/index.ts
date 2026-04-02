@@ -29,6 +29,7 @@ import { CentralBankAssetPanel } from './CentralBankAssetPanel';
 import { UTXOAgeDistributionPanel } from './UTXOAgeDistributionPanel';
 import { LTHSTHSupplyPanel } from './LTHSTHSupplyPanel';
 import { CoinDaysDestroyedPanel } from './CoinDaysDestroyedPanel';
+import { URPDPanel } from './URPDPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -57,4 +58,5 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'utxo-age-dist':  UTXOAgeDistributionPanel,
   'lth-sth-supply':  LTHSTHSupplyPanel,
   'cdd':             CoinDaysDestroyedPanel,
+  'urpd':            URPDPanel,
 };
