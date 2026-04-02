@@ -277,9 +277,10 @@ export function URPDPanel() {
               stroke={C.gridLine}
               horizontal={false}
             />
-            {/* X-axis = supply (value axis) */}
+            {/* X-axis = supply (value axis) — reversed so bars grow right→left */}
             <XAxis
               type="number"
+              reversed
               tick={axisStyle}
               axisLine={false}
               tickLine={false}
@@ -287,10 +288,11 @@ export function URPDPanel() {
               width={40}
               height={18}
             />
-            {/* Y-axis = price (category axis) — show only key price labels */}
+            {/* Y-axis = price (category axis) — reversed so low prices at bottom */}
             <YAxis
               type="category"
               dataKey="price"
+              reversed
               tick={axisStyle}
               axisLine={false}
               tickLine={false}
