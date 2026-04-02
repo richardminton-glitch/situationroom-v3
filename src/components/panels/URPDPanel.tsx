@@ -73,7 +73,7 @@ function formatSupply(v: number): string {
 // Bar colour based on how far the bucket price is from current price
 function barColor(bucketPrice: number, currentPrice: number): string {
   if (bucketPrice > currentPrice * 1.05)  return '#8b3a3a'; // above current — at a loss
-  if (bucketPrice >= currentPrice * 0.95) return '#c9a227'; // transition zone
+  if (bucketPrice >= currentPrice * 0.95) return '#b8860b'; // transition zone
   return '#2d6a4f';                                          // below current — in profit
 }
 
@@ -81,7 +81,7 @@ function barColor(bucketPrice: number, currentPrice: number): string {
 function statusText(inProfit: number): { text: string; color: string } {
   if (inProfit >= 85) return {
     text: 'Near-euphoric supply distribution — historically precedes local tops.',
-    color: '#c9a227',
+    color: '#b8860b',
   };
   if (inProfit >= 70) return {
     text: 'Healthy majority in profit — bull market conditions.',
@@ -89,7 +89,7 @@ function statusText(inProfit: number): { text: string; color: string } {
   };
   if (inProfit >= 50) return {
     text: 'Mixed — market at an inflection point.',
-    color: '#c9a227',
+    color: '#b8860b',
   };
   return {
     text: 'Majority underwater — capitulation or accumulation zone.',
@@ -373,7 +373,7 @@ export function URPDPanel() {
       >
         {[
           { color: '#2d6a4f', label: 'In profit' },
-          { color: '#c9a227', label: 'Near price' },
+          { color: '#b8860b', label: 'Near price' },
           { color: '#8b3a3a', label: 'Underwater' },
         ].map(({ color, label }) => (
           <span

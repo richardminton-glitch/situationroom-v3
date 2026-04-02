@@ -76,26 +76,26 @@ type Signal = {
   text: string;
 };
 
-function getSignal(vocdd: number, ma30: number): Signal {
+function getSignal(vocdd: number, ma30: number, isDark: boolean): Signal {
   if (ma30 === 0) return { level: null, label: '', bg: '', text: '' };
   const ratio = vocdd / ma30;
   if (ratio > 3) return {
     level: 'spike',
     label: '▲ SPIKE — Significant economic dormancy destroyed. Monitor for distribution.',
-    bg:   '#7a1a1a',
-    text: '#ffcccc',
+    bg:   isDark ? '#4a1a1a' : 'rgba(155,50,50,0.10)',
+    text: isDark ? '#ffaaaa' : '#9b3232',
   };
   if (ratio > 2) return {
     level: 'elevated',
     label: '⚠ ELEVATED — Long-value holder movement detected.',
-    bg:   '#5a4200',
-    text: '#ffe599',
+    bg:   isDark ? '#3a2a00' : 'rgba(139,105,20,0.10)',
+    text: isDark ? '#ffd966' : '#8b6914',
   };
   if (ratio < 0.5) return {
     level: 'quiet',
     label: '● QUIET — Minimal economic dormancy destroyed. Accumulation conditions.',
-    bg:   '#1a3a1a',
-    text: '#99ffaa',
+    bg:   isDark ? '#0a2a1a' : 'rgba(74,124,89,0.10)',
+    text: isDark ? '#66ddaa' : '#4a7c59',
   };
   return { level: null, label: '', bg: '', text: '' };
 }
@@ -206,11 +206,11 @@ export function CoinDaysDestroyedPanel() {
 
   const { data } = response;
   const latest   = data.at(-1)!;
-  const signal   = getSignal(latest.vocdd, latest.ma30);
+  const signal   = getSignal(latest.vocdd, latest.ma30, isDark);
 
   // Accent colour — gold (parchment) / teal (dark)
   const accentColor = isDark ? '#00d4c8' : '#b8860b';
-  const mutedColor  = isDark ? '#2a3a3a' : '#555555';
+  const mutedColor  = isDark ? '#2a3a3a' : '#9a8a78';
 
   // Tick cadence — ~9 labels across 90 days ≈ every 10 days
   const tickInterval = Math.max(1, Math.floor(data.length / 9));

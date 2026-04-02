@@ -61,9 +61,9 @@ function formatDateLabel(iso: string): string {
 // ── Signal / colour helpers ───────────────────────────────────────────────────
 
 function signalForPct(pct: number): { label: string; color: string } {
-  if (pct >= 70) return { label: 'ACCUMULATION', color: '#2a8a2a' };
+  if (pct >= 70) return { label: 'ACCUMULATION', color: '#4a7c59' };
   if (pct >= 60) return { label: 'NEUTRAL',       color: '#b8860b' };
-  return              { label: 'DISTRIBUTION',   color: '#cc4444' };
+  return              { label: 'DISTRIBUTION',   color: '#9b3232' };
 }
 
 function lineColorForPct(pct: number): string {
@@ -126,7 +126,7 @@ function CustomTooltip({ active, payload, isDark }: CustomTooltipProps) {
           <span
             style={{
               display: 'inline-block', width: 8, height: 8, borderRadius: 2,
-              background: '#cc4444', flexShrink: 0,
+              background: '#9b3232', flexShrink: 0,
             }}
           />
           STH Supply
@@ -194,7 +194,7 @@ export function LTHSTHSupplyPanel() {
 
   // LTH accent: gold (parchment) / teal (dark)
   const lthAccent = isDark ? '#00d4c8' : '#b8860b';
-  const sthAccent = '#cc4444';
+  const sthAccent = '#9b3232';
 
   // Y-axis domain for LTH% — small padding around data range
   const pctValues = data.map((d) => d.lthPct);
@@ -405,13 +405,13 @@ export function LTHSTHSupplyPanel() {
               {/* 70% — Strong Accumulation threshold */}
               <ReferenceLine
                 y={70}
-                stroke="#2a8a2a"
+                stroke="#4a7c59"
                 strokeDasharray="4 3"
                 strokeWidth={1}
                 label={{
                   value: 'STRONG ACCUMULATION',
                   position: 'insideTopRight',
-                  fill: '#2a8a2a',
+                  fill: '#4a7c59',
                   fontFamily: 'var(--font-mono)',
                   fontSize: 8,
                   letterSpacing: '0.06em',
