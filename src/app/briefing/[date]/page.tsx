@@ -36,8 +36,7 @@ export default async function BriefingPage({ params }: Props) {
   });
   if (!briefing) notFound();
 
-  const sources      = JSON.parse(briefing.sourcesJson)      as { url: string; title: string }[];
-  const headlines    = JSON.parse(briefing.headlinesJson)    as { title: string; category: string; source: string }[];
+  const sourcesCount = (JSON.parse(briefing.sourcesJson) as unknown[]).length;
   const dataSnapshot = JSON.parse(briefing.dataSnapshotJson) as Record<string, number>;
 
   const [prevBriefing, nextBriefing] = await Promise.all([
@@ -127,14 +126,47 @@ export default async function BriefingPage({ params }: Props) {
         }}>
           Conviction: {Math.round(briefing.convictionScore)}/100
         </span>
-        {sources.length > 0 && (
+        {sourcesCount > 0 && (
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
-            {sources.length} sources
+            {sourcesCount} sources
           </span>
         )}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: '16px', marginBottom: '32px' }} />
+      <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: '16px', marginBottom: '20px' }} />
+
+      {/* Data snapshot — shown immediately under header */}
+      {dataSnapshot && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          fontFamily: 'var(--font-mono)', fontSize: '11px',
+          marginBottom: '32px',
+          border: '1px solid var(--border-subtle)',
+        }}>
+          {[
+            ['BTC Price',    `$${(dataSnapshot.btcPrice || 0).toLocaleString()}`],
+            ['24h Change',   `${(dataSnapshot.btc24hPct || 0).toFixed(2)}%`],
+            ['Fear & Greed', `${dataSnapshot.fearGreed || '—'}`],
+            ['Hashrate',     `${(dataSnapshot.hashrateEH || 0).toFixed(1)} EH/s`],
+            ['MVRV',         `${(dataSnapshot.mvrv || 0).toFixed(2)}`],
+            ['Block Height', `${(dataSnapshot.blockHeight || 0).toLocaleString()}`],
+            ['S&P 500',      `${(dataSnapshot.sp500 || 0).toLocaleString()}`],
+            ['VIX',          `${(dataSnapshot.vix || 0).toFixed(2)}`],
+            ['Gold',         `$${(dataSnapshot.gold || 0).toFixed(0)}`],
+            ['DXY',          `${(dataSnapshot.dxy || 0).toFixed(2)}`],
+            ['US 10Y',       `${(dataSnapshot.us10y || 0).toFixed(2)}%`],
+            ['Oil',          `$${(dataSnapshot.oil || 0).toFixed(2)}`],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between py-1.5 px-3"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {label}
+              </span>
+              <span style={{ color: 'var(--text-primary)' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Sections */}
       {sections.map((section, i) => (
@@ -149,102 +181,6 @@ export default async function BriefingPage({ params }: Props) {
           <BriefingMarkdown content={section.content} />
         </section>
       ))}
-
-      {/* Data snapshot */}
-      {dataSnapshot && (
-        <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '20px', marginTop: '36px' }}>
-          <p style={{
-            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px',
-          }}>
-            Dashboard snapshot at time of briefing
-          </p>
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-            fontFamily: 'var(--font-mono)', fontSize: '11px',
-          }}>
-            {[
-              ['BTC Price',   `$${(dataSnapshot.btcPrice || 0).toLocaleString()}`],
-              ['24h Change',  `${(dataSnapshot.btc24hPct || 0).toFixed(2)}%`],
-              ['Fear & Greed',`${dataSnapshot.fearGreed || '—'}`],
-              ['Hashrate',    `${(dataSnapshot.hashrateEH || 0).toFixed(1)} EH/s`],
-              ['MVRV',        `${(dataSnapshot.mvrv || 0).toFixed(2)}`],
-              ['Block Height',`${(dataSnapshot.blockHeight || 0).toLocaleString()}`],
-              ['S&P 500',     `${(dataSnapshot.sp500 || 0).toLocaleString()}`],
-              ['VIX',         `${(dataSnapshot.vix || 0).toFixed(2)}`],
-              ['Gold',        `$${(dataSnapshot.gold || 0).toFixed(0)}`],
-              ['DXY',         `${(dataSnapshot.dxy || 0).toFixed(2)}`],
-              ['US 10Y',      `${(dataSnapshot.us10y || 0).toFixed(2)}%`],
-              ['Oil',         `$${(dataSnapshot.oil || 0).toFixed(2)}`],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between py-1.5 px-2"
-                style={{ borderBottom: '1px dotted var(--border-subtle)' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {label}
-                </span>
-                <span style={{ color: 'var(--text-primary)' }}>{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Headlines */}
-      {headlines.length > 0 && (
-        <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '20px', marginTop: '28px' }}>
-          <p style={{
-            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px',
-          }}>
-            News headlines at time of briefing ({headlines.length})
-          </p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {headlines.slice(0, 24).map((h, i) => (
-              <li key={i} className="flex items-start gap-2 py-1"
-                style={{ borderBottom: '1px dotted var(--border-subtle)' }}>
-                <span className="mt-1.5 shrink-0" style={{
-                  display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%',
-                  backgroundColor:
-                    h.category === 'bitcoin'  ? '#f7931a' :
-                    h.category === 'conflict' ? '#8b2020' :
-                    h.category === 'disaster' ? '#b8860b' :
-                    h.category === 'economy'  ? 'var(--text-secondary)' : 'var(--text-muted)',
-                }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  {h.title}
-                  {h.source && <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>— {h.source}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Sources */}
-      {sources.length > 0 && (
-        <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '20px', marginTop: '28px' }}>
-          <p style={{
-            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px',
-          }}>
-            Sources ({sources.length})
-          </p>
-          <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {sources.map((s, i) => (
-              <li key={i} className="flex items-baseline gap-2 py-0.5">
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', minWidth: '16px' }}>
-                  {i + 1}.
-                </span>
-                <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent-primary)', textDecoration: 'none' }}
-                  className="hover:underline">
-                  {s.title || s.url}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
 
       {/* Prev / Next */}
       <nav className="flex items-center justify-between mt-12 pt-6"
