@@ -15,7 +15,8 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      layouts: layouts.map((l) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      layouts: layouts.map((l: any) => ({
         id: l.id,
         name: l.name,
         isDefault: l.isDefault,
