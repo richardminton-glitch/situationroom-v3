@@ -129,10 +129,19 @@ export function DashboardHeader() {
     return () => clearInterval(interval);
   }, []);
 
-  // Simulated viewer count (in production: WebSocket or polling)
+  // Live viewer count — heartbeat POST every 30s, same mechanism as V2
   useEffect(() => {
-    setViewers(Math.floor(Math.random() * 30) + 5);
-    const interval = setInterval(() => setViewers(Math.floor(Math.random() * 30) + 5), 30_000);
+    async function heartbeat() {
+      try {
+        const res = await fetch('/api/viewers', { method: 'POST' });
+        if (res.ok) {
+          const { viewers: v } = await res.json();
+          setViewers(v);
+        }
+      } catch { /* keep last known count */ }
+    }
+    heartbeat();
+    const interval = setInterval(heartbeat, 30_000);
     return () => clearInterval(interval);
   }, []);
 
