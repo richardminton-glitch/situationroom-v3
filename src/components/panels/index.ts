@@ -28,6 +28,7 @@ import { CentralBankRatesPanel } from './CentralBankRatesPanel';
 import { CentralBankAssetPanel } from './CentralBankAssetPanel';
 import { UTXOAgeDistributionPanel } from './UTXOAgeDistributionPanel';
 import { LTHSTHSupplyPanel } from './LTHSTHSupplyPanel';
+import { CoinDaysDestroyedPanel } from './CoinDaysDestroyedPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -54,5 +55,6 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'cb-rates-chart': CentralBankRatesPanel,
   'cb-asset-chart': CentralBankAssetPanel,
   'utxo-age-dist':  UTXOAgeDistributionPanel,
-  'lth-sth-supply': LTHSTHSupplyPanel,
+  'lth-sth-supply':  LTHSTHSupplyPanel,
+  'cdd':             CoinDaysDestroyedPanel,
 };

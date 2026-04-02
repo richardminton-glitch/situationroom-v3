@@ -142,6 +142,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: '1yr dual-area chart of Long-Term vs Short-Term Holder supply + LTH% regime line (155-day threshold)',
     icon: 'onchain',
   },
+  {
+    id: 'cdd',
+    name: 'Value of Coin Days Destroyed',
+    category: 'onchain',
+    defaultW: 792, defaultH: 352, minW: 528, minH: 220,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: '90-day VOCDD bar chart (hot/cold vs 30D MA) with signal banner — CDD × USD price at time of spend',
+    icon: 'onchain',
+  },
 
   // ── Macro ──
   {

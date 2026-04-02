@@ -153,6 +153,8 @@ export const LAYOUT_PRESETS: DashboardLayout[] = [
       { panelId: 'utxo-age-dist',   x: 0, y: 0,        w: G * 18, h: G * 8,  collapsed: false, resizable: true },
       // THE HOLDERS section — LTH / STH supply + regime line (directly below UTXO age)
       { panelId: 'lth-sth-supply',  x: 0, y: G * 8,    w: G * 18, h: G * 10, collapsed: false, resizable: true },
+      // Value of Coin Days Destroyed — hot/cold bar chart (directly below LTH/STH)
+      { panelId: 'cdd',             x: 0, y: G * 18,   w: G * 18, h: G * 8,  collapsed: false, resizable: true },
     ],
   },
   {
