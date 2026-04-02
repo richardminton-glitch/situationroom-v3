@@ -122,7 +122,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
 
   {
     id: 'utxo-age-dist',
-    name: 'THE HOLDERS — UTXO Age Distribution',
+    name: 'UTXO Age Distribution',
     category: 'onchain',
     defaultW: 792, defaultH: 352, minW: 528, minH: 220,
     resizable: true,
@@ -133,7 +133,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
   },
   {
     id: 'lth-sth-supply',
-    name: 'THE HOLDERS — LTH / STH Supply',
+    name: 'LTH / STH Supply',
     category: 'onchain',
     defaultW: 792, defaultH: 440, minW: 528, minH: 308,
     resizable: true,
@@ -144,7 +144,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
   },
   {
     id: 'urpd',
-    name: 'THE HOLDERS — Supply at Cost Basis (URPD)',
+    name: 'Supply at Cost Basis (URPD)',
     category: 'onchain',
     defaultW: 528, defaultH: 440, minW: 352, minH: 308,
     resizable: true,
