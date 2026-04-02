@@ -51,8 +51,8 @@ dev.log
 # claude session files
 .claude/
 
-# prisma (not in use yet)
-/prisma/
+# prisma generated client (rebuilt on deploy)
+/prisma/generated/
 
 # dashboard v2 (separate project, ignore if accidentally nested)
 /Dashboard V2/

@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  displayName  String?  @map("display_name")
+  timezone     String   @default("Europe/London")
+  currencyPref String   @default("USD") @map("currency_pref")
+  themePref    String   @default("parchment") @map("theme_pref")
+  tier         String   @default("free")
+  isPublic     Boolean  @default(false) @map("is_public")
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastSeenAt   DateTime @default(now()) @map("last_seen_at")
+
+  sessions   Session[]
+  pinCodes   PinCode[]
+  layouts    UserLayout[]
+  watchlists UserWatchlist[]
+  bookmarks  UserBookmark[]
+  preferences UserPreference[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  token        String   @unique
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PinCode {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  pin       String
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pin_codes")
+}
+
+model UserLayout {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  layoutJson String   @map("layout_json") @db.Text
+  isDefault  Boolean  @default(false) @map("is_default")
+  name       String   @default("Default")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_layouts")
+}
+
+model UserWatchlist {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  itemsJson String   @map("items_json") @db.Text
+  isPublic  Boolean  @default(false) @map("is_public")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_watchlists")
+}
+
+model UserBookmark {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  briefingDate DateTime @map("briefing_date") @db.Date
+  note         String?
+  isPublic     Boolean  @default(false) @map("is_public")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_bookmarks")
+}
+
+model UserPreference {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  key    String
+  value  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("user_preferences")
+}
+
+model Briefing {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique @db.Date
+  generatedAt         DateTime @map("generated_at")
+  marketSection       String   @map("market_section") @db.Text
+  networkSection      String   @map("network_section") @db.Text
+  geopoliticalSection String   @map("geopolitical_section") @db.Text
+  macroSection        String   @map("macro_section") @db.Text
+  outlookSection      String   @map("outlook_section") @db.Text
+  dataSnapshotJson    String   @map("data_snapshot_json") @db.Text
+  sourcesJson         String   @map("sources_json") @db.Text
+  headlinesJson       String   @default("[]") @map("headlines_json") @db.Text
+  threatLevel         String   @map("threat_level")
+  threatScore         Int      @default(0) @map("threat_score")
+  convictionScore     Float    @map("conviction_score")
+  headline            String
+
+  @@map("briefings")
+}
+
+model ConvictionScore {
+  id                          String   @id @default(cuid())
+  date                        DateTime @unique @db.Date
+  compositeScore              Float    @map("composite_score")
+  priceMomentumScore          Float    @map("price_momentum_score")
+  priceMomentumDataJson       String   @map("price_momentum_data_json") @db.Text
+  onchainHealthScore          Float    @map("onchain_health_score")
+  onchainHealthDataJson       String   @map("onchain_health_data_json") @db.Text
+  macroEnvironmentScore       Float    @map("macro_environment_score")
+  macroEnvironmentDataJson    String   @map("macro_environment_data_json") @db.Text
+  networkFundamentalsScore    Float    @map("network_fundamentals_score")
+  networkFundamentalsDataJson String   @map("network_fundamentals_data_json") @db.Text
+  sentimentScore              Float    @map("sentiment_score")
+  sentimentDataJson           String   @map("sentiment_data_json") @db.Text
+
+  @@map("conviction_scores")
+}
+
+model DataSnapshot {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  dataJson  String   @map("data_json") @db.Text
+
+  @@map("data_snapshots")
+}
+
+model DataCache {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  data      String   @db.Text
+  expiresAt DateTime @map("expires_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("data_cache")
+}
+
+// ── Daily Snapshot Tables (recorded at midnight UTC) ──
+
+model DailyBtc {
+  date         DateTime @id @db.Date
+  price        Float
+  marketCap    Float    @map("market_cap")
+  volume24h    Float    @map("volume_24h")
+  change24h    Float    @map("change_24h")
+  change7d     Float    @map("change_7d")
+  change30d    Float    @map("change_30d")
+  ath          Float
+  athChangePct Float    @map("ath_change_pct")
+  supply       Float
+
+  @@map("daily_btc")
+}
+
+model DailyNetwork {
+  date        DateTime @id @db.Date
+  hashrateEh  Float    @map("hashrate_eh")
+  difficulty  Float
+  feeFast     Float    @map("fee_fast")
+  feeMedium   Float    @map("fee_medium")
+  mempoolMb   Float    @map("mempool_mb")
+  blockHeight Int      @map("block_height")
+
+  @@map("daily_network")
+}
+
+model DailyLightning {
+  date        DateTime @id @db.Date
+  channels    Int
+  capacityBtc Float    @map("capacity_btc")
+  nodes       Int
+
+  @@map("daily_lightning")
+}
+
+model DailyOnchain {
+  date            DateTime @id @db.Date
+  mvrv            Float
+  exchangeInflow  Float    @map("exchange_inflow")
+  exchangeOutflow Float    @map("exchange_outflow")
+  exchangeBalance Float    @map("exchange_balance")
+
+  @@map("daily_onchain")
+}
+
+model DailyIndices {
+  date    DateTime @id @db.Date
+  sp500   Float?
+  nasdaq  Float?
+  dow     Float?
+  ftse    Float?
+  dax     Float?
+  nikkei  Float?
+  hangSeng Float?  @map("hang_seng")
+  vix     Float?
+  dxy     Float?
+  us10y   Float?
+  us2y    Float?
+
+  @@map("daily_indices")
+}
+
+model DailyCommodities {
+  date       DateTime @id @db.Date
+  gold       Float?
+  silver     Float?
+  crudeOil   Float?   @map("crude_oil")
+  naturalGas Float?   @map("natural_gas")
+  copper     Float?
+
+  @@map("daily_commodities")
+}
+
+model DailyFx {
+  date   DateTime @id @db.Date
+  eurUsd Float?   @map("eur_usd")
+  gbpUsd Float?   @map("gbp_usd")
+  usdJpy Float?   @map("usd_jpy")
+  usdCny Float?   @map("usd_cny")
+
+  @@map("daily_fx")
+}
+
+model DailySentiment {
+  date            DateTime @id @db.Date
+  fearGreed       Int?     @map("fear_greed")
+  convictionScore Float?   @map("conviction_score")
+  threatLevel     String?  @map("threat_level")
+
+  @@map("daily_sentiment")
+}
+
+model BtcPriceHistory {
+  date  DateTime @id @db.Date
+  close Float
+
+  @@map("btc_price_history")
+}

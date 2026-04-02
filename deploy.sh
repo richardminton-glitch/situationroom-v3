@@ -7,6 +7,9 @@ git pull
 echo "→ Installing dependencies..."
 npm ci
 
+echo "→ Generating Prisma client..."
+npx prisma generate
+
 echo "→ Building Next.js..."
 npm run build
 
