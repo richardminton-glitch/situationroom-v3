@@ -30,12 +30,13 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      briefings: briefings.map((b) => ({
-        date: b.date.toISOString().split('T')[0],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      briefings: briefings.map((b: any) => ({
+        date: new Date(b.date).toISOString().split('T')[0],
         headline: b.headline,
         threatLevel: b.threatLevel,
         convictionScore: b.convictionScore,
-        generatedAt: b.generatedAt.toISOString(),
+        generatedAt: new Date(b.generatedAt).toISOString(),
       })),
     });
   }
