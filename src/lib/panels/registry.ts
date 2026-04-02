@@ -131,6 +131,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: '90-day stacked bar chart of Bitcoin supply by coin age — 10 bands from <1d to 5yr+',
     icon: 'onchain',
   },
+  {
+    id: 'lth-sth-supply',
+    name: 'THE HOLDERS — LTH / STH Supply',
+    category: 'onchain',
+    defaultW: 792, defaultH: 440, minW: 528, minH: 308,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: '1yr dual-area chart of Long-Term vs Short-Term Holder supply + LTH% regime line (155-day threshold)',
+    icon: 'onchain',
+  },
 
   // ── Macro ──
   {

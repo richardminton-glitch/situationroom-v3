@@ -27,6 +27,7 @@ import { InflationChartPanel } from './InflationChartPanel';
 import { CentralBankRatesPanel } from './CentralBankRatesPanel';
 import { CentralBankAssetPanel } from './CentralBankAssetPanel';
 import { UTXOAgeDistributionPanel } from './UTXOAgeDistributionPanel';
+import { LTHSTHSupplyPanel } from './LTHSTHSupplyPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -52,5 +53,6 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'inflation-chart': InflationChartPanel,
   'cb-rates-chart': CentralBankRatesPanel,
   'cb-asset-chart': CentralBankAssetPanel,
-  'utxo-age-dist': UTXOAgeDistributionPanel,
+  'utxo-age-dist':  UTXOAgeDistributionPanel,
+  'lth-sth-supply': LTHSTHSupplyPanel,
 };

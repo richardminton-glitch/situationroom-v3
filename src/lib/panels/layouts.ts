@@ -150,7 +150,9 @@ export const LAYOUT_PRESETS: DashboardLayout[] = [
     description: 'Network metrics, on-chain flows, and mining data',
     panels: [
       // THE HOLDERS section — UTXO age distribution
-      { panelId: 'utxo-age-dist', x: 0, y: 0, w: G * 18, h: G * 8, collapsed: false, resizable: true },
+      { panelId: 'utxo-age-dist',   x: 0, y: 0,        w: G * 18, h: G * 8,  collapsed: false, resizable: true },
+      // THE HOLDERS section — LTH / STH supply + regime line (directly below UTXO age)
+      { panelId: 'lth-sth-supply',  x: 0, y: G * 8,    w: G * 18, h: G * 10, collapsed: false, resizable: true },
     ],
   },
   {
