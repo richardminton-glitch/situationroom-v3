@@ -135,8 +135,8 @@ export const LAYOUT_PRESETS: DashboardLayout[] = [
     panels: [
       { panelId: 'market-indices', x:   0, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
       { panelId: 'commodities',    x:   0, y: 220, w: 264, h: 220, collapsed: false, resizable: false },
-      { panelId: 'fx-macro',       x:   0, y: 440, w: 264, h: 132, collapsed: false, resizable: false },
-      { panelId: 'central-bank',   x:   0, y: 572, w: 264, h:  88, collapsed: false, resizable: false },
+      { panelId: 'fx-macro',       x:   0, y: 484, w: 264, h: 132, collapsed: false, resizable: false },
+      { panelId: 'central-bank',   x:   0, y: 616, w: 264, h:  88, collapsed: false, resizable: false },
       { panelId: 'btc-hero',       x: 264, y:   0, w: 260, h: 132, collapsed: false, resizable: false },
       { panelId: 'fear-greed',     x: 528, y:   0, w: 260, h: 132, collapsed: false, resizable: false },
       { panelId: 'cb-asset-chart', x: 264, y: 132, w: 528, h: 660, collapsed: false, resizable: true  },
