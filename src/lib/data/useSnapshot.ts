@@ -49,6 +49,7 @@ export interface SnapshotData {
     exchangeBalance: number;
     netFlow: number;
     interpretation: string;
+    signal: 'bullish' | 'bearish' | 'neutral';
   } | null;
   indices: Record<string, { name: string; price: number; changePct: number }> | null;
   commodities: Record<string, { name: string; price: number; changePct: number }> | null;

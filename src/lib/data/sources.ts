@@ -173,6 +173,7 @@ export interface OnChainData {
   exchangeBalance: number;
   netFlow: number;
   interpretation: string;
+  signal: 'bullish' | 'bearish' | 'neutral';
 }
 
 export async function fetchOnChain(): Promise<OnChainData> {
@@ -199,9 +200,20 @@ export async function fetchOnChain(): Promise<OnChainData> {
   const net = outflow - inflow;
   const mvrvVal = parseFloat(latestMvrv.CapMVRVCur || '0');
 
-  let interpretation = 'Neutral flow';
-  if (net > 1000) interpretation = 'Net outflow — accumulation signal';
-  else if (net < -1000) interpretation = 'Net inflow — distribution signal';
+  // Net flow line
+  let flowLine = 'Neutral flow — no directional bias';
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (net > 1000)  { flowLine = 'Net outflow — coins leaving exchanges (accumulation)'; signal = 'bullish'; }
+  else if (net < -1000) { flowLine = 'Net inflow — coins entering exchanges (distribution)'; signal = 'bearish'; }
+
+  // MVRV line
+  let mvrvLine = `MVRV ${mvrvVal.toFixed(2)} — fair value range`;
+  if (mvrvVal > 3.5)      mvrvLine = `MVRV ${mvrvVal.toFixed(2)} — market overheated, historically high risk`;
+  else if (mvrvVal > 2.4) mvrvLine = `MVRV ${mvrvVal.toFixed(2)} — greed territory, elevated risk`;
+  else if (mvrvVal < 1.0) mvrvLine = `MVRV ${mvrvVal.toFixed(2)} — below cost basis, deep value zone`;
+  else if (mvrvVal < 1.5) mvrvLine = `MVRV ${mvrvVal.toFixed(2)} — undervalued, accumulation zone`;
+
+  const interpretation = `${flowLine}\n${mvrvLine}`;
 
   return {
     mvrv: mvrvVal,
@@ -210,6 +222,7 @@ export async function fetchOnChain(): Promise<OnChainData> {
     exchangeBalance: balance,
     netFlow: net,
     interpretation,
+    signal,
   };
 }
 
