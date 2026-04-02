@@ -156,7 +156,7 @@ export function InflationChartPanel() {
       lg.append('line').attr('x1', 0).attr('x2', 14).attr('y1', 0).attr('y2', 0)
         .attr('stroke', color).attr('stroke-width', 2);
       lg.append('text').attr('x', 18).attr('y', 3)
-        .attr('fill', tickColor).attr('font-size', '8px')
+        .attr('fill', tickColor).attr('font-size', '11px')
         .attr('font-family', fontData)
         .text(LABELS[key] ?? key);
     });
@@ -169,7 +169,7 @@ export function InflationChartPanel() {
         .tickFormat((d) => d3.timeFormat('%b %y')(d as Date)))
       .call((ax) => ax.select('.domain').remove())
       .selectAll('text')
-      .attr('fill', tickColor).attr('font-size', '8px')
+      .attr('fill', tickColor).attr('font-size', '11px')
       .attr('font-family', fontData);
 
     // Y-axis (right)
@@ -180,7 +180,7 @@ export function InflationChartPanel() {
         .tickFormat((d) => fmtPct(+d)))
       .call((ax) => ax.select('.domain').remove())
       .selectAll('text')
-      .attr('fill', tickColor).attr('font-size', '8px')
+      .attr('fill', tickColor).attr('font-size', '11px')
       .attr('font-family', fontMono);
 
     // Crosshair
