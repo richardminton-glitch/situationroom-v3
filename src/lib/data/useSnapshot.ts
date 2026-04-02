@@ -32,6 +32,11 @@ export interface SnapshotData {
     capacityBTC: number;
     nodes: number;
     avgChannelSize: number;
+    torNodes: number;
+    clearnetNodes: number;
+    avgFeeRate: number;
+    avgBaseFee: number;
+    medCapacityBTC: number;
   } | null;
   fearGreed: {
     value: number;

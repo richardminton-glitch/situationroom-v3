@@ -109,20 +109,36 @@ export interface LightningData {
   capacityBTC: number;
   nodes: number;
   avgChannelSize: number;
+  torNodes: number;
+  clearnetNodes: number;
+  avgFeeRate: number;       // ppm
+  avgBaseFee: number;       // msats
+  medCapacityBTC: number;
 }
 
 export async function fetchLightning(): Promise<LightningData> {
-  const raw = await fetchJSON<{ latest: { channel_count: number; total_capacity: number; node_count: number } }>(
+  const raw = await fetchJSON<{
+    latest: {
+      channel_count: number; total_capacity: number; node_count: number;
+      tor_nodes: number; clearnet_nodes: number;
+      avg_fee_rate: number; avg_base_fee_mtokens: number; med_capacity: number;
+    }
+  }>(
     'https://mempool.space/api/v1/lightning/statistics/latest',
     { cacheKey: 'lightning', cacheDuration: 60_000 }
   );
   const ln = raw.latest;
   const capBTC = ln.total_capacity / 1e8;
   return {
-    channels: ln.channel_count,
-    capacityBTC: capBTC,
-    nodes: ln.node_count,
+    channels:       ln.channel_count,
+    capacityBTC:    capBTC,
+    nodes:          ln.node_count,
     avgChannelSize: ln.channel_count > 0 ? capBTC / ln.channel_count : 0,
+    torNodes:       ln.tor_nodes,
+    clearnetNodes:  ln.clearnet_nodes,
+    avgFeeRate:     ln.avg_fee_rate,
+    avgBaseFee:     ln.avg_base_fee_mtokens,
+    medCapacityBTC: ln.med_capacity / 1e8,
   };
 }
 
