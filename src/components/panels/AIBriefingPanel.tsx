@@ -103,24 +103,6 @@ export function AIBriefingPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Headline */}
-      <p
-        className="text-sm font-medium mb-2 leading-snug shrink-0"
-        style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}
-      >
-        {briefing.headline}
-      </p>
-
-      {/* Meta */}
-      <div className="flex gap-3 mb-2 shrink-0">
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {briefing.date}
-        </span>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Threat: {briefing.threatLevel}
-        </span>
-      </div>
-
       {/* Section tabs */}
       <div className="flex gap-1 mb-2 flex-wrap shrink-0">
         {SECTIONS.map((s) => (
