@@ -17,6 +17,19 @@ interface BriefingData {
   };
 }
 
+// Strip markdown noise: bold markers, citation links [[n]](url), bare URLs, word count suffixes
+function cleanText(text: string): string {
+  return text
+    .replace(/\[\[(\d+)\]\]\([^)]*\)/g, '')   // [[n]](url) citations
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // [text](url) → text
+    .replace(/https?:\/\/\S+/g, '')            // bare URLs
+    .replace(/\*\*([^*]+)\*\*/g, '$1')         // **bold** → plain
+    .replace(/\*([^*]+)\*/g, '$1')             // *italic* → plain
+    .replace(/\(\d+ words?\)/gi, '')           // (198 words) suffix
+    .replace(/\s{2,}/g, ' ')                   // collapse extra spaces
+    .trim();
+}
+
 const SECTIONS: { key: keyof BriefingData['sections']; label: string }[] = [
   { key: 'outlook', label: 'Outlook' },
   { key: 'market', label: 'Market' },
@@ -126,7 +139,7 @@ export function AIBriefingPanel() {
         className="flex-1 overflow-y-auto text-sm leading-relaxed"
         style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)' }}
       >
-        {briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.'}
+        {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
       </div>
 
       {/* Archive link */}
