@@ -1,26 +1,217 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================
+   PARCHMENT THEME (default)
+   "Live Financial Times" — editorial, warm
+   ============================================ */
+:root,
+[data-theme="parchment"] {
+  --bg-primary: #F8F1E3;
+  --bg-secondary: #EAE0CE;
+  --bg-card: #faf7f2;
+  --bg-card-hover: #f0ebe0;
+
+  --text-primary: #2c2416;
+  --text-secondary: #5a4e3c;
+  --text-muted: #8a7e6c;
+
+  --border-primary: #d4c9b8;
+  --border-subtle: #e5ddd0;
+
+  --accent-primary: #8b6914;
+  --accent-secondary: #6b4f10;
+  --accent-success: #4a7c59;
+  --accent-danger: #9b3232;
+  --accent-warning: #b8860b;
+
+  --texture-opacity: 0.04;
+  --text-panel-title: #3e2c1a;   /* dark ink — matches 'Situation Room' title */
+
+  --font-heading: 'IM Fell English SC', 'Georgia', 'Times New Roman', serif;
+  --font-body: 'IM Fell English', 'Georgia', 'Times New Roman', serif;
+  --font-data: 'Source Serif 4', 'Georgia', serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+}
+
+/* ============================================
+   DARK THEME
+   "Live operations centre" — teal & coral
+   ============================================ */
+[data-theme="dark"] {
+  --bg-primary: #0a0f14;
+  --bg-secondary: #111920;
+  --bg-card: #151d25;
+  --bg-card-hover: #1a2530;
+
+  --text-primary: #c8e6e3;       /* teal-tinted white — data values */
+  --text-secondary: #8aaba6;     /* muted teal — secondary text */
+  --text-muted: #5e8580;         /* teal-gray — labels, brightened for readability */
+
+  --border-primary: #1a3a3a;     /* teal-tinted border */
+  --border-subtle: #142a2a;      /* darker teal border */
+
+  --accent-primary: #00d4c8;     /* bright teal — titles, links, highlights */
+  --accent-secondary: #0aa89e;   /* mid teal */
+  --accent-success: #2dd4bf;     /* teal for positive values */
+  --accent-danger: #d06050;      /* muted coral for negative */
+  --accent-warning: #c4885a;     /* muted amber */
+
+  --text-panel-title: #00d4c8;   /* teal — panel section titles */
+
+  --texture-opacity: 0;
+
+  --font-heading: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+  --font-body: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+  --font-data: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-hover: var(--bg-card-hover);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-primary: var(--border-primary);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-success: var(--accent-success);
+  --color-accent-danger: var(--accent-danger);
+  --color-accent-warning: var(--accent-warning);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================
+   SLIM SCROLLBARS (V2 style)
+   ============================================ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
 }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
+/* ============================================
+   BASE STYLES
+   ============================================ */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Parchment grid overlay — subtle map-style gridlines */
+[data-theme="parchment"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Globe event markers — V2 styling */
+.event-marker { cursor: pointer; }
+.event-dot.bitcoin    { fill: #f7931a; }
+.event-dot.conflict   { fill: #8b2020; }
+.event-dot.disaster   { fill: #b8860b; }
+.event-dot.economy    { fill: #2a2a2a; }
+.event-dot.political  { fill: #555; }
+
+/* Ticker scroll animation — used by Wire and Tikr */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+.ticker-content {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker-scroll 60s linear infinite;
+}
+.ticker-content:hover {
+  animation-play-state: paused;
+}
+
+/* Panel card base */
+.panel-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-card:hover {
+  background-color: var(--bg-card-hover);
+}
+
+/* Parchment: transparent, borderless panels (except noHeader bars) */
+[data-theme="parchment"] .panel-card:not(.panel-bar) {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-theme="parchment"] .panel-card:not(.panel-bar):hover {
+  background-color: transparent !important;
+}
+/* Show borders in edit mode */
+[data-theme="parchment"] .panel-card.panel-editing:not(.panel-bar) {
+  border: 1px dashed var(--border-primary) !important;
+}
+/* Ticker bars keep background + border in parchment */
+[data-theme="parchment"] .panel-bar {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-primary) !important;
+}
+/* Keep sidebar and header opaque in parchment */
+[data-theme="parchment"] aside {
+  background-color: var(--bg-secondary) !important;
+}
+[data-theme="parchment"] header.shrink-0 {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .panel-card {
+  border-color: #1a3a3a;
+  box-shadow: 0 0 1px rgba(0,212,200,0.1);
+}
+[data-theme="dark"] .panel-card:hover {
+  border-color: #1a4a4a;
+  box-shadow: 0 0 6px rgba(0,212,200,0.08);
+}
+
+/* Data display */
+.data-value {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar styling for dark mode */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
 }
