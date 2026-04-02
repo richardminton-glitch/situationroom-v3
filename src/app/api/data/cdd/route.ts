@@ -6,14 +6,20 @@ export const dynamic = 'force-dynamic';
 
 // BRK (Bitcoin Research Kit) — bitview.space
 // Series used:
-//   vocdd            — Value of Coin Days Destroyed (CDD × USD price at time of spend)
-//   vocdd_average_1m — 30-day rolling average of VOCDD, pre-computed by BRK
+//   vocdd_sum_24h — 24-hour rolling sum of VOCDD per day (supports day1 index).
+//                   This is the effective "daily VOCDD" value.
+//                   Note: the bare `vocdd` series only supports the `height` (per-block)
+//                   index; vocdd_sum_24h is the correct daily equivalent.
 //
-// VOCDD answers: "how much economic dormancy was destroyed today?" rather than the raw
-// chain-mechanic count of classic CDD. More legible for a macro-intelligence audience.
+// NOTE on vocdd_average_1m: Although BRK pre-computes this series, it is the rolling
+// average of per-block VOCDD values — NOT the 30-day average of daily VOCDD sums.
+// The two series operate at different resolutions (~144 blocks/day), making
+// vocdd_average_1m ~140× smaller than the daily sum. The 30-day MA is therefore
+// calculated server-side from vocdd_sum_24h values, which is also what the original
+// spec called for.
 //
-// The 30-day MA is fetched directly — NOT calculated server-side — because BRK provides
-// vocdd_average_1m as a first-class series. This keeps the route lean and the MA accurate.
+// We fetch 120 days (90 display + 30 warm-up) so the MA is fully populated from
+// day 1 of the returned window.
 //
 // supplyAdjusted is hardcoded false — BRK does not expose a supply-adjusted CDD variant.
 
@@ -22,7 +28,7 @@ const ONE_HOUR  = 60 * 60 * 1000;
 const CACHE_FILE = join(process.cwd(), 'data', 'cdd-cache.json');
 const GENESIS_MS = Date.UTC(2009, 0, 3);
 
-const SERIES = ['vocdd', 'vocdd_average_1m'] as const;
+const SERIES = ['vocdd_sum_24h'] as const;
 
 export interface CDDPoint {
   date: string;
@@ -60,41 +66,59 @@ function writeCache(data: CacheShape) {
   }
 }
 
-async function fetchFromBRK(days = 90): Promise<CacheShape> {
+/** 30-day simple moving average. Returns NaN for the first 29 positions. */
+function ma30(values: number[]): number[] {
+  return values.map((_, i) => {
+    if (i < 29) return NaN;
+    let sum = 0;
+    for (let j = i - 29; j <= i; j++) sum += values[j];
+    return sum / 30;
+  });
+}
+
+async function fetchFromBRK(displayDays = 90): Promise<CacheShape> {
+  // Fetch 30 extra days as MA warm-up so the first display day has a full 30-day window
+  const fetchDays = displayDays + 30;
+
   // Probe to discover total data points available (same pattern as utxo-age / lth-sth routes)
   const probeUrl = `https://bitview.space/api/series/${SERIES[0]}/day1?limit=1`;
   const probeRes = await fetch(probeUrl, { signal: AbortSignal.timeout(10_000) });
   if (!probeRes.ok) throw new Error(`BRK probe: HTTP ${probeRes.status}`);
   const probe = (await probeRes.json()) as { total: number };
   const total       = probe.total;
-  const startOffset = Math.max(0, total - days);
+  const startOffset = Math.max(0, total - fetchDays);
 
   const url =
-    `${BRK_BASE}?series=${SERIES.join(',')}&index=day1` +
-    `&start=${startOffset}&limit=${days}`;
+    `${BRK_BASE}?series=${SERIES[0]}&index=day1` +
+    `&start=${startOffset}&limit=${fetchDays}`;
 
   const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`BRK bulk: HTTP ${res.status}`);
 
+  // Single-series bulk returns an array with one element
   const bulk = (await res.json()) as Array<{ start: number; data: (number | null)[] }>;
+  const series = Array.isArray(bulk) ? bulk[0] : (bulk as unknown as { start: number; data: (number | null)[] });
 
-  if (!Array.isArray(bulk) || bulk.length !== SERIES.length) {
-    throw new Error(`BRK bulk: expected ${SERIES.length} series, got ${bulk?.length}`);
-  }
+  const rawValues = series.data.map((v) => v ?? 0);
+  const maValues  = ma30(rawValues);
+  const dataStartOffset = series.start;
 
-  const numPoints       = bulk[0].data.length;
-  const dataStartOffset = bulk[0].start;
+  // Only return the last `displayDays` rows (skip the 30-day warm-up)
   const points: CDDPoint[] = [];
+  const startIdx = rawValues.length - displayDays;
 
-  for (let i = 0; i < numPoints; i++) {
-    const vocdd = bulk[0].data[i] ?? 0;
-    const ma30  = bulk[1].data[i] ?? 0;
-    // Skip days where both values are zero/null (sparse early data)
-    if (vocdd === 0 && ma30 === 0) continue;
-    points.push({ date: offsetToDate(dataStartOffset + i), vocdd, ma30 });
+  for (let i = startIdx; i < rawValues.length; i++) {
+    const vocdd = rawValues[i];
+    const ma    = maValues[i];
+    if (vocdd === 0 && (isNaN(ma) || ma === 0)) continue;
+    points.push({
+      date:  offsetToDate(dataStartOffset + i),
+      vocdd,
+      ma30:  isNaN(ma) ? 0 : Math.round(ma),
+    });
   }
 
-  console.log(`[cdd] Fetched ${points.length} days, latest: ${points.at(-1)?.date}`);
+  console.log(`[cdd] Fetched ${points.length} display days, latest: ${points.at(-1)?.date}`);
   return { data: points, supplyAdjusted: false };
 }
 
