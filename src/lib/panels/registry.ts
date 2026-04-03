@@ -357,6 +357,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: 'Upcoming economic events — FOMC, CPI, central bank decisions',
     icon: 'calendar',
   },
+  {
+    id: 'account-settings',
+    name: 'Account & Newsletter',
+    category: 'ui',
+    defaultW: 340, defaultH: 440, minW: 280, minH: 300,
+    resizable: true,
+    refreshInterval: 0,
+    dataSources: [],
+    description: 'Newsletter preferences, frequency settings, and portfolio fields',
+    icon: 'settings',
+  },
 ];
 
 export function getPanelById(id: string): PanelRegistryEntry | undefined {

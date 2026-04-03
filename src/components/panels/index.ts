@@ -32,6 +32,7 @@ import { CoinDaysDestroyedPanel } from './CoinDaysDestroyedPanel';
 import { URPDPanel } from './URPDPanel';
 import { HSeparatorPanel } from './HSeparatorPanel';
 import { VSeparatorPanel } from './VSeparatorPanel';
+import { AccountSettingsPanel } from './AccountSettingsPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -63,4 +64,5 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'urpd':            URPDPanel,
   'h-separator':     HSeparatorPanel,
   'v-separator':     VSeparatorPanel,
+  'account-settings': AccountSettingsPanel,
 };

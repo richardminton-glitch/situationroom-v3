@@ -337,6 +337,22 @@ model UpgradeAttempt {
   @@map("upgrade_attempts")
 }
 
+// ── Newsletter Sends Log ──────────────────────────────────────────────────────
+
+model NewsletterSend {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  briefingDate DateTime  @map("briefing_date") @db.Date
+  tier         String    // 'free' | 'general' | 'members' | 'vip'
+  status       String    @default("sent")  // 'sent' | 'failed' | 'skipped'
+  error        String?
+  sentAt       DateTime  @default(now()) @map("sent_at")
+
+  @@index([userId])
+  @@index([briefingDate])
+  @@map("newsletter_sends")
+}
+
 // ── RSS Classification Cache ──────────────────────────────────────────────────
 // Stores article classification results keyed by sha256(title|feedUrl).
 // TTL = 7 days. Populated by the classifier pipeline; cleaned up by daily cron.
