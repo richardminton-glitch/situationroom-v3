@@ -1,11 +1,39 @@
 import { NextResponse } from 'next/server';
 import { fetchJSON } from '@/lib/data/fetcher';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
 interface ChartPoint {
   time: number; // unix ms
   value: number;
+}
+
+const HIST_FILE = path.join(process.cwd(), 'data', 'btc-price-history.ndjson');
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Read BTC price history from the local NDJSON log file.
+ * Returns the last `days` days of data, sorted ascending.
+ * Returns [] if the file doesn't exist or has insufficient data.
+ */
+function readLocalBtcHistory(days = 30): ChartPoint[] {
+  try {
+    if (!fs.existsSync(HIST_FILE)) return [];
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const lines  = fs.readFileSync(HIST_FILE, 'utf8').trim().split('\n');
+    const points: ChartPoint[] = [];
+    for (const line of lines) {
+      try {
+        const { t, v } = JSON.parse(line);
+        if (t >= cutoff) points.push({ time: t, value: v });
+      } catch { /* skip malformed lines */ }
+    }
+    return points.sort((a, b) => a.time - b.time);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -17,12 +45,19 @@ interface ChartPoint {
  * - Exchange balance 30-day
  */
 export async function GET() {
+  // Prefer local NDJSON log (hourly granularity, grows over time).
+  // Fall back to CoinGecko — omitting &interval forces hourly for days<=90.
+  const localBtc = readLocalBtcHistory(30);
+  const useLocal  = localBtc.length >= 100; // need at least 100 points to be useful
+
   const results = await Promise.allSettled([
-    // BTC price 30d from CoinGecko
-    fetchJSON<{ prices: [number, number][]; total_volumes: [number, number][] }>(
-      'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily',
-      { cacheKey: 'chart-btc30d', cacheDuration: 600_000 }
-    ),
+    // BTC price 30d — skip remote fetch if local history is rich enough
+    useLocal
+      ? Promise.resolve({ prices: localBtc.map((p) => [p.time, p.value] as [number, number]), total_volumes: [] as [number,number][] })
+      : fetchJSON<{ prices: [number, number][]; total_volumes: [number, number][] }>(
+          'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30',
+          { cacheKey: 'chart-btc30d', cacheDuration: 600_000 }
+        ),
     // Hashrate 30d from Mempool.space
     fetchJSON<{ hashrates: { avgHashrate: number; timestamp: number }[] }>(
       'https://mempool.space/api/v1/mining/hashrate/1m',
@@ -40,9 +75,11 @@ export async function GET() {
     ),
   ]);
 
-  const btcChart: ChartPoint[] = results[0].status === 'fulfilled'
-    ? results[0].value.prices.map(([t, v]) => ({ time: t, value: v }))
-    : [];
+  const btcChart: ChartPoint[] = useLocal
+    ? localBtc
+    : results[0].status === 'fulfilled'
+      ? results[0].value.prices.map(([t, v]) => ({ time: t, value: v }))
+      : [];
 
   const volumeChart: ChartPoint[] = results[0].status === 'fulfilled'
     ? results[0].value.total_volumes.map(([t, v]) => ({ time: t, value: v }))
