@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PanelLoading } from './shared';
+import { BlurGate } from '@/components/auth/BlurGate';
 
 interface BriefingData {
   date: string;
@@ -134,13 +135,15 @@ export function AIBriefingPanel() {
         ))}
       </div>
 
-      {/* Active section content */}
-      <div
-        className="flex-1 overflow-y-auto text-sm leading-relaxed"
-        style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)' }}
-      >
-        {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
-      </div>
+      {/* Active section content — gated: General required */}
+      <BlurGate requiredTier="general" featureName="AI Intelligence">
+        <div
+          className="flex-1 overflow-y-auto text-sm leading-relaxed"
+          style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)', minHeight: '80px' }}
+        >
+          {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
+        </div>
+      </BlurGate>
 
       {/* Archive link */}
       <a

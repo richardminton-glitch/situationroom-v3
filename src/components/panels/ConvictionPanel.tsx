@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { PanelLoading } from './shared';
 import { useTheme } from '@/components/layout/ThemeProvider';
+import { BlurGate } from '@/components/auth/BlurGate';
 import type { ConvictionResult } from '@/lib/conviction/engine';
 
 const DARK_BAND_COLORS: Record<string, string> = {
@@ -87,23 +88,25 @@ export function ConvictionPanel() {
 
   return (
     <div className="flex items-center gap-3" style={{ width: '100%' }}>
-      {/* Signal list */}
-      <div className="flex-1">
-        {data.signals.map((sig) => (
-          <div key={sig.key} className="flex items-center justify-between py-0.5">
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              <span className="inline-block w-4 text-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
-              {' '}
-              <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
-                {sig.name.split(' ')[0]}
+      {/* Signal list — gated: General required for breakdown */}
+      <BlurGate requiredTier="general" featureName="Conviction Breakdown">
+        <div className="flex-1">
+          {data.signals.map((sig) => (
+            <div key={sig.key} className="flex items-center justify-between py-0.5">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <span className="inline-block w-4 text-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
+                {' '}
+                <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
+                  {sig.name.split(' ')[0]}
+                </span>
               </span>
-            </span>
-            <span className="text-xs font-medium" style={{ fontFamily: 'var(--font-data)', color: dirColor(sig.direction) }}>
-              {sig.score}
-            </span>
-          </div>
-        ))}
-      </div>
+              <span className="text-xs font-medium" style={{ fontFamily: 'var(--font-data)', color: dirColor(sig.direction) }}>
+                {sig.score}
+              </span>
+            </div>
+          ))}
+        </div>
+      </BlurGate>
 
       {/* Gauge */}
       <div className="shrink-0 text-center">

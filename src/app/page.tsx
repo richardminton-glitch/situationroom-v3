@@ -10,17 +10,31 @@ import { PanelPicker } from '@/components/layout/PanelPicker';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
 import { getPanelById } from '@/lib/panels/registry';
-import type { Theme } from '@/types';
+import { LockedViewPrompt } from '@/components/auth/LockedViewPrompt';
+import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
+import { useTier } from '@/hooks/useTier';
+import { hasAccess } from '@/lib/auth/tier';
+import type { Theme, Tier } from '@/types';
+
+// Tier requirements + locked view descriptions
+const LOCKED_VIEWS: Record<string, { requiredTier: Exclude<Tier, 'free'>; name: string; description: string }> = {
+  'full-data':        { requiredTier: 'general', name: 'Full Data',         description: 'Complete Bitcoin market data, network metrics, Lightning stats, mining economics, on-chain sentiment, and all charts in one view.' },
+  'macro-focus':      { requiredTier: 'general', name: 'Macro Focus',       description: 'Central bank balance sheet composition, 10-year policy rate history, inflation monitor across G7 nations, and macro context behind every number.' },
+  'onchain-deep-dive':{ requiredTier: 'members', name: 'On-Chain Deep Dive',description: 'UTXO age distribution, long-term vs short-term holder supply, value of coin days destroyed, and supply at cost basis — the complete holder behaviour picture.' },
+};
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { userTier } = useTier();
   const { error: dataError } = useData();
   // theme is now correct on first render (ThemeProvider reads localStorage)
   const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme(theme).panels);
   const [activePreset, setActivePreset] = useState('default');
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeModalTier, setUpgradeModalTier] = useState<Exclude<Tier, 'free'>>('general');
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -152,13 +166,31 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Free-floating canvas */}
+        {/* Free-floating canvas — show LockedViewPrompt if preset is inaccessible */}
         <main ref={mainRef} className="flex-1 overflow-auto p-0">
-          <DashboardGrid
-            layout={layout}
-            onLayoutChange={handleLayoutChange}
-            editable={editMode}
-          />
+          {(() => {
+            const lockedView = LOCKED_VIEWS[activePreset];
+            if (lockedView && !hasAccess(userTier, lockedView.requiredTier)) {
+              return (
+                <LockedViewPrompt
+                  view={lockedView.name}
+                  requiredTier={lockedView.requiredTier}
+                  description={lockedView.description}
+                  onUpgradeClick={() => {
+                    setUpgradeModalTier(lockedView.requiredTier);
+                    setShowUpgradeModal(true);
+                  }}
+                />
+              );
+            }
+            return (
+              <DashboardGrid
+                layout={layout}
+                onLayoutChange={handleLayoutChange}
+                editable={editMode}
+              />
+            );
+          })()}
         </main>
       </div>
 
@@ -170,6 +202,13 @@ export default function DashboardPage() {
         />
       )}
 
+      {showUpgradeModal && (
+        <SubscriptionModal
+          initialTier={upgradeModalTier}
+          onClose={() => setShowUpgradeModal(false)}
+          onSuccess={() => setShowUpgradeModal(false)}
+        />
+      )}
     </div>
   );
 }
