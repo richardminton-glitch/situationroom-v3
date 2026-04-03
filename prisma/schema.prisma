@@ -50,6 +50,7 @@ model User {
   watchlists  UserWatchlist[]
   bookmarks   UserBookmark[]
   preferences UserPreference[]
+  payments    SubscriptionPayment[]
 
   @@map("users")
 }
@@ -296,6 +297,29 @@ model BtcPriceHistory {
   close Float
 
   @@map("btc_price_history")
+}
+
+// ── Payments & Subscriptions ──────────────────────────────────────────────────
+
+model SubscriptionPayment {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  tier         String    // 'general' | 'members' | 'vip' | 'donation'
+  amountSats   Int       @map("amount_sats")
+  memo         String
+  lnmDepositId String?   @unique @map("lnm_deposit_id")
+  paymentRequest String? @map("payment_request") @db.Text
+  status       String    @default("pending")  // 'pending' | 'confirmed' | 'expired'
+  activatedAt  DateTime? @map("activated_at")
+  expiresAt    DateTime? @map("expires_at")   // subscription end date (not invoice expiry)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([lnmDepositId])
+  @@map("subscription_payments")
 }
 
 // ── RSS Classification Cache ──────────────────────────────────────────────────
