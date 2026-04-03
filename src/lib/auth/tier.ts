@@ -1,5 +1,12 @@
 import type { Tier } from '@/types';
 
+/** Primary admin email — full access regardless of tier. */
+export const ADMIN_EMAILS: string[] = ['richardminton@gmail.com'];
+
+export function isAdmin(email: string | null | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 export const TIER_ORDER: Tier[] = ['free', 'general', 'members', 'vip'];
 
 export const TIER_LABELS: Record<Tier, string> = {

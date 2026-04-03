@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TIER_LABELS } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_ORDER, isAdmin } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 
 declare global {
@@ -56,6 +56,9 @@ export default function AccountPage() {
   const [deleteTyped, setDeleteTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Admin tier switch
+  const [tierSwitching, setTierSwitching] = useState(false);
+
   // General state
   const [error, setError] = useState('');
 
@@ -95,8 +98,27 @@ export default function AccountPage() {
 
   const userTier = (user.tier as Tier) ?? 'free';
   const canDaily = userTier !== 'free';
+  const userIsAdmin = isAdmin(user.email);
 
   // ── Handlers ──
+
+  async function switchTier(newTier: Tier) {
+    setTierSwitching(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/set-tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: newTier }),
+      });
+      if (!res.ok) throw new Error('Failed to switch tier');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to switch');
+    } finally {
+      setTierSwitching(false);
+    }
+  }
 
   async function saveNewsletter() {
     setNlLoading(true);
@@ -284,6 +306,39 @@ export default function AccountPage() {
           </Link>
         </div>
       </div>
+
+      {/* ── Admin: Tier Switch ── */}
+      {userIsAdmin && (
+        <div style={{ ...sectionStyle, backgroundColor: 'rgba(124, 92, 191, 0.06)', border: '1px solid var(--border-subtle)', marginBottom: '1px' }}>
+          <span style={{ ...labelStyle, color: '#7c5cbf' }}>Admin — Tier Testing</span>
+          <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
+            Switch your visible tier to test gated views. Does not affect admin access.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {TIER_ORDER.map((t) => (
+              <button
+                key={t}
+                onClick={() => switchTier(t)}
+                disabled={tierSwitching}
+                style={{
+                  padding: '7px 16px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  letterSpacing: '0.08em',
+                  backgroundColor: userTier === t ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                  color: userTier === t ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                  border: `1px solid ${userTier === t ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                  cursor: tierSwitching ? 'wait' : 'pointer',
+                  opacity: tierSwitching ? 0.5 : 1,
+                }}
+              >
+                {TIER_LABELS[t].toUpperCase()}
+                {userTier === t && ' ●'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Newsletter Frequency ── */}
       <div style={sectionStyle}>
