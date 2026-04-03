@@ -12,19 +12,14 @@
  *   < 1.0  — UTXOs spent at loss (capitulation signal if sustained)
  *   < 0.97 — Extreme loss-spending (strong capitulation zone)
  *
- * Cache: file-based, 1-hour TTL.
+ * Cache: file-based via shared BRK helper, 1-hour TTL.
  */
 
 import { NextResponse } from 'next/server';
-import { readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { fetchBrkSeries, brkOffsetToDate } from '@/lib/data/brk';
 
 export const dynamic = 'force-dynamic';
 
-const ONE_HOUR      = 60 * 60 * 1000;
-const CACHE_FILE    = join(process.cwd(), 'data', 'network-signals-cache.json');
-const GENESIS_MS    = Date.UTC(2009, 0, 3);
-const BRK_BASE      = 'https://bitview.space/api/series/bulk';
 const DISPLAY_DAYS  = 60;
 const FETCH_DAYS    = DISPLAY_DAYS + 7; // 7d MA warm-up
 
@@ -53,33 +48,9 @@ function sma7(values: number[]): number[] {
   });
 }
 
-function offsetToDate(offset: number): string {
-  return new Date(GENESIS_MS + offset * 86_400_000).toISOString().slice(0, 10);
-}
-
-async function fetchFromBRK(): Promise<NetworkSignalsResponse> {
-  // Probe using sopr series
-  const probeUrl = `https://bitview.space/api/series/sopr/day1?limit=1`;
-  const probeRes = await fetch(probeUrl, { signal: AbortSignal.timeout(8_000) });
-  if (!probeRes.ok) throw new Error(`BRK probe (sopr): HTTP ${probeRes.status}`);
-  const probe    = (await probeRes.json()) as { total: number };
-  const total    = probe.total;
-  const start    = Math.max(0, total - FETCH_DAYS);
-
-  // Fetch SOPR + active_addresses in parallel bulk request
-  const url = `${BRK_BASE}?series=sopr,active_addresses&index=day1&start=${start}&limit=${FETCH_DAYS}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
-  if (!res.ok) throw new Error(`BRK bulk: HTTP ${res.status}`);
-
-  const bulk = (await res.json()) as Array<{ start: number; data: (number | null)[] }>;
-  if (!Array.isArray(bulk) || bulk.length < 2) throw new Error('BRK: expected 2 series');
-
-  const soprSeries   = bulk[0];
-  const activeSeries = bulk[1];
-  const dataStart    = soprSeries.start;
-
-  const soprVals   = soprSeries.data.map((v) => v ?? 1);        // default 1 = neutral
-  const activeVals = activeSeries.data.map((v) => v ?? 0);
+function processRawData(seriesData: Record<string, number[]>, dates: string[]): NetworkSignalsResponse {
+  const soprVals   = (seriesData['sopr'] ?? []).map((v) => v ?? 1);            // default 1 = neutral
+  const activeVals = (seriesData['active_addresses'] ?? []).map((v) => v ?? 0);
 
   const soprMa7vals   = sma7(soprVals);
   const activeMa7vals = sma7(activeVals);
@@ -91,7 +62,7 @@ async function fetchFromBRK(): Promise<NetworkSignalsResponse> {
     const activeMa7 = activeMa7vals[i];
     if (isNaN(soprMa7) || isNaN(activeMa7)) continue;
     points.push({
-      date:               offsetToDate(dataStart + i),
+      date:               dates[i] ?? brkOffsetToDate(i),
       sopr:               Math.round(soprVals[i] * 10000) / 10000,
       soprMa7:            Math.round(soprMa7 * 10000) / 10000,
       activeAddresses:    Math.round(activeVals[i]),
@@ -126,38 +97,19 @@ async function fetchFromBRK(): Promise<NetworkSignalsResponse> {
   };
 }
 
-function readCache(): { data: NetworkSignalsResponse; fetchedAt: number } | null {
-  try {
-    const stat = statSync(CACHE_FILE);
-    const json = JSON.parse(readFileSync(CACHE_FILE, 'utf-8')) as NetworkSignalsResponse;
-    return { data: json, fetchedAt: stat.mtimeMs };
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(data: NetworkSignalsResponse) {
-  try {
-    mkdirSync(join(process.cwd(), 'data'), { recursive: true });
-    writeFileSync(CACHE_FILE, JSON.stringify(data));
-  } catch (e) {
-    console.warn('[network-signals] Could not write cache:', e);
-  }
-}
-
 export async function GET() {
-  const cached = readCache();
-  if (cached && Date.now() - cached.fetchedAt < ONE_HOUR) {
-    return NextResponse.json(cached.data);
-  }
-
   try {
-    const result = await fetchFromBRK();
-    writeCache(result);
+    const raw = await fetchBrkSeries({
+      series: ['sopr', 'active_addresses'],
+      probeSeries: 'sopr',
+      days: FETCH_DAYS,
+      cacheFile: 'network-signals-raw-cache.json',
+    });
+
+    const result = processRawData(raw.seriesData, raw.dates);
     return NextResponse.json(result);
   } catch (err) {
     console.error('[network-signals] Fetch failed:', (err as Error).message);
-    if (cached) return NextResponse.json(cached.data);
     return NextResponse.json(
       { data: [], currentSopr: 1, soprSignal: 'neutral', currentActive: 0, activeTrend: 'flat' },
       { status: 503 }

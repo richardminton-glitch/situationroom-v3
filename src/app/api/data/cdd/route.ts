@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { fetchBrkSeries, brkOffsetToDate } from '@/lib/data/brk';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +22,8 @@ export const dynamic = 'force-dynamic';
 //
 // supplyAdjusted is hardcoded false — BRK does not expose a supply-adjusted CDD variant.
 
-const BRK_BASE  = 'https://bitview.space/api/series/bulk';
-const ONE_HOUR  = 60 * 60 * 1000;
-const CACHE_FILE = join(process.cwd(), 'data', 'cdd-cache.json');
-const GENESIS_MS = Date.UTC(2009, 0, 3);
-
-const SERIES = ['vocdd_sum_24h'] as const;
+const DISPLAY_DAYS = 90;
+const FETCH_DAYS   = DISPLAY_DAYS + 30; // 30d MA warm-up
 
 export interface CDDPoint {
   date: string;
@@ -41,31 +36,6 @@ export interface CDDResponse {
   supplyAdjusted: false;
 }
 
-type CacheShape = CDDResponse;
-
-function offsetToDate(offset: number): string {
-  return new Date(GENESIS_MS + offset * 86_400_000).toISOString().slice(0, 10);
-}
-
-function readCache(): { data: CacheShape; fetchedAt: number } | null {
-  try {
-    const stat = statSync(CACHE_FILE);
-    const json = JSON.parse(readFileSync(CACHE_FILE, 'utf-8')) as CacheShape;
-    return { data: json, fetchedAt: stat.mtimeMs };
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(data: CacheShape) {
-  try {
-    mkdirSync(join(process.cwd(), 'data'), { recursive: true });
-    writeFileSync(CACHE_FILE, JSON.stringify(data));
-  } catch (e) {
-    console.warn('[cdd] Could not write cache:', e);
-  }
-}
-
 /** 30-day simple moving average. Returns NaN for the first 29 positions. */
 function ma30(values: number[]): number[] {
   return values.map((_, i) => {
@@ -76,68 +46,41 @@ function ma30(values: number[]): number[] {
   });
 }
 
-async function fetchFromBRK(displayDays = 90): Promise<CacheShape> {
-  // Fetch 30 extra days as MA warm-up so the first display day has a full 30-day window
-  const fetchDays = displayDays + 30;
-
-  // Probe to discover total data points available (same pattern as utxo-age / lth-sth routes)
-  const probeUrl = `https://bitview.space/api/series/${SERIES[0]}/day1?limit=1`;
-  const probeRes = await fetch(probeUrl, { signal: AbortSignal.timeout(10_000) });
-  if (!probeRes.ok) throw new Error(`BRK probe: HTTP ${probeRes.status}`);
-  const probe = (await probeRes.json()) as { total: number };
-  const total       = probe.total;
-  const startOffset = Math.max(0, total - fetchDays);
-
-  const url =
-    `${BRK_BASE}?series=${SERIES[0]}&index=day1` +
-    `&start=${startOffset}&limit=${fetchDays}`;
-
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-  if (!res.ok) throw new Error(`BRK bulk: HTTP ${res.status}`);
-
-  // Single-series bulk returns an array with one element
-  const bulk = (await res.json()) as Array<{ start: number; data: (number | null)[] }>;
-  const series = Array.isArray(bulk) ? bulk[0] : (bulk as unknown as { start: number; data: (number | null)[] });
-
-  const rawValues = series.data.map((v) => v ?? 0);
+function processRawData(seriesData: Record<string, number[]>, dates: string[]): CDDResponse {
+  const rawValues = (seriesData['vocdd_sum_24h'] ?? []).map((v) => v ?? 0);
   const maValues  = ma30(rawValues);
-  const dataStartOffset = series.start;
 
-  // Only return the last `displayDays` rows (skip the 30-day warm-up)
+  // Only return the last `DISPLAY_DAYS` rows (skip the 30-day warm-up)
   const points: CDDPoint[] = [];
-  const startIdx = rawValues.length - displayDays;
+  const startIdx = rawValues.length - DISPLAY_DAYS;
 
-  for (let i = startIdx; i < rawValues.length; i++) {
+  for (let i = Math.max(0, startIdx); i < rawValues.length; i++) {
     const vocdd = rawValues[i];
     const ma    = maValues[i];
     if (vocdd === 0 && (isNaN(ma) || ma === 0)) continue;
     points.push({
-      date:  offsetToDate(dataStartOffset + i),
+      date:  dates[i] ?? brkOffsetToDate(i),
       vocdd,
       ma30:  isNaN(ma) ? 0 : Math.round(ma),
     });
   }
 
-  console.log(`[cdd] Fetched ${points.length} display days, latest: ${points.at(-1)?.date}`);
+  console.log(`[cdd] Processed ${points.length} display days, latest: ${points.at(-1)?.date}`);
   return { data: points, supplyAdjusted: false };
 }
 
 export async function GET() {
-  const cached = readCache();
-  if (cached && Date.now() - cached.fetchedAt < ONE_HOUR) {
-    return NextResponse.json(cached.data);
-  }
-
   try {
-    const payload = await fetchFromBRK(90);
-    writeCache(payload);
+    const raw = await fetchBrkSeries({
+      series: ['vocdd_sum_24h'],
+      days: FETCH_DAYS,
+      cacheFile: 'cdd-raw-cache.json',
+    });
+
+    const payload = processRawData(raw.seriesData, raw.dates);
     return NextResponse.json(payload);
   } catch (err) {
     console.error('[cdd] Fetch failed:', (err as Error).message);
-    if (cached) {
-      console.log('[cdd] Serving stale cache');
-      return NextResponse.json(cached.data);
-    }
     return NextResponse.json({ data: [], supplyAdjusted: false }, { status: 503 });
   }
 }

@@ -3,8 +3,9 @@
  * Each source returns typed data for panel consumption.
  */
 
-import { fetchJSON, fetchApiNinjas } from './fetcher';
+import { fetchJSON } from './fetcher';
 import { trackChange } from './price-tracker';
+import { getApiNinjasSnapshot } from './api-ninjas-batch';
 
 // ════════════════════════════════════════════════════════
 // BITCOIN MARKET (CoinGecko — free, no key)
@@ -227,7 +228,7 @@ export async function fetchOnChain(): Promise<OnChainData> {
 }
 
 // ════════════════════════════════════════════════════════
-// MARKET INDICES (API Ninjas — paid key required)
+// MARKET INDICES (via API-Ninjas batch manager)
 // ════════════════════════════════════════════════════════
 
 export interface TickerData {
@@ -236,178 +237,61 @@ export interface TickerData {
   changePct: number;
 }
 
-const INDEX_TICKERS: Record<string, string> = {
-  sp500: '^GSPC',
-  nasdaq: '^IXIC',
-  dji: '^DJI',
-  ftse: '^FTSE',
-  dax: '^GDAXI',
-  nikkei: '^N225',
-  hsi: '^HSI',
-  vix: '^VIX',
-};
-
 export async function fetchIndices(): Promise<Record<string, TickerData>> {
+  const snap = await getApiNinjasSnapshot();
+  // Track price changes for % calculation
   const results: Record<string, TickerData> = {};
-  const entries = Object.entries(INDEX_TICKERS);
-
-  const data = await Promise.allSettled(
-    entries.map(([id, ticker]) =>
-      fetchApiNinjas<{ ticker: string; name: string; price: number }>(
-        `/stockprice?ticker=${encodeURIComponent(ticker)}`,
-        `idx-${id}`,
-        1_800_000
-      ).then((d) => ({ id, data: d }))
-    )
-  );
-
-  for (const result of data) {
-    if (result.status === 'fulfilled') {
-      const { id, data: d } = result.value;
-      const changePct = await trackChange('indices', id, d.price);
-      results[id] = { name: d.name || id.toUpperCase(), price: d.price, changePct: changePct ?? 0 };
-    }
+  for (const [id, data] of Object.entries(snap.indices)) {
+    const changePct = await trackChange('indices', id, data.price);
+    results[id] = { ...data, changePct: changePct ?? data.changePct };
   }
-
   return results;
 }
 
 // ════════════════════════════════════════════════════════
-// COMMODITIES (API Ninjas — paid key required)
+// COMMODITIES (via API-Ninjas batch manager)
 // ════════════════════════════════════════════════════════
-
-const COMMODITY_NAMES = ['Gold', 'Silver', 'Crude Oil', 'Natural Gas', 'Copper'];
 
 export async function fetchCommodities(): Promise<Record<string, TickerData>> {
+  const snap = await getApiNinjasSnapshot();
   const results: Record<string, TickerData> = {};
-
-  const data = await Promise.allSettled(
-    COMMODITY_NAMES.map((name) =>
-      fetchApiNinjas<{ name: string; price: number }>(
-        `/commodityprice?name=${encodeURIComponent(name)}`,
-        `commodity-${name.toLowerCase().replace(/\s/g, '-')}`,
-        1_800_000
-      ).then((d) => ({ id: name.toLowerCase().replace(/\s/g, '-'), data: d }))
-    )
-  );
-
-  // Also fetch DXY, US10Y, US2Y via stock endpoint
-  const yieldTickers = [
-    { id: 'dxy', ticker: 'DX-Y.NYB', name: 'DXY' },
-    { id: 'us10y', ticker: '^TNX', name: 'US 10Y' },
-    { id: 'us2y', ticker: '^IRX', name: 'US 2Y' },
-  ];
-
-  const yieldData = await Promise.allSettled(
-    yieldTickers.map(({ id, ticker, name }) =>
-      fetchApiNinjas<{ price: number }>(
-        `/stockprice?ticker=${encodeURIComponent(ticker)}`,
-        `yield-${id}`,
-        1_800_000
-      ).then((d) => ({ id, name, data: d }))
-    )
-  );
-
-  for (const result of data) {
-    if (result.status === 'fulfilled') {
-      const { id, data: d } = result.value;
-      const changePct = await trackChange('commodities', id, d.price);
-      results[id] = { name: d.name, price: d.price, changePct: changePct ?? 0 };
-    }
+  for (const [id, data] of Object.entries(snap.commodities)) {
+    const changePct = await trackChange('commodities', id, data.price);
+    results[id] = { ...data, changePct: changePct ?? data.changePct };
   }
-
-  for (const result of yieldData) {
-    if (result.status === 'fulfilled') {
-      const { id, name, data: d } = result.value;
-      const changePct = await trackChange('commodities', id, d.price);
-      results[id] = { name, price: d.price, changePct: changePct ?? 0 };
-    }
-  }
-
   return results;
 }
 
 // ════════════════════════════════════════════════════════
-// FX PAIRS (API Ninjas — paid key required)
+// FX PAIRS (via API-Ninjas batch manager)
 // ════════════════════════════════════════════════════════
-
-const FX_PAIRS = [
-  // invert=true: API returns USD_EUR (USD per EUR), we display EUR/USD (EUR per USD) = 1/rate
-  { id: 'eur', pair: 'USD_EUR', name: 'EUR / USD', invert: true  },
-  { id: 'gbp', pair: 'USD_GBP', name: 'GBP / USD', invert: true  },
-  { id: 'jpy', pair: 'USD_JPY', name: 'USD / JPY', invert: false },
-  { id: 'cny', pair: 'USD_CNY', name: 'USD / CNY', invert: false },
-];
 
 export async function fetchFX(): Promise<Record<string, TickerData>> {
+  const snap = await getApiNinjasSnapshot();
   const results: Record<string, TickerData> = {};
-
-  const data = await Promise.allSettled(
-    FX_PAIRS.map(({ id, pair, name, invert }) =>
-      fetchApiNinjas<{ exchange_rate: number }>(
-        `/exchangerate?pair=${pair}`,
-        `fx-${id}`,
-        1_800_000
-      ).then((d) => ({ id, name, invert, data: d }))
-    )
-  );
-
-  for (const result of data) {
-    if (result.status === 'fulfilled') {
-      const { id, name, invert, data: d } = result.value;
-      const rawRate = d.exchange_rate;
-      const displayRate = invert && rawRate ? 1 / rawRate : rawRate;
-      const changePct = await trackChange('fx', id, displayRate);
-      results[id] = { name, price: displayRate, changePct: changePct ?? 0 };
-    }
+  for (const [id, data] of Object.entries(snap.fx)) {
+    const changePct = await trackChange('fx', id, data.price);
+    results[id] = { ...data, changePct: changePct ?? data.changePct };
   }
-
   return results;
 }
 
 // ════════════════════════════════════════════════════════
-// BTC EQUITIES (API Ninjas — paid key required)
+// BTC EQUITIES (via API-Ninjas batch manager)
 // ════════════════════════════════════════════════════════
-
-const BTC_EQUITY_TICKERS: Record<string, string> = {
-  ibit: 'IBIT', fbtc: 'FBTC', arkb: 'ARKB', bitb: 'BITB', hodl: 'HODL',
-  mstr: 'MSTR', coin: 'COIN', mara: 'MARA', riot: 'RIOT', clsk: 'CLSK', hut: 'HUT',
-};
 
 export async function fetchBtcEquities(): Promise<Record<string, TickerData>> {
+  const snap = await getApiNinjasSnapshot();
   const results: Record<string, TickerData> = {};
-
-  // Only fetch during US market hours (14:30-21:00 UTC, Mon-Fri)
-  const now = new Date();
-  const utcHour = now.getUTCHours() + now.getUTCMinutes() / 60;
-  const day = now.getUTCDay();
-  const isMarketHours = day >= 1 && day <= 5 && utcHour >= 14.5 && utcHour < 21;
-
-  const entries = Object.entries(BTC_EQUITY_TICKERS);
-
-  const data = await Promise.allSettled(
-    entries.map(([id, ticker]) =>
-      fetchApiNinjas<{ ticker: string; name: string; price: number }>(
-        `/stockprice?ticker=${ticker}`,
-        `eq-${id}`,
-        isMarketHours ? 1_800_000 : 86_400_000 // 30min during market, 24h otherwise
-      ).then((d) => ({ id, data: d }))
-    )
-  );
-
-  for (const result of data) {
-    if (result.status === 'fulfilled') {
-      const { id, data: d } = result.value;
-      const changePct = await trackChange('indices', `eq-${id}`, d.price);
-      results[id] = { name: d.name || BTC_EQUITY_TICKERS[id], price: d.price, changePct: changePct ?? 0 };
-    }
+  for (const [id, data] of Object.entries(snap.equities)) {
+    const changePct = await trackChange('indices', `eq-${id}`, data.price);
+    results[id] = { ...data, changePct: changePct ?? data.changePct };
   }
-
   return results;
 }
 
 // ════════════════════════════════════════════════════════
-// CENTRAL BANK RATES (API Ninjas — paid key required)
+// CENTRAL BANK RATES (via API-Ninjas batch manager)
 // ════════════════════════════════════════════════════════
 
 export interface CentralBankRate {
@@ -417,30 +301,8 @@ export interface CentralBankRate {
 }
 
 export async function fetchCentralBankRates(): Promise<CentralBankRate[]> {
-  const raw = await fetchApiNinjas<{
-    central_bank_rates: { central_bank: string; country: string; rate_pct: number; last_updated: string }[];
-  }>(
-    '/interestrate',
-    'rates',
-    21_600_000
-  );
-
-  const rates = raw.central_bank_rates || [];
-
-  const TARGET_COUNTRIES = [
-    { match: 'United_States', label: 'Fed (US)' },
-    { match: 'Europe', label: 'ECB (EU)' },
-    { match: 'Japan', label: 'BOJ (Japan)' },
-    { match: 'United_Kingdom', label: 'BOE (UK)' },
-  ];
-
-  return TARGET_COUNTRIES
-    .map(({ match, label }) => {
-      const found = rates.find((r) => r.country === match);
-      if (!found) return null;
-      return { country: label, rate: found.rate_pct, lastUpdated: found.last_updated };
-    })
-    .filter((r): r is CentralBankRate => r !== null);
+  const snap = await getApiNinjasSnapshot();
+  return snap.cbRates;
 }
 
 // ════════════════════════════════════════════════════════

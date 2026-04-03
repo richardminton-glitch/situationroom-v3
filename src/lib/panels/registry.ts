@@ -349,6 +349,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: 'Dominant Bitcoin cohort, implication, and confidence — LTH/STH/whale/retail breakdown',
     icon: 'ai',
   },
+  {
+    id: 'bitcoin-argument',
+    name: 'Bitcoin Argument',
+    category: 'ai',
+    defaultW: 748, defaultH: 396, minW: 440, minH: 264,
+    resizable: true,
+    refreshInterval: 43200,
+    dataSources: ['briefing'],
+    description: 'AI-generated 3-point case for Bitcoin based on current macro and network data',
+    icon: 'ai',
+  },
 
   // ── UI Components ──
   {
@@ -438,18 +449,6 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'settings',
   },
 
-  // ── AI Analysis ──
-  {
-    id: 'bitcoin-argument',
-    name: 'Bitcoin Argument',
-    category: 'ai',
-    defaultW: 748, defaultH: 396, minW: 440, minH: 264,
-    resizable: true,
-    refreshInterval: 43200,
-    dataSources: ['briefing'],
-    description: 'AI-generated 3-point case for Bitcoin based on current macro and network data',
-    icon: 'ai',
-  },
 ];
 
 export function getPanelById(id: string): PanelRegistryEntry | undefined {
