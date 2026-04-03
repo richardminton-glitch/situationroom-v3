@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useRouter } from 'next/navigation';
 
@@ -71,9 +72,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="panel-card w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
-          The Situation Room
-        </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', margin: 0 }}>
+            The Situation Room
+          </h1>
+          <Link
+            href="/"
+            style={{
+              fontSize: '11px', letterSpacing: '0.08em', color: 'var(--accent-primary)',
+              textDecoration: 'none', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap',
+            }}
+          >
+            ← Dashboard
+          </Link>
+        </div>
         <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
           {step === 'email' ? 'Enter your email to sign in' : `Enter the PIN sent to ${email}`}
         </p>
