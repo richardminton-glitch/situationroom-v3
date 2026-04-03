@@ -28,7 +28,7 @@ export function BlurGate({
   if (canAccess(requiredTier)) return <>{children}</>;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', flex: '1 1 0', minHeight: 0 }}>
       <div style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' }}>
         {children}
       </div>
