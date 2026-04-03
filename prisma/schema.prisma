@@ -19,14 +19,49 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   lastSeenAt   DateTime @default(now()) @map("last_seen_at")
 
-  sessions   Session[]
-  pinCodes   PinCode[]
-  layouts    UserLayout[]
-  watchlists UserWatchlist[]
-  bookmarks  UserBookmark[]
+  // ── Nostr identity ──────────────────────────────────────────────────────────
+  nostrNpub         String?  @unique @map("nostr_npub")
+  nostrAuthType     String   @default("email") @map("nostr_auth_type")
+  // 'email' = email/PIN only, 'assigned' = server keypair, 'native' = user's own key, 'upgraded' = was assigned, now native
+  assignedNpub      String?  @unique @map("assigned_npub")
+  assignedPrivkeyEnc String? @map("assigned_privkey_enc")  // AES-256-GCM encrypted hex
+  chatDisplayName   String   @default("") @map("chat_display_name")
+  chatIcon          String   @default("email") @map("chat_icon")  // 'lightning' | 'email' | 'bot'
+
+  // ── Subscription ────────────────────────────────────────────────────────────
+  subscriptionExpiresAt   DateTime? @map("subscription_expires_at")
+  subscriptionActivatedAt DateTime? @map("subscription_activated_at")
+
+  // ── Newsletter ───────────────────────────────────────────────────────────────
+  newsletterEnabled   Boolean   @default(false) @map("newsletter_enabled")
+  newsletterFrequency String    @default("weekly") @map("newsletter_frequency")  // 'daily' | 'weekly'
+  newsletterDay       Int       @default(0) @map("newsletter_day")  // 0=Sunday … 6=Saturday
+  newsletterVipTopics String[]  @map("newsletter_vip_topics")
+  newsletterLastSent  DateTime? @map("newsletter_last_sent")
+  newsletterConfirmedAt DateTime? @map("newsletter_confirmed_at")
+
+  // ── Portfolio (VIP) ─────────────────────────────────────────────────────────
+  portfolioCostBasis   Float? @map("portfolio_cost_basis")
+  portfolioHoldingsBtc Float? @map("portfolio_holdings_btc")
+
+  sessions    Session[]
+  pinCodes    PinCode[]
+  layouts     UserLayout[]
+  watchlists  UserWatchlist[]
+  bookmarks   UserBookmark[]
   preferences UserPreference[]
 
   @@map("users")
+}
+
+model NostrChallenge {
+  id        String    @id @default(cuid())
+  challenge String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  @@index([expiresAt])
+  @@map("nostr_challenges")
 }
 
 model Session {

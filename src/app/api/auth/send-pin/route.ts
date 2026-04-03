@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createPinForUser } from '@/lib/auth/pin';
+import { generateAssignedKeypair, assignedDisplayName } from '@/lib/auth/keypair';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,8 +19,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      const keypair = generateAssignedKeypair();
       user = await prisma.user.create({
-        data: { email: normalizedEmail },
+        data: {
+          email:              normalizedEmail,
+          assignedNpub:       keypair.npub,
+          assignedPrivkeyEnc: keypair.encryptedPrivkey,
+          nostrAuthType:      'assigned',
+          chatDisplayName:    assignedDisplayName(),
+          chatIcon:           'email',
+        },
       });
     }
 
