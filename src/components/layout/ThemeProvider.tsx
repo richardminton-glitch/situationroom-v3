@@ -17,6 +17,12 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
+function readStoredTheme(fallback: Theme): Theme {
+  if (typeof window === 'undefined') return fallback;
+  const stored = localStorage.getItem('sr-theme') as Theme | null;
+  return stored === 'dark' || stored === 'parchment' ? stored : fallback;
+}
+
 export function ThemeProvider({
   children,
   initialTheme = 'parchment',
@@ -24,12 +30,13 @@ export function ThemeProvider({
   children: ReactNode;
   initialTheme?: Theme;
 }) {
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme(initialTheme));
 
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
     root.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('sr-theme', theme);
   }, [theme]);
 
   return (

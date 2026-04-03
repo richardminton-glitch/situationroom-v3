@@ -16,22 +16,31 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const { error: dataError } = useData();
-  const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme('parchment').panels);
+  // theme is now correct on first render (ThemeProvider reads localStorage)
+  const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme(theme).panels);
   const [activePreset, setActivePreset] = useState('default');
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (user?.themePref) {
-      setTheme(user.themePref as Theme);
+    if (user?.themePref && user.themePref !== theme) {
+      const t = user.themePref as Theme;
+      setTheme(t);
+      // Update layout in the same batch so no parchment flash occurs
+      const preset = getPresetByIdForTheme(activePreset, t) ?? getDefaultForTheme(t);
+      setLayout(preset.panels);
+      setActivePreset(preset.id);
     }
-  }, [user?.themePref, setTheme]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.themePref]);
 
-  // When theme changes, always switch to that theme's layout.
-  // Named presets load their theme equivalent; custom layouts fall back to the
-  // theme default (each theme maintains its own independent layout).
+  // When the user manually switches theme (sidebar toggle), load that theme's
+  // matching preset. Skip on initial mount — layout is already correct because
+  // ThemeProvider reads the stored theme from localStorage before first render.
+  const hasMounted = useRef(false);
   useEffect(() => {
+    if (!hasMounted.current) { hasMounted.current = true; return; }
     const matched = activePreset !== 'custom'
       ? getPresetByIdForTheme(activePreset, theme)
       : undefined;
