@@ -12,6 +12,7 @@ import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type Lay
 import { getPanelById } from '@/lib/panels/registry';
 import { LockedViewPrompt } from '@/components/auth/LockedViewPrompt';
 import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
+import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
 import { hasAccess } from '@/lib/auth/tier';
 import type { Theme, Tier } from '@/types';
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeModalTier, setUpgradeModalTier] = useState<Exclude<Tier, 'free'>>('general');
+  const [opsRoomOpen, setOpsRoomOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -126,8 +128,25 @@ export default function DashboardPage() {
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Sidebar dashboardControls={dashboardControls} />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0" style={{ marginRight: opsRoomOpen ? '320px' : '0', transition: 'margin-right 0.2s ease' }}>
         <DashboardHeader />
+
+        {/* OPS ROOM button — always visible in header area */}
+        <div className="flex items-center justify-end px-4 py-1 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <button
+            onClick={() => setOpsRoomOpen((o) => !o)}
+            className="text-xs px-3 py-1"
+            style={{
+              fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontSize: '10px',
+              backgroundColor: opsRoomOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
+              color: opsRoomOpen ? 'var(--bg-primary)' : 'var(--text-muted)',
+              border: '1px solid var(--border-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            OPS ROOM {opsRoomOpen ? '→' : '◊'}
+          </button>
+        </div>
 
         {/* Edit mode toolbar — only shows Add Panel button when editing */}
         {editMode && (
@@ -209,6 +228,8 @@ export default function DashboardPage() {
           onSuccess={() => setShowUpgradeModal(false)}
         />
       )}
+
+      <OpsRoom open={opsRoomOpen} onClose={() => setOpsRoomOpen(false)} />
     </div>
   );
 }

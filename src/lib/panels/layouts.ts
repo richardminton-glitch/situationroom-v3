@@ -119,12 +119,19 @@ const MACRO_FOCUS_PRESET: DashboardLayout = {
 const ONCHAIN_PRESET: DashboardLayout = {
   id: 'onchain-deep-dive',
   name: 'On-Chain Deep Dive',
-  description: 'Network metrics, on-chain flows, and mining data',
+  description: 'Network metrics, on-chain flows, hash ribbon, Puell, SOPR and more',
   panels: [
-    { panelId: 'cdd',            x: 0,   y: 0,   w: 748, h: 396, collapsed: false, resizable: true },
-    { panelId: 'urpd',           x: 748, y: 0,   w: 704, h: 396, collapsed: false, resizable: true },
-    { panelId: 'lth-sth-supply', x: 0,   y: 396, w: 748, h: 396, collapsed: false, resizable: true },
-    { panelId: 'utxo-age-dist',  x: 748, y: 396, w: 704, h: 396, collapsed: false, resizable: true },
+    // Row 1 — Supply distribution
+    { panelId: 'cdd',             x: 0,   y:   0, w: 748, h: 396, collapsed: false, resizable: true },
+    { panelId: 'urpd',            x: 748, y:   0, w: 704, h: 396, collapsed: false, resizable: true },
+    // Row 2 — Holder behavior
+    { panelId: 'lth-sth-supply',  x: 0,   y: 396, w: 748, h: 396, collapsed: false, resizable: true },
+    { panelId: 'utxo-age-dist',   x: 748, y: 396, w: 704, h: 396, collapsed: false, resizable: true },
+    // Row 3 — Miners
+    { panelId: 'hash-ribbon',     x: 0,   y: 792, w: 748, h: 396, collapsed: false, resizable: true },
+    { panelId: 'puell-multiple',  x: 748, y: 792, w: 704, h: 396, collapsed: false, resizable: true },
+    // Row 4 — Network
+    { panelId: 'network-signals', x: 0,   y: 1188, w: 748, h: 528, collapsed: false, resizable: true },
   ],
 };
 

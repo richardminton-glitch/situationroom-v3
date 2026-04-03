@@ -34,6 +34,9 @@ import { HSeparatorPanel } from './HSeparatorPanel';
 import { VSeparatorPanel } from './VSeparatorPanel';
 import { AccountSettingsPanel } from './AccountSettingsPanel';
 import { M2ChartPanel } from './M2ChartPanel';
+import { HashRibbonPanel } from './HashRibbonPanel';
+import { PuellMultiplePanel } from './PuellMultiplePanel';
+import { NetworkSignalsPanel } from './NetworkSignalsPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -65,6 +68,9 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'urpd':            URPDPanel,
   'h-separator':     HSeparatorPanel,
   'v-separator':     VSeparatorPanel,
-  'account-settings': AccountSettingsPanel,
-  'm2-chart':         M2ChartPanel,
+  'account-settings':  AccountSettingsPanel,
+  'm2-chart':          M2ChartPanel,
+  'hash-ribbon':       HashRibbonPanel,
+  'puell-multiple':    PuellMultiplePanel,
+  'network-signals':   NetworkSignalsPanel,
 };

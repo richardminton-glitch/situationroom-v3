@@ -46,6 +46,30 @@ function pct(n: number): string { return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 function usd(n: number): string { return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`; }
 function fixed2(n: number): string { return n.toFixed(2); }
 
+/** Fetch recent bot alert messages since a given date (Members/VIP only) */
+async function getAlertsForMember(since: Date): Promise<string[]> {
+  try {
+    const messages = await (prisma as any).chatMessage.findMany({
+      where: {
+        isBot: true,
+        eventType: { notIn: ['new_briefing'] },  // skip the daily briefing post itself
+        createdAt: { gt: since },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 8, // max 8 alerts per email
+      select: { content: true, createdAt: true },
+    });
+    return messages.map((m: { content: string; createdAt: Date }) => {
+      const time = m.createdAt.toISOString().slice(11, 16) + ' UTC';
+      // Trim content to 100 chars for email-safe display
+      const text = m.content.length > 100 ? m.content.slice(0, 97) + '…' : m.content;
+      return `[${time}] ${text}`;
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** Fetch pool status from LNM bot account — returns null if unavailable */
 async function getPoolStatus(): Promise<GeneralBriefingEmailProps['poolStatus'] | null> {
   try {
@@ -115,9 +139,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ sent: 0, failed: 0, skipped: 0 });
   }
 
-  // ── Pool status (fetched once for members) ────────────────────────────────
+  // ── Pool status + alerts (fetched once for members) ──────────────────────
   const hasMembersOrVip = users.some((u) => u.tier === 'members' || u.tier === 'vip');
   const poolStatus = hasMembersOrVip ? await getPoolStatus() : null;
+  // Fetch bot alerts for the last 26 hours (covers daily send window with margin)
+  const alertsSince = new Date(Date.now() - 26 * 60 * 60 * 1000);
+  const memberAlerts = hasMembersOrVip ? await getAlertsForMember(alertsSince) : [];
 
   const resend = getResend();
   let sent = 0;
@@ -130,7 +157,9 @@ export async function GET(request: NextRequest) {
     const briefingUrl = `${SITE_URL}/briefing/${dateStr}`;
     const viewInBrowserUrl = briefingUrl;
 
-    const includePool = (user.tier === 'members' || user.tier === 'vip') && poolStatus != null;
+    const isMembersPlus = user.tier === 'members' || user.tier === 'vip';
+    const includePool   = isMembersPlus && poolStatus != null;
+    const includeAlerts = isMembersPlus && memberAlerts.length > 0;
 
     const emailHtml = await render(
       GeneralBriefingEmail({
@@ -162,6 +191,7 @@ export async function GET(request: NextRequest) {
         unsubscribeUrl,
         viewInBrowserUrl,
         poolStatus: includePool ? poolStatus! : undefined,
+        alerts: includeAlerts ? memberAlerts : undefined,
       })
     );
 

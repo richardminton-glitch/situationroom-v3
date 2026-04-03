@@ -15,6 +15,7 @@
 
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
+import { syncRelayForUser, getActiveNpub } from '@/lib/nostr/relay';
 
 const SUBSCRIPTION_TIERS = ['general', 'members', 'vip'] as const;
 type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
@@ -68,16 +69,21 @@ export async function activateTier(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SUBSCRIPTION_DURATION_MS);
 
-  await prisma.$transaction([
-    prisma.user.update({
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
       where: { id: userId },
       data: { tier, subscriptionActivatedAt: now, subscriptionExpiresAt: expiresAt },
-    }),
-    prisma.subscriptionPayment.update({
+    });
+    await tx.subscriptionPayment.update({
       where: { id: paymentId },
       data: { status: 'confirmed', activatedAt: now, expiresAt },
-    }),
-  ]);
+    });
+    return u;
+  });
+
+  // Sync relay whitelist (Members+ get posting access)
+  const npub = getActiveNpub(updatedUser);
+  await syncRelayForUser(userId, npub, tier);
 
   console.log(`[Payments] Activated ${tier} for user ${userId}, expires ${expiresAt.toISOString()}`);
 }
@@ -120,10 +126,23 @@ export async function processExpiredSubscriptions(): Promise<void> {
   });
 
   if (expired.length > 0) {
+    // Fetch user npubs before downgrading (for relay removal)
+    const expiredUsers = await prisma.user.findMany({
+      where: { id: { in: expired.map((u) => u.id) } },
+      select: { id: true, nostrNpub: true, assignedNpub: true },
+    });
+
     await prisma.user.updateMany({
       where: { id: { in: expired.map((u) => u.id) } },
       data:  { tier: 'free', subscriptionExpiresAt: null },
     });
+
+    // Remove expired users from relay whitelist
+    for (const u of expiredUsers) {
+      const npub = getActiveNpub(u);
+      if (npub) await syncRelayForUser(u.id, npub, 'free');
+    }
+
     console.log(`[Renewal] Downgraded ${expired.length} expired subscriptions to free`);
   }
 }

@@ -25,12 +25,14 @@ interface NavItem {
   href: string;
   icon: string;
   requiresAuth?: boolean;
+  requiredTier?: Exclude<Tier, 'free'>;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: '◉' },
   { label: 'Briefings', href: '/briefings', icon: '◈' },
   { label: 'Members Room', href: '/room', icon: '◊', requiresAuth: true },
+  { label: 'Trading Pool', href: '/pool', icon: '⬡', requiredTier: 'members' },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [
@@ -130,6 +132,61 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
           <div className="space-y-1">
             {NAV_ITEMS.filter((item) => !item.requiresAuth || user).map((item) => {
               const active = pathname === item.href;
+              const navLocked = item.requiredTier ? !canAccess(item.requiredTier) : false;
+              const navTooltipVisible = tooltip?.id === `__nav_${item.href}`;
+
+              if (navLocked && item.requiredTier) {
+                return (
+                  <div key={item.href}>
+                    <button
+                      onClick={() => showLockedTooltip(`__nav_${item.href}`, item.requiredTier!)}
+                      className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors w-full text-left"
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-muted)',
+                        border: '1px solid transparent',
+                        opacity: 0.6,
+                      }}
+                      title={collapsed ? `${item.label} (${TIER_LABELS[item.requiredTier]} required)` : undefined}
+                    >
+                      <span className="text-base shrink-0">{item.icon}</span>
+                      {!collapsed && (
+                        <>
+                          <span className="flex-1">{item.label}</span>
+                          <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
+                            {TIER_LABELS[item.requiredTier].toUpperCase()} ↑
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    {navTooltipVisible && !collapsed && item.requiredTier && (
+                      <div
+                        style={{
+                          background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
+                          padding: '8px 10px', margin: '2px 0 4px',
+                          fontSize: '10px', color: 'var(--text-secondary)', lineHeight: '1.5',
+                        }}
+                      >
+                        <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          {TIER_LABELS[item.requiredTier]} required
+                        </div>
+                        <button
+                          onClick={() => openModal(item.requiredTier!)}
+                          style={{
+                            background: 'none', border: 'none', padding: 0,
+                            color: 'var(--accent-primary)', cursor: 'pointer',
+                            fontFamily: 'var(--font-mono)', fontSize: '10px',
+                            letterSpacing: '0.06em',
+                          }}
+                        >
+                          SUBSCRIBE ⚡
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <div key={item.href}>
                   <Link

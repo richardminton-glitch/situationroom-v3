@@ -292,6 +292,40 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'chart',
   },
 
+  {
+    id: 'hash-ribbon',
+    name: 'Hash Ribbon',
+    category: 'onchain',
+    defaultW: 660, defaultH: 352, minW: 440, minH: 264,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: '90-day hash rate ribbon (30d/60d MA) — miner capitulation recovery signal',
+    icon: 'onchain',
+  },
+  {
+    id: 'puell-multiple',
+    name: 'Puell Multiple',
+    category: 'onchain',
+    defaultW: 660, defaultH: 352, minW: 440, minH: 264,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: 'Daily miner revenue vs 365-day MA — macro cycle undervalue/overvalue indicator',
+    icon: 'onchain',
+  },
+  {
+    id: 'network-signals',
+    name: 'SOPR & Active Addresses',
+    category: 'onchain',
+    defaultW: 528, defaultH: 528, minW: 440, minH: 396,
+    resizable: true,
+    refreshInterval: 3600,
+    dataSources: ['brk'],
+    description: 'SOPR (profit/loss on-chain spending) + active address trend — 60-day dual chart',
+    icon: 'onchain',
+  },
+
   // ── UI Components ──
   {
     id: 'h-separator',

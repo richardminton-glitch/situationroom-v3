@@ -337,6 +337,59 @@ model UpgradeAttempt {
   @@map("upgrade_attempts")
 }
 
+// ── Nostr Relay Whitelist ─────────────────────────────────────────────────────
+// Tracks which npubs are currently authorised to post on the private relay.
+// Managed automatically on tier activation / expiry.
+
+model NostrRelayWhitelist {
+  id        String   @id @default(cuid())
+  npub      String   @unique
+  userId    String   @map("user_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+  removedAt DateTime? @map("removed_at")  // null = currently active
+  active    Boolean  @default(true)
+
+  @@index([npub])
+  @@index([userId])
+  @@index([active])
+  @@map("nostr_relay_whitelist")
+}
+
+// ── Chat Messages ─────────────────────────────────────────────────────────────
+// Stores all Ops Room chat messages (human + bot).
+// nostrEventId: if message was also posted to the Nostr relay, its event ID.
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  roomId          String   @default("ops") @map("room_id")
+  authorNpub      String   @map("author_npub")
+  authorDisplay   String   @map("author_display")
+  authorIcon      String   @default("email") @map("author_icon")  // 'lightning' | 'email' | 'bot'
+  content         String   @db.Text
+  nostrEventId    String?  @unique @map("nostr_event_id")
+  isBot           Boolean  @default(false) @map("is_bot")
+  eventType       String?  @map("event_type")  // null for human, 'alert' | 'briefing' | 'whale' etc for bot
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([roomId, createdAt])
+  @@index([authorNpub])
+  @@map("chat_messages")
+}
+
+// ── Chat Alert Log ────────────────────────────────────────────────────────────
+// Prevents duplicate auto-post firing for the same event within 24hr.
+
+model ChatAlertLog {
+  id          String   @id @default(cuid())
+  eventType   String   @map("event_type")  // e.g. 'btc_move_up_3pct'
+  eventKey    String   @map("event_key")   // dedup key, e.g. 'btc_67000_up'
+  firedAt     DateTime @default(now()) @map("fired_at")
+
+  @@unique([eventType, eventKey])
+  @@index([firedAt])
+  @@map("chat_alert_log")
+}
+
 // ── Newsletter Sends Log ──────────────────────────────────────────────────────
 
 model NewsletterSend {

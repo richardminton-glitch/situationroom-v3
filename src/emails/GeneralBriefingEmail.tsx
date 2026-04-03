@@ -50,6 +50,8 @@ export interface GeneralBriefingEmailProps {
     lastTradeDesc: string;
     winRatePct: number;
   };
+  // Optional bot alerts since last send (Members only)
+  alerts?: string[];
 }
 
 // Parchment palette — inline hex only
@@ -100,7 +102,7 @@ export function GeneralBriefingEmail({
   date, headline, threatLevel, convictionScore, sourcesCount,
   sections, btcPrice, btcChange24h, fearGreed, hashrate, mvrv,
   blockHeight, sp500, vix, gold, dxy, us10y, oil,
-  briefingUrl, unsubscribeUrl, viewInBrowserUrl, poolStatus,
+  briefingUrl, unsubscribeUrl, viewInBrowserUrl, poolStatus, alerts,
 }: GeneralBriefingEmailProps) {
   return (
     <Html lang="en">
@@ -206,6 +208,21 @@ export function GeneralBriefingEmail({
                 Last trade: {poolStatus.lastTradeDesc}
                 {'  ·  '}Win rate: {poolStatus.winRatePct}%
               </Text>
+            </Section>
+          )}
+
+          {/* Alerts block — Members tier only, shown when there are recent bot alerts */}
+          {alerts && alerts.length > 0 && (
+            <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '16px 28px' }}>
+              <Hr style={{ borderColor: C.dimBorder, margin: '0 0 12px' }} />
+              <Text style={{ fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 10px' }}>
+                ALERTS SINCE LAST BRIEFING
+              </Text>
+              {alerts.map((alert, i) => (
+                <Text key={i} style={{ fontFamily: font.mono, fontSize: '11px', color: C.text, lineHeight: '1.6', margin: '0 0 6px', paddingLeft: '10px', borderLeft: `2px solid ${C.accent}` }}>
+                  {alert}
+                </Text>
+              ))}
             </Section>
           )}
 
