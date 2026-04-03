@@ -10,6 +10,11 @@ jobs:
     steps:
       - name: Pull and build
         run: |
+          set -x
+          echo "whoami: $(whoami)"
+          echo "PATH: $PATH"
+          echo "node: $(node --version 2>&1 || echo NOT_FOUND)"
+          echo "npm: $(npm --version 2>&1 || echo NOT_FOUND)"
           cd /opt/situationroom-v3
           git pull
           npm run build
