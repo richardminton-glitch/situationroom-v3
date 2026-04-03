@@ -15,5 +15,5 @@ export function getResend(): Resend {
   return _resend;
 }
 
-export const FROM_ADDRESS = 'briefings@situationroom.space';
+export const FROM_ADDRESS = 'briefings@rdctd.co.uk';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://situationroom.space';
