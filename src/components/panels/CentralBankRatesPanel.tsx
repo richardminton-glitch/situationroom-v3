@@ -262,6 +262,15 @@ export function CentralBankRatesPanel() {
   if (loading) return <PanelLoading />;
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
+      <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }} />
+      <p style={{
+        fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)',
+        lineHeight: 1.6, letterSpacing: '0.02em', padding: '6px 8px',
+        borderTop: '1px solid var(--border-subtle)', marginTop: '4px',
+      }}>
+        The 2022–23 rate-hiking cycle was the most synchronised since the 1980s — all four major central banks moved together for the first time in decades. The BOJ remains the holdout, defending yield-curve control while its peers tightened. When it eventually moves, the unwinding of the yen carry trade will be one of the largest capital flows in modern history.
+      </p>
+    </div>
   );
 }

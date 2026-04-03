@@ -29,3 +29,9 @@ SITE=https://situationroom.space
 
 # Free newsletter digest — Sunday 18:00 UTC
 0 18 * * 0 curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/newsletter-digest >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# General/Members daily briefing email — 06:15 UTC (15 min after briefing generation)
+15 6 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/newsletter-daily >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# M2 money supply data refresh — weekly Monday 06:10 UTC
+10 6 * * 1 curl -s $SITE/api/data/m2 >> /opt/situationroom-v3/logs/cron.log 2>&1

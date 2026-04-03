@@ -17,7 +17,7 @@ const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
   'minimal':          null,       // free
   'full-data':        'general',
   'macro-focus':      'general',
-  'onchain-deep-dive':'members',
+  'onchain-deep-dive':'general',
 };
 
 interface NavItem {

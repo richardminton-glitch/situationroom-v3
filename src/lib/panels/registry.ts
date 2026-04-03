@@ -358,6 +358,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'calendar',
   },
   {
+    id: 'm2-chart',
+    name: 'M2 Money Supply',
+    category: 'macro',
+    defaultW: 660, defaultH: 420, minW: 420, minH: 280,
+    resizable: true,
+    refreshInterval: 604800, // 7 days
+    dataSources: ['fred'],
+    description: 'G4 M2 money supply indexed to 100 — USA, EU, UK, Japan',
+    icon: 'chart',
+  },
+  {
     id: 'account-settings',
     name: 'Account & Newsletter',
     category: 'ui',

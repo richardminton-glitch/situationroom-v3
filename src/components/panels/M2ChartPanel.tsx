@@ -6,65 +6,46 @@ import { useTheme } from '@/components/layout/ThemeProvider';
 import { PanelLoading, chartColors } from './shared';
 
 interface DataPoint { time: number; value: number; }
-type InflationData = Record<string, DataPoint[]>;
+type M2Data = Record<string, DataPoint[]>;
 
-const G7_KEYS    = ['USA', 'UK', 'Germany', 'Japan'] as const;
-const EXTREME_KEYS = ['Turkey', 'Argentina'] as const;
+const KEYS = ['USA', 'EU', 'UK', 'Japan'] as const;
 
 const PARCHMENT_COLORS: Record<string, string> = {
-  USA:      '#3e2c1a',
-  UK:       '#b87333',
-  Germany:  '#4a6741',
-  Japan:    '#6b4c8a',
-  Turkey:   '#c04040',
-  Argentina:'#8b6914',
+  USA:   '#3e2c1a',
+  EU:    '#b87333',
+  UK:    '#4a6741',
+  Japan: '#6b4c8a',
 };
 
 const DARK_COLORS: Record<string, string> = {
-  USA:      '#00d4c8',
-  UK:       '#c4885a',
-  Germany:  '#5bbfb8',
-  Japan:    '#a08aab',
-  Turkey:   '#ff6b6b',
-  Argentina:'#f0c040',
+  USA:   '#00d4c8',
+  EU:    '#c4885a',
+  UK:    '#5bbfb8',
+  Japan: '#a08aab',
 };
 
-const LABELS: Record<string, string> = {
-  USA: 'USA', UK: 'UK', Germany: 'DE', Japan: 'JP',
-  Turkey: 'TR', Argentina: 'AR',
-};
+const LABELS: Record<string, string> = { USA: 'USA', EU: 'EU', UK: 'UK', Japan: 'JP' };
 
 const MARGIN = { top: 28, right: 52, bottom: 26, left: 4 };
 
-function fmtPct(v: number): string {
-  if (Math.abs(v) >= 100) return `${v.toFixed(0)}%`;
-  return `${v.toFixed(1)}%`;
-}
+const CALLOUT = 'M2 indexed to 100 at the 3-year baseline. Diverging lines reveal different monetary responses: the USA expanded aggressively post-2020 before contracting; the EU and UK followed with a lag; Japan barely moved, constrained by decades of deflationary psychology. When the Fed expands M2, Bitcoin historically responds 12–18 months later.';
 
-// ── Static editorial callout ───────────────────────────────────────────────────
-const CALLOUT_G7 = 'G7 inflation peaked in 2022–23 as pandemic-era monetary expansion met supply-chain disruption. Central banks responded with the fastest rate-hiking cycle in four decades, pulling inflation back toward target. Japan remains an outlier — decades of deflation mean any sustained price rise is structurally significant.';
-const CALLOUT_EXTREME = 'Extreme cases reveal what happens when monetary discipline breaks down. Turkey\'s 2022 unorthodox rate cuts sent inflation to 85%. Argentina\'s chronic fiscal monetisation has produced triple-digit inflation. These are not outliers — they are the endpoint of every fiat experiment that prioritises growth over monetary restraint.';
-
-export function InflationChartPanel() {
+export function M2ChartPanel() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const colors = isDark ? DARK_COLORS : PARCHMENT_COLORS;
 
-  const [data, setData] = useState<InflationData | null>(null);
+  const [data, setData] = useState<M2Data | null>(null);
   const [loading, setLoading] = useState(true);
-  const [extreme, setExtreme] = useState(false);
   const [resizeKey, setResizeKey] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/data/inflation');
-        if (res.ok) setData(await res.json());
-      } catch { /* non-critical */ }
-      finally { setLoading(false); }
-    }
-    load();
+    fetch('/api/data/m2')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setData(d); })
+      .catch(() => { /* non-critical */ })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -75,10 +56,6 @@ export function InflationChartPanel() {
     return () => ro.disconnect();
   }, []);
 
-  const activeKeys = extreme
-    ? [...G7_KEYS, ...EXTREME_KEYS]
-    : [...G7_KEYS];
-
   const render = useCallback(() => {
     const el = containerRef.current;
     if (!el || !data) return;
@@ -88,7 +65,7 @@ export function InflationChartPanel() {
     const fontMono = rootStyle.getPropertyValue('--font-mono').trim() || "'IBM Plex Mono', monospace";
 
     d3.select(el).select('svg').remove();
-    el.querySelectorAll('.inflation-tooltip').forEach((n) => n.remove());
+    el.querySelectorAll('.m2-tooltip').forEach((n) => n.remove());
 
     const rect = el.getBoundingClientRect();
     const w = rect.width || 660;
@@ -97,7 +74,7 @@ export function InflationChartPanel() {
     const innerH = h - MARGIN.top - MARGIN.bottom;
     if (innerW < 50 || innerH < 30) return;
 
-    const activeSeries = activeKeys
+    const activeSeries = KEYS
       .map((key) => ({ key, points: (data[key] ?? []).filter((d) => d.value != null) }))
       .filter((s) => s.points.length > 0);
 
@@ -107,21 +84,25 @@ export function InflationChartPanel() {
     const xExtent = d3.extent(allPoints, (d) => d.time) as [number, number];
     const xScale = d3.scaleTime().domain(xExtent).range([0, innerW]);
 
-    const rawMin = d3.min(allPoints, (d) => d.value) ?? 0;
-    const rawMax = d3.max(allPoints, (d) => d.value) ?? 10;
-    const yFloor = Math.min(0, rawMin - 0.5);
-    const yCeil  = rawMax * 1.1;
+    const rawMin = d3.min(allPoints, (d) => d.value) ?? 80;
+    const rawMax = d3.max(allPoints, (d) => d.value) ?? 140;
+    const yFloor = rawMin * 0.97;
+    const yCeil  = rawMax * 1.03;
     const yScale = d3.scaleLinear().domain([yFloor, yCeil]).range([innerH, 0]);
 
     const { axisTick: tickColor, gridLine: gridColor } = chartColors(isDark);
 
     const svg = d3.select(el)
-      .append('svg')
-      .attr('width', '100%').attr('height', '100%')
-      .attr('viewBox', `0 0 ${w} ${h}`)
-      .style('overflow', 'visible');
+      .append('svg').attr('width', '100%').attr('height', '100%')
+      .attr('viewBox', `0 0 ${w} ${h}`).style('overflow', 'visible');
 
     const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
+
+    // Baseline 100 reference line
+    g.append('line').attr('x1', 0).attr('x2', innerW)
+      .attr('y1', yScale(100)).attr('y2', yScale(100))
+      .attr('stroke', isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)')
+      .attr('stroke-dasharray', '4,3').attr('stroke-width', 0.8);
 
     // Grid
     g.selectAll('.gl').data(yScale.ticks(5)).enter().append('line')
@@ -129,19 +110,10 @@ export function InflationChartPanel() {
       .attr('y1', (d) => yScale(d)).attr('y2', (d) => yScale(d))
       .attr('stroke', gridColor).attr('stroke-dasharray', '2,3');
 
-    if (yFloor < 0) {
-      g.append('line').attr('x1', 0).attr('x2', innerW)
-        .attr('y1', yScale(0)).attr('y2', yScale(0))
-        .attr('stroke', isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')
-        .attr('stroke-width', 0.5);
-    }
-
     const lineGen = d3.line<DataPoint>().x((d) => xScale(d.time)).y((d) => yScale(d.value)).curve(d3.curveMonotoneX);
-    const areaGen = d3.area<DataPoint>().x((d) => xScale(d.time)).y0(innerH).y1((d) => yScale(d.value)).curve(d3.curveMonotoneX);
 
     activeSeries.forEach(({ key, points }) => {
       const color = colors[key] || '#888';
-      g.append('path').datum(points).attr('d', areaGen).attr('fill', color).attr('opacity', 0.06);
       g.append('path').datum(points).attr('d', lineGen).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.8);
     });
 
@@ -161,10 +133,10 @@ export function InflationChartPanel() {
       .call((ax) => ax.select('.domain').remove())
       .selectAll('text').attr('fill', tickColor).attr('font-size', '11px').attr('font-family', fontData);
 
-    // Y-axis (right)
+    // Y-axis (right) — indexed values
     const yTicks = Math.max(3, Math.floor(innerH / 40));
     g.append('g').attr('transform', `translate(${innerW},0)`)
-      .call(d3.axisRight(yScale).ticks(yTicks).tickSize(0).tickFormat((d) => fmtPct(+d)))
+      .call(d3.axisRight(yScale).ticks(yTicks).tickSize(0).tickFormat((d) => `${(+d).toFixed(0)}`))
       .call((ax) => ax.select('.domain').remove())
       .selectAll('text').attr('fill', tickColor).attr('font-size', '11px').attr('font-family', fontMono);
 
@@ -173,7 +145,7 @@ export function InflationChartPanel() {
       .attr('stroke', isDark ? 'rgba(0,212,200,0.3)' : 'rgba(0,0,0,0.2)').attr('stroke-dasharray', '3,3').style('display', 'none');
 
     const tooltip = document.createElement('div');
-    tooltip.className = 'inflation-tooltip';
+    tooltip.className = 'm2-tooltip';
     tooltip.style.cssText = [
       'display:none', 'position:absolute', 'pointer-events:none', 'z-index:30',
       `background:${isDark ? 'rgba(21,29,37,0.97)' : 'rgba(248,241,227,0.97)'}`,
@@ -207,7 +179,7 @@ export function InflationChartPanel() {
         ...vals.map(({ key, point }) =>
           `<span style="color:${colors[key] || '#888'}">${LABELS[key] ?? key}</span>` +
           `<span style="opacity:0.6"> : </span>` +
-          `<span style="font-weight:600">${fmtPct(point.value)}</span>`
+          `<span style="font-weight:600">${point.value.toFixed(1)}</span>`
         ),
       ].join('<br>');
 
@@ -222,7 +194,7 @@ export function InflationChartPanel() {
     });
 
     svg.on('mouseleave', () => { crosshair.style('display', 'none'); tooltip.style.display = 'none'; });
-  }, [data, colors, isDark, activeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, colors, isDark]);
 
   useEffect(() => {
     const rafId = requestAnimationFrame(render);
@@ -230,48 +202,23 @@ export function InflationChartPanel() {
       cancelAnimationFrame(rafId);
       if (containerRef.current) {
         d3.select(containerRef.current).select('svg').remove();
-        containerRef.current.querySelectorAll('.inflation-tooltip').forEach((n) => n.remove());
+        containerRef.current.querySelectorAll('.m2-tooltip').forEach((n) => n.remove());
       }
     };
-  }, [render, resizeKey, extreme]);
+  }, [render, resizeKey]);
 
   if (loading) return <PanelLoading />;
 
-  const monoStyle: React.CSSProperties = {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '9px',
-    color: 'var(--text-muted)',
-    lineHeight: 1.6,
-    letterSpacing: '0.02em',
-    padding: '6px 8px',
-    borderTop: '1px solid var(--border-subtle)',
-    marginTop: '4px',
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
-      {/* Extreme mode toggle */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 4px 0' }}>
-        <button
-          onClick={() => setExtreme((e) => !e)}
-          style={{
-            fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em',
-            textTransform: 'uppercase', padding: '2px 8px',
-            border: '1px solid var(--border-subtle)',
-            backgroundColor: extreme ? 'var(--accent-danger, #c04040)' : 'transparent',
-            color: extreme ? '#fff' : 'var(--text-muted)',
-            cursor: 'pointer',
-          }}
-        >
-          {extreme ? '⚠ EXTREME ON' : 'EXTREME MODE'}
-        </button>
-      </div>
-
-      {/* Chart */}
       <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }} />
-
-      {/* Editorial callout */}
-      <p style={monoStyle}>{extreme ? CALLOUT_EXTREME : CALLOUT_G7}</p>
+      <p style={{
+        fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)',
+        lineHeight: 1.6, letterSpacing: '0.02em', padding: '6px 8px',
+        borderTop: '1px solid var(--border-subtle)', marginTop: '4px',
+      }}>
+        {CALLOUT}
+      </p>
     </div>
   );
 }

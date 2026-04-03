@@ -1,5 +1,6 @@
 declare module '@ln-markets/api' {
   export interface RestClient {
+    getUser(): Promise<{ balance?: number; [key: string]: unknown }>;
     userGet(): Promise<unknown>;
     userDeposit(data: { amount: number; unit: string; memo?: string }): Promise<{
       id: string;

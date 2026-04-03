@@ -33,6 +33,7 @@ import { URPDPanel } from './URPDPanel';
 import { HSeparatorPanel } from './HSeparatorPanel';
 import { VSeparatorPanel } from './VSeparatorPanel';
 import { AccountSettingsPanel } from './AccountSettingsPanel';
+import { M2ChartPanel } from './M2ChartPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -65,4 +66,5 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'h-separator':     HSeparatorPanel,
   'v-separator':     VSeparatorPanel,
   'account-settings': AccountSettingsPanel,
+  'm2-chart':         M2ChartPanel,
 };
