@@ -1,5 +1,7 @@
 'use client';
 
+import { useTheme } from '@/components/layout/ThemeProvider';
+
 /**
  * VSeparatorPanel — Vertical visual separator line.
  *
@@ -7,9 +9,15 @@
  * each side (matching the panel-title underline margin).  The container is a
  * free-floating, resizable Rnd panel with no header chrome — the whole
  * surface acts as the drag handle in edit mode.
+ *
+ * Colour adapts to the active theme: espresso brown for parchment,
+ * dark teal for dark mode.
  */
 
 export function VSeparatorPanel() {
+  const { theme } = useTheme();
+  const lineColor = theme === 'dark' ? 'rgba(0,180,170,0.25)' : '#3a2a1a';
+
   return (
     <div
       style={{
@@ -26,7 +34,7 @@ export function VSeparatorPanel() {
         style={{
           width: '1px',
           height: '100%',
-          backgroundColor: '#3a2a1a',
+          backgroundColor: lineColor,
         }}
       />
     </div>

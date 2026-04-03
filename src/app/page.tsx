@@ -8,15 +8,15 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { DashboardGrid } from '@/components/layout/DashboardGrid';
 import { PanelPicker } from '@/components/layout/PanelPicker';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
-import { DEFAULT_LAYOUT, LAYOUT_PRESETS, type LayoutPanelItem } from '@/lib/panels/layouts';
+import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
 import { getPanelById } from '@/lib/panels/registry';
 import type { Theme } from '@/types';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { error: dataError } = useData();
-  const [layout, setLayout] = useState<LayoutPanelItem[]>(DEFAULT_LAYOUT.panels);
+  const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme('parchment').panels);
   const [activePreset, setActivePreset] = useState('default');
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -28,13 +28,25 @@ export default function DashboardPage() {
     }
   }, [user?.themePref, setTheme]);
 
+  // When theme changes, load the matching preset for the new theme.
+  // If the current named preset exists in the new theme's list, use that;
+  // otherwise fall back to the new theme's default.
+  useEffect(() => {
+    if (activePreset === 'custom') return; // never clobber a user-customised layout
+    const matched = getPresetByIdForTheme(activePreset, theme);
+    const next = matched ?? getDefaultForTheme(theme);
+    setLayout(next.panels);
+    setActivePreset(next.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
+
   const switchPreset = useCallback((presetId: string) => {
-    const preset = LAYOUT_PRESETS.find((p) => p.id === presetId);
+    const preset = getPresetByIdForTheme(presetId, theme);
     if (preset) {
       setLayout(preset.panels);
       setActivePreset(presetId);
     }
-  }, []);
+  }, [theme]);
 
   const handleLayoutChange = useCallback((newLayout: LayoutPanelItem[]) => {
     setLayout(newLayout);
@@ -79,7 +91,7 @@ export default function DashboardPage() {
   }
 
   const dashboardControls = {
-    presets: LAYOUT_PRESETS.map((p) => ({ id: p.id, name: p.name, description: p.description })),
+    presets: getPresetsForTheme(theme).map((p) => ({ id: p.id, name: p.name, description: p.description })),
     activePreset,
     onSwitchPreset: switchPreset,
     editMode,
