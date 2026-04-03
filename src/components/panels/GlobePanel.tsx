@@ -69,7 +69,7 @@ export function GlobePanel() {
     return () => el.removeEventListener('globe-toggle-chart', handler);
   }, [toggleView]);
 
-  const legend = view === 'globe' ? (
+  const legend = view === 'globe' && theme === 'parchment' ? (
     <div
       style={{
         display: 'flex',

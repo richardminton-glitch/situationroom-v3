@@ -363,7 +363,7 @@ export function DarkGlobe() {
       pivot.add(dot);
 
       // Invisible hit sphere (larger radius for easier hover detection)
-      const hitGeo = new THREE.SphereGeometry(5.5, 8, 8);
+      const hitGeo = new THREE.SphereGeometry(8, 8, 8);
       const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
       const hitMesh = new THREE.Mesh(hitGeo, hitMat);
       hitMesh.position.copy(pos);
@@ -400,6 +400,7 @@ export function DarkGlobe() {
 
     // Market tooltip via raycasting
     const raycaster = new THREE.Raycaster();
+    const hitMeshes = marketDots.map((m) => m.mesh);
     el.addEventListener('mousemove', (e) => {
       if (isDragging) { tooltipDiv.style.display = 'none'; return; }
       const rect = el.getBoundingClientRect();
@@ -407,8 +408,10 @@ export function DarkGlobe() {
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
         -((e.clientY - rect.top) / rect.height) * 2 + 1,
       );
+      // Force world matrices to be current — pivot may have rotated since last render frame
+      scene.updateMatrixWorld(true);
       raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(marketDots.map((m) => m.mesh));
+      const hits = raycaster.intersectObjects(hitMeshes);
       if (hits.length > 0) {
         const found = marketDots.find((m) => m.mesh === hits[0].object);
         if (found) {
