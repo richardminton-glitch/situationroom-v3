@@ -6,6 +6,36 @@ import { useTier } from '@/hooks/useTier';
 import { TierGate } from '@/components/auth/TierGate';
 import { PanelLoading } from './shared';
 
+// ── Alert types ───────────────────────────────────────────────────────────────
+
+type TriggerType = 'conviction' | 'btc_price' | 'fear_greed' | 'new_briefing';
+type ConditionType = 'above' | 'below' | 'any';
+
+interface Alert {
+  id: string;
+  triggerType: TriggerType;
+  condition: ConditionType;
+  threshold: number | null;
+  label: string;
+  isActive: boolean;
+  lastFiredAt: string | null;
+  createdAt: string;
+}
+
+const TRIGGER_OPTIONS: { value: TriggerType; label: string }[] = [
+  { value: 'conviction', label: 'Conviction Score' },
+  { value: 'btc_price', label: 'BTC Price' },
+  { value: 'fear_greed', label: 'Fear & Greed' },
+  { value: 'new_briefing', label: 'New Briefing' },
+];
+
+/** Triggers that support above/below threshold comparisons */
+const THRESHOLD_TRIGGERS: TriggerType[] = ['conviction', 'btc_price', 'fear_greed'];
+
+function triggerLabel(t: TriggerType): string {
+  return TRIGGER_OPTIONS.find((o) => o.value === t)?.label ?? t;
+}
+
 const VIP_TOPICS = [
   { id: 'price-action', label: 'Price Action' },
   { id: 'network-health', label: 'Network Health' },
@@ -269,6 +299,11 @@ export function AccountSettingsPanel() {
         {canAccess('vip') && (
           <PortfolioFields />
         )}
+
+        {/* VIP custom alerts */}
+        {canAccess('vip') && (
+          <AlertsSection />
+        )}
       </section>
 
       {/* Flash message */}
@@ -293,6 +328,266 @@ export function AccountSettingsPanel() {
     </div>
   );
 }
+
+// ── AlertsSection ─────────────────────────────────────────────────────────────
+
+function AlertsSection() {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Add-alert form state
+  const [trigger, setTrigger] = useState<TriggerType>('conviction');
+  const [condition, setCondition] = useState<ConditionType>('above');
+  const [threshold, setThreshold] = useState('');
+  const [label, setLabel] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const needsThreshold = THRESHOLD_TRIGGERS.includes(trigger);
+
+  // Reset condition when switching to a non-threshold trigger
+  useEffect(() => {
+    if (!needsThreshold) setCondition('any');
+    else if (condition === 'any') setCondition('above');
+  }, [trigger, needsThreshold, condition]);
+
+  useEffect(() => {
+    fetch('/api/alerts')
+      .then(async (r) => {
+        if (r.ok) setAlerts(await r.json() as Alert[]);
+        else setLoadError('Could not load alerts');
+      })
+      .catch(() => setLoadError('Network error'));
+  }, []);
+
+  const deleteAlert = async (id: string) => {
+    const res = await fetch(`/api/alerts/${id}`, { method: 'DELETE' });
+    if (res.ok) setAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const toggleAlert = async (id: string, isActive: boolean) => {
+    const res = await fetch(`/api/alerts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !isActive }),
+    });
+    if (res.ok) {
+      const updated = await res.json() as Alert;
+      setAlerts((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    }
+  };
+
+  const addAlert = async () => {
+    setAddError(null);
+    if (needsThreshold && !threshold) {
+      setAddError('Threshold required');
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          triggerType: trigger,
+          condition,
+          threshold: needsThreshold && threshold ? parseFloat(threshold) : undefined,
+          label: label.trim(),
+        }),
+      });
+      const data = await res.json() as Alert | { error: string };
+      if (res.ok) {
+        setAlerts((prev) => [data as Alert, ...prev]);
+        setThreshold('');
+        setLabel('');
+      } else {
+        setAddError((data as { error: string }).error ?? 'Failed to add alert');
+      }
+    } catch {
+      setAddError('Network error');
+    }
+    setAdding(false);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-subtle)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
+    borderRadius: '4px',
+    padding: '4px 6px',
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    cursor: 'pointer',
+  };
+
+  return (
+    <div className="mb-3">
+      {/* Section header */}
+      <div
+        className="uppercase tracking-widest mb-3 flex items-center justify-between"
+        style={{
+          fontSize: '9px',
+          letterSpacing: '0.18em',
+          color: 'var(--text-muted)',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '6px',
+        }}
+      >
+        <span>Custom Alerts <span style={{ color: 'var(--accent-primary)' }}>(VIP)</span></span>
+        <span style={{ opacity: 0.6 }}>{alerts.length}/10</span>
+      </div>
+
+      {loadError && (
+        <p style={{ color: 'var(--accent-danger)', marginBottom: '8px', fontSize: '11px' }}>
+          {loadError}
+        </p>
+      )}
+
+      {/* Add-alert form */}
+      {alerts.length < 10 && (
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-1 items-center mb-1">
+            {/* Trigger selector */}
+            <select
+              value={trigger}
+              onChange={(e) => setTrigger(e.target.value as TriggerType)}
+              style={{ ...selectStyle, minWidth: '130px' }}
+            >
+              {TRIGGER_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+
+            {/* Condition selector — only when threshold-based trigger */}
+            {needsThreshold && (
+              <select
+                value={condition}
+                onChange={(e) => setCondition(e.target.value as ConditionType)}
+                style={{ ...selectStyle, minWidth: '70px' }}
+              >
+                <option value="above">above</option>
+                <option value="below">below</option>
+              </select>
+            )}
+
+            {/* Threshold input */}
+            {needsThreshold && (
+              <input
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder={trigger === 'btc_price' ? '$0' : '0'}
+                style={{ ...inputStyle, width: '80px' }}
+              />
+            )}
+
+            {/* Label */}
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="description (optional)"
+              maxLength={100}
+              style={{ ...inputStyle, flex: 1, minWidth: '100px' }}
+            />
+
+            {/* Add button */}
+            <button
+              onClick={addAlert}
+              disabled={adding}
+              className="px-3 py-1 rounded uppercase tracking-wider"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-primary)',
+                fontSize: '9px',
+                letterSpacing: '0.12em',
+                opacity: adding ? 0.5 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {adding ? '…' : 'Add Alert'}
+            </button>
+          </div>
+
+          {addError && (
+            <p style={{ color: 'var(--accent-danger)', fontSize: '10px', marginTop: '2px' }}>
+              {addError}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Alert list */}
+      {alerts.length === 0 && !loadError && (
+        <p style={{ color: 'var(--text-muted)', fontSize: '11px' }}>No alerts set.</p>
+      )}
+
+      <div className="flex flex-col gap-1">
+        {alerts.map((alert) => (
+          <div
+            key={alert.id}
+            className="flex items-center justify-between px-2 py-1 rounded"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              opacity: alert.isActive ? 1 : 0.5,
+            }}
+          >
+            {/* Alert description */}
+            <button
+              onClick={() => toggleAlert(alert.id, alert.isActive)}
+              title={alert.isActive ? 'Click to pause' : 'Click to activate'}
+              style={{ textAlign: 'left', flex: 1 }}
+            >
+              <span style={{ color: 'var(--accent-primary)', marginRight: '6px' }}>⚡</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                {triggerLabel(alert.triggerType)}
+                {alert.condition !== 'any' && ` ${alert.condition}`}
+                {alert.threshold != null && (
+                  <span>
+                    {' '}
+                    {alert.triggerType === 'btc_price'
+                      ? `$${alert.threshold.toLocaleString()}`
+                      : alert.threshold}
+                  </span>
+                )}
+                {alert.label && (
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>
+                    — {alert.label}
+                  </span>
+                )}
+              </span>
+            </button>
+
+            {/* Delete button */}
+            <button
+              onClick={() => deleteAlert(alert.id)}
+              title="Delete alert"
+              style={{
+                color: 'var(--text-muted)',
+                fontSize: '13px',
+                lineHeight: 1,
+                padding: '0 4px',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-danger)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── PortfolioFields ───────────────────────────────────────────────────────────
 
 function PortfolioFields() {
   const [costBasis, setCostBasis] = useState('');

@@ -96,10 +96,13 @@ model UserLayout {
   layoutJson String   @map("layout_json") @db.Text
   isDefault  Boolean  @default(false) @map("is_default")
   name       String   @default("Default")
+  theme      String   @default("parchment")
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("user_layouts")
 }
 
@@ -404,6 +407,53 @@ model NewsletterSend {
   @@index([userId])
   @@index([briefingDate])
   @@map("newsletter_sends")
+}
+
+// ── VIP Tier Models ───────────────────────────────────────────────────────────
+
+model UserAlert {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  triggerType String    @map("trigger_type")  // 'conviction' | 'lth_supply' | 'hash_ribbon' | 'btc_price' | 'fear_greed' | 'new_briefing'
+  condition   String    // 'above' | 'below' | 'flip' | 'any'
+  threshold   Float?    // value to compare against (null for 'flip'/'any' triggers)
+  label       String    @default("")  // user-readable description
+  isActive    Boolean   @default(true) @map("is_active")
+  lastFiredAt DateTime? @map("last_fired_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("user_alerts")
+}
+
+model VipBriefing {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  topicHash    String   @map("topic_hash")
+  date         DateTime @db.Date
+  topics       String   @default("[]") @db.Text   // JSON array of topic keys
+  contentJson  String   @map("content_json") @db.Text  // {market, network, geo, macro, outlook}
+  headline     String
+  portfolioCtx String?  @map("portfolio_ctx") @db.Text  // AI paragraph about user's position
+  generatedAt  DateTime @default(now()) @map("generated_at")
+
+  @@unique([userId, date])
+  @@index([topicHash, date])
+  @@map("vip_briefings")
+}
+
+model SignalAnnotation {
+  id          String   @id @default(cuid())
+  panelId     String   @map("panel_id")
+  valueKey    String   @map("value_key")   // rounded metric + value as dedup key
+  annotation  String   @db.Text            // AI-generated annotation text
+  generatedAt DateTime @default(now()) @map("generated_at")
+  expiresAt   DateTime @map("expires_at")  // typically data refresh + 24hr
+
+  @@unique([panelId, valueKey])
+  @@index([expiresAt])
+  @@map("signal_annotations")
 }
 
 // ── RSS Classification Cache ──────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { hasAccess } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 import Link from 'next/link';
+import { PersonalBriefingContext } from '@/components/briefing/PersonalBriefingContext';
 
 interface Props {
   params: Promise<{ date: string }>;
@@ -160,6 +161,8 @@ export default async function BriefingPage({ params }: Props) {
               <BriefingMarkdown content={section.content} />
             </section>
           ))}
+          {/* VIP personalised position context — renders client-side if applicable */}
+          <PersonalBriefingContext date={date} />
         </>
       ) : (
         /* Upgrade wall — free users */

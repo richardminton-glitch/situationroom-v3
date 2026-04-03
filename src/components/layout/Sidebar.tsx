@@ -10,6 +10,7 @@ import { FundingBar } from '@/components/widgets/FundingBar';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Tier } from '@/types';
+import type { LayoutPanelItem } from '@/lib/panels/layouts';
 
 // Tier requirements for each preset
 const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
@@ -45,6 +46,9 @@ export interface DashboardControls {
   onSwitchPreset: (id: string) => void;
   editMode: boolean;
   onToggleEdit: () => void;
+  savedLayouts?: { id: string; name: string; panels: LayoutPanelItem[] }[];
+  onLoadSavedLayout?: (layout: { id: string; name: string; panels: LayoutPanelItem[] }) => void;
+  onDeleteSavedLayout?: (id: string) => void;
 }
 
 interface SidebarProps {
@@ -272,6 +276,42 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                         <span className="block px-2 py-1 text-xs" style={{ color: 'var(--accent-primary)' }}>
                           Custom
                         </span>
+                      )}
+
+                      {/* Saved layouts — VIP only */}
+                      {canAccess('vip') && dashboardControls.savedLayouts && dashboardControls.savedLayouts.length > 0 && (
+                        <div className="mt-2 mb-1">
+                          <span
+                            className="block px-2 pb-1 text-xs uppercase tracking-wider"
+                            style={{ color: 'var(--text-muted)', fontSize: '9px', letterSpacing: '0.08em' }}
+                          >
+                            Saved
+                          </span>
+                          {dashboardControls.savedLayouts.map((sl) => (
+                            <div key={sl.id} className="flex items-center group">
+                              <button
+                                onClick={() => dashboardControls.onLoadSavedLayout?.(sl)}
+                                className="flex-1 text-left px-2 py-1 rounded text-xs transition-colors"
+                                style={{
+                                  color: 'var(--text-secondary)',
+                                  backgroundColor: 'transparent',
+                                  border: '1px solid transparent',
+                                }}
+                                title={`Load "${sl.name}"`}
+                              >
+                                {sl.name}
+                              </button>
+                              <button
+                                onClick={() => dashboardControls.onDeleteSavedLayout?.(sl.id)}
+                                className="px-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                title="Delete layout"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       )}
 
                       {/* Edit Layout — VIP locked */}

@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { chartColors, PanelLoading } from './shared';
+import { SignalAnnotationButton } from './SignalAnnotationButton';
 
 interface HashRibbonPoint {
   date:     string;
@@ -228,6 +229,9 @@ export function HashRibbonPanel() {
         Hash Ribbon identifies miner capitulation cycles. When the 30d MA crosses above the 60d MA,
         miners have survived stress and are back to accumulating — historically a high-conviction buy signal.
       </p>
+      <div style={{ padding: '0 10px 6px' }}>
+        <SignalAnnotationButton panelId="hash-ribbon" valueKey={new Date().toISOString().slice(0, 10)} />
+      </div>
     </div>
   );
 }

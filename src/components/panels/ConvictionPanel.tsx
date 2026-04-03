@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { PanelLoading } from './shared';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { BlurGate } from '@/components/auth/BlurGate';
+import { useTier } from '@/hooks/useTier';
 import type { ConvictionResult } from '@/lib/conviction/engine';
 
 const DARK_BAND_COLORS: Record<string, string> = {
@@ -66,6 +67,17 @@ export function ConvictionPanel() {
   const [data, setData] = useState<ConvictionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
+  const { canAccess } = useTier();
+  const isVip = canAccess('vip');
+  const [personal, setPersonal] = useState<{ personalScore: number; personalLabel: string; profitPct: number | null; positionStatus: string } | null>(null);
+
+  useEffect(() => {
+    if (!isVip) return;
+    fetch('/api/conviction/personal')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d ? setPersonal(d) : null)
+      .catch(() => null);
+  }, [isVip]);
 
   useEffect(() => {
     async function fetch_() {
@@ -117,6 +129,19 @@ export function ConvictionPanel() {
         >
           {data.band.split(' ').map((w) => <div key={w}>{w}</div>)}
         </div>
+        {isVip && personal && personal.positionStatus !== 'no_data' && (
+          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '2px' }}>YOUR SCORE</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 'bold', color: personal.personalScore >= 60 ? 'var(--accent-success)' : personal.personalScore >= 40 ? 'var(--text-secondary)' : 'var(--accent-danger)' }}>
+              {personal.personalScore} — {personal.personalLabel}
+            </div>
+            {personal.profitPct !== null && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: personal.profitPct >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)', marginTop: '2px' }}>
+                Position: {personal.profitPct >= 0 ? '+' : ''}{personal.profitPct}%
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

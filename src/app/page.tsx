@@ -14,6 +14,7 @@ import { LockedViewPrompt } from '@/components/auth/LockedViewPrompt';
 import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
 import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
+import { useSavedLayouts } from '@/hooks/useSavedLayouts';
 import { hasAccess } from '@/lib/auth/tier';
 import type { Theme, Tier } from '@/types';
 
@@ -27,7 +28,7 @@ const LOCKED_VIEWS: Record<string, { requiredTier: Exclude<Tier, 'free'>; name: 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { userTier } = useTier();
+  const { userTier, canAccess } = useTier();
   const { error: dataError } = useData();
   // theme is now correct on first render (ThemeProvider reads localStorage)
   const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme(theme).panels);
@@ -37,7 +38,12 @@ export default function DashboardPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeModalTier, setUpgradeModalTier] = useState<Exclude<Tier, 'free'>>('general');
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [savedLayoutName, setSavedLayoutName] = useState('');
   const mainRef = useRef<HTMLElement>(null);
+
+  const isVip = canAccess('vip');
+  const { layouts: savedLayouts, saveLayout, deleteLayout } = useSavedLayouts(isVip);
 
   useEffect(() => {
     if (user?.themePref && user.themePref !== theme) {
@@ -122,6 +128,12 @@ export default function DashboardPage() {
     onSwitchPreset: switchPreset,
     editMode,
     onToggleEdit: () => setEditMode((prev) => !prev),
+    savedLayouts: savedLayouts.map((l) => ({ id: l.id, name: l.name, panels: l.panels })),
+    onLoadSavedLayout: (l: { id: string; name: string; panels: LayoutPanelItem[] }) => {
+      setLayout(l.panels);
+      setActivePreset('custom');
+    },
+    onDeleteSavedLayout: deleteLayout,
   };
 
   return (
@@ -171,6 +183,65 @@ export default function DashboardPage() {
             >
               ⎘ Export Layout
             </button>
+
+            {/* Save Layout button — VIP only */}
+            {canAccess('vip') && (
+              <>
+                {showSavePrompt ? (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginRight: '8px' }}>
+                    <input
+                      value={savedLayoutName}
+                      onChange={(e) => setSavedLayoutName(e.target.value)}
+                      placeholder="Layout name..."
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '11px',
+                        padding: '2px 6px',
+                        border: '1px solid var(--border-primary)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-primary)',
+                        width: '130px',
+                      }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter' && savedLayoutName.trim()) {
+                          await saveLayout(savedLayoutName.trim(), layout, theme);
+                          setSavedLayoutName('');
+                          setShowSavePrompt(false);
+                        }
+                        if (e.key === 'Escape') setShowSavePrompt(false);
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => setShowSavePrompt(false)}
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '11px',
+                        color: 'var(--text-muted)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSavePrompt(true)}
+                    className="px-3 py-1 rounded text-xs mr-2"
+                    style={{
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  >
+                    ☁ Save Layout{savedLayouts.length > 0 ? ` (${savedLayouts.length}/5)` : ''}
+                  </button>
+                )}
+              </>
+            )}
+
             <button
               onClick={() => setShowPicker(true)}
               className="px-3 py-1 rounded text-xs"

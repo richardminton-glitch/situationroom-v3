@@ -38,3 +38,9 @@ SITE=https://situationroom.space
 
 # M2 money supply data refresh — weekly Monday 06:10 UTC
 10 6 * * 1 curl -s $SITE/api/data/m2 >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# VIP personalised briefings — 06:10 UTC (after base briefing confirmed)
+10 6 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/vip-briefings >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# User alert checks — every 5 minutes
+*/5 * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/check-alerts >> /opt/situationroom-v3/logs/cron.log 2>&1

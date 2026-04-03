@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { PanelLoading, chartColors } from './shared';
+import { SignalAnnotationButton } from './SignalAnnotationButton';
 
 interface DataPoint { time: number; value: number; }
 type InflationData = Record<string, DataPoint[]>;
@@ -272,6 +273,9 @@ export function InflationChartPanel() {
 
       {/* Editorial callout */}
       <p style={monoStyle}>{extreme ? CALLOUT_EXTREME : CALLOUT_G7}</p>
+      <div style={{ padding: '0 10px 6px' }}>
+        <SignalAnnotationButton panelId="inflation-chart" valueKey={new Date().toISOString().slice(0, 10)} />
+      </div>
     </div>
   );
 }

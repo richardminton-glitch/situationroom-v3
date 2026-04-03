@@ -1,16 +1,18 @@
 /**
  * GET /api/cron/newsletter-daily
- * Daily at 06:15 UTC — sends briefing emails to General and Members subscribers.
+ * Daily at 06:15 UTC — sends briefing emails to General, Members, and VIP subscribers.
  *
  * Eligibility:
  *   - newsletterEnabled = true
  *   - newsletterConfirmedAt NOT NULL
- *   - tier IN ('general', 'members', 'vip')  [vip gets general template for now; Phase 6 adds personalised]
+ *   - tier IN ('general', 'members', 'vip')
  *   - (frequency='daily') OR (frequency='weekly' AND today=newsletterDay)
  *   - newsletterLastSent < 20 hours ago (or null) — prevents double-sends
  *
- * Members get the pool status block in their email.
- * Pool status is fetched once per run and included for all members.
+ * Members/VIP get the pool status block.
+ * VIP users get the VipBriefingEmail template with personalised content if a VipBriefing
+ * record exists for today; otherwise falls back to GeneralBriefingEmail.
+ * Pool status is fetched once per run and included for all members/VIP.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,6 +26,10 @@ import {
   generalBriefingSubject,
   type GeneralBriefingEmailProps,
 } from '@/emails/GeneralBriefingEmail';
+import {
+  VipBriefingEmail,
+  vipBriefingSubject,
+} from '@/emails/VipBriefingEmail';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -139,16 +145,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ sent: 0, failed: 0, skipped: 0 });
   }
 
-  // ── Pool status + alerts (fetched once for members) ──────────────────────
+  // ── Pool status + alerts (fetched once for members/VIP) ──────────────────
   const hasMembersOrVip = users.some((u) => u.tier === 'members' || u.tier === 'vip');
   const poolStatus = hasMembersOrVip ? await getPoolStatus() : null;
   // Fetch bot alerts for the last 26 hours (covers daily send window with margin)
   const alertsSince = new Date(Date.now() - 26 * 60 * 60 * 1000);
   const memberAlerts = hasMembersOrVip ? await getAlertsForMember(alertsSince) : [];
 
+  // ── Today's date for VIP briefing lookup ─────────────────────────────────
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+
   const resend = getResend();
   let sent = 0;
   let failed = 0;
+
+  // Shared snapshot values (computed once)
+  const snapshotProps = {
+    btcPrice:    snapVal(ds, 'btcPrice',    usd),
+    btcChange24h: snapVal(ds, 'btc24hPct',  pct),
+    fearGreed:   snapVal(ds, 'fearGreed'),
+    hashrate:    snapVal(ds, 'hashrateEH',  (n: number) => `${n.toFixed(1)} EH/s`),
+    mvrv:        snapVal(ds, 'mvrv',        fixed2),
+    blockHeight: snapVal(ds, 'blockHeight', (n: number) => n.toLocaleString()),
+    sp500:       snapVal(ds, 'sp500',       usd),
+    vix:         snapVal(ds, 'vix',         fixed2),
+    gold:        snapVal(ds, 'gold',        (n: number) => `$${n.toFixed(0)}`),
+    dxy:         snapVal(ds, 'dxy',         fixed2),
+    us10y:       snapVal(ds, 'us10y',       (n: number) => `${n.toFixed(2)}%`),
+    oil:         snapVal(ds, 'oil',         (n: number) => `$${n.toFixed(2)}`),
+  };
 
   // ── Send loop ─────────────────────────────────────────────────────────────
   for (const user of users) {
@@ -161,41 +187,101 @@ export async function GET(request: NextRequest) {
     const includePool   = isMembersPlus && poolStatus != null;
     const includeAlerts = isMembersPlus && memberAlerts.length > 0;
 
-    const emailHtml = await render(
-      GeneralBriefingEmail({
-        date: dateFormatted,
-        headline: briefing.headline,
-        threatLevel: briefing.threatLevel,
-        convictionScore: score,
-        sourcesCount,
-        sections: {
-          market:  briefing.marketSection,
-          network: briefing.networkSection,
-          geo:     briefing.geopoliticalSection,
-          macro:   briefing.macroSection,
-          outlook: briefing.outlookSection,
-        },
-        btcPrice:    snapVal(ds, 'btcPrice',    usd),
-        btcChange24h: snapVal(ds, 'btc24hPct',  pct),
-        fearGreed:   snapVal(ds, 'fearGreed'),
-        hashrate:    snapVal(ds, 'hashrateEH',  (n) => `${n.toFixed(1)} EH/s`),
-        mvrv:        snapVal(ds, 'mvrv',        fixed2),
-        blockHeight: snapVal(ds, 'blockHeight', (n) => n.toLocaleString()),
-        sp500:       snapVal(ds, 'sp500',       usd),
-        vix:         snapVal(ds, 'vix',         fixed2),
-        gold:        snapVal(ds, 'gold',        (n) => `$${n.toFixed(0)}`),
-        dxy:         snapVal(ds, 'dxy',         fixed2),
-        us10y:       snapVal(ds, 'us10y',       (n) => `${n.toFixed(2)}%`),
-        oil:         snapVal(ds, 'oil',         (n) => `$${n.toFixed(2)}`),
-        briefingUrl,
-        unsubscribeUrl,
-        viewInBrowserUrl,
-        poolStatus: includePool ? poolStatus! : undefined,
-        alerts: includeAlerts ? memberAlerts : undefined,
-      })
-    );
+    // ── VIP: attempt personalised email ──────────────────────────────────
+    let emailHtml: string;
+    let subject: string;
 
-    const subject = generalBriefingSubject(dateFormatted, briefing.threatLevel, briefing.headline);
+    if (user.tier === 'vip') {
+      // Look up today's VIP briefing
+      const vipBriefing = await (prisma as any).vipBriefing.findUnique({
+        where: { userId_date: { userId: user.id, date: todayUTC } },
+        select: { contentJson: true, headline: true, portfolioCtx: true, topics: true },
+      }) as { contentJson: string; headline: string; portfolioCtx: string | null; topics: string } | null;
+
+      if (vipBriefing) {
+        // Parse personalised content
+        const vipContent = JSON.parse(vipBriefing.contentJson) as {
+          market: string; network: string; geo: string; macro: string; outlook: string;
+        };
+        const vipTopics = JSON.parse(vipBriefing.topics) as string[];
+
+        emailHtml = await render(
+          VipBriefingEmail({
+            date: dateFormatted,
+            headline: vipBriefing.headline,
+            threatLevel: briefing.threatLevel,
+            convictionScore: score,
+            sourcesCount,
+            sections: {
+              market:  vipContent.market,
+              network: vipContent.network,
+              geo:     vipContent.geo,
+              macro:   vipContent.macro,
+              outlook: vipContent.outlook,
+            },
+            ...snapshotProps,
+            briefingUrl,
+            unsubscribeUrl,
+            viewInBrowserUrl,
+            topicNames: vipTopics,
+            poolStatus: includePool ? poolStatus! : undefined,
+            portfolioCtx: vipBriefing.portfolioCtx ?? undefined,
+            alerts: includeAlerts ? memberAlerts : undefined,
+          })
+        );
+        subject = vipBriefingSubject(dateFormatted, briefing.threatLevel, vipTopics);
+      } else {
+        // VIP briefing not ready — fall back to general template
+        emailHtml = await render(
+          GeneralBriefingEmail({
+            date: dateFormatted,
+            headline: briefing.headline,
+            threatLevel: briefing.threatLevel,
+            convictionScore: score,
+            sourcesCount,
+            sections: {
+              market:  briefing.marketSection,
+              network: briefing.networkSection,
+              geo:     briefing.geopoliticalSection,
+              macro:   briefing.macroSection,
+              outlook: briefing.outlookSection,
+            },
+            ...snapshotProps,
+            briefingUrl,
+            unsubscribeUrl,
+            viewInBrowserUrl,
+            poolStatus: includePool ? poolStatus! : undefined,
+            alerts: includeAlerts ? memberAlerts : undefined,
+          })
+        );
+        subject = generalBriefingSubject(dateFormatted, briefing.threatLevel, briefing.headline);
+      }
+    } else {
+      // ── General / Members: standard template ───────────────────────────
+      emailHtml = await render(
+        GeneralBriefingEmail({
+          date: dateFormatted,
+          headline: briefing.headline,
+          threatLevel: briefing.threatLevel,
+          convictionScore: score,
+          sourcesCount,
+          sections: {
+            market:  briefing.marketSection,
+            network: briefing.networkSection,
+            geo:     briefing.geopoliticalSection,
+            macro:   briefing.macroSection,
+            outlook: briefing.outlookSection,
+          },
+          ...snapshotProps,
+          briefingUrl,
+          unsubscribeUrl,
+          viewInBrowserUrl,
+          poolStatus: includePool ? poolStatus! : undefined,
+          alerts: includeAlerts ? memberAlerts : undefined,
+        })
+      );
+      subject = generalBriefingSubject(dateFormatted, briefing.threatLevel, briefing.headline);
+    }
 
     let status: 'sent' | 'failed' = 'sent';
     let error: string | undefined;
