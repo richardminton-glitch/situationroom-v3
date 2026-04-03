@@ -28,12 +28,13 @@ export default function DashboardPage() {
     }
   }, [user?.themePref, setTheme]);
 
-  // When theme changes, load the matching preset for the new theme.
-  // If the current named preset exists in the new theme's list, use that;
-  // otherwise fall back to the new theme's default.
+  // When theme changes, always switch to that theme's layout.
+  // Named presets load their theme equivalent; custom layouts fall back to the
+  // theme default (each theme maintains its own independent layout).
   useEffect(() => {
-    if (activePreset === 'custom') return; // never clobber a user-customised layout
-    const matched = getPresetByIdForTheme(activePreset, theme);
+    const matched = activePreset !== 'custom'
+      ? getPresetByIdForTheme(activePreset, theme)
+      : undefined;
     const next = matched ?? getDefaultForTheme(theme);
     setLayout(next.panels);
     setActivePreset(next.id);
