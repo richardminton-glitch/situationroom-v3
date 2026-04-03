@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import { hasAccess } from '@/lib/auth/tier';
+import { BriefingSearch } from '@/components/briefings/BriefingSearch';
 import type { Tier } from '@/types';
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default async function BriefingsArchivePage() {
   const user = await getCurrentUser();
   const userTier = (user?.tier as Tier) ?? 'free';
   const canReadArchive = hasAccess(userTier, 'general');
+  const isVip = hasAccess(userTier, 'vip');
 
   // General+: 30 days. Free: 3 most recent (teasers only — detail pages still gated).
   const briefings = await prisma.briefing.findMany({
@@ -52,6 +54,9 @@ export default async function BriefingsArchivePage() {
         </p>
         <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: '10px' }} />
       </header>
+
+      {/* VIP: Briefing Archive Intelligence */}
+      {isVip && <BriefingSearch />}
 
       {/* Archive */}
       {briefings.length === 0 ? (

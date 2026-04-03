@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createPinForUser } from '@/lib/auth/pin';
 import { generateAssignedKeypair, assignedDisplayName } from '@/lib/auth/keypair';
+import { getResend, FROM_ADDRESS } from '@/lib/newsletter/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,10 +35,36 @@ export async function POST(request: NextRequest) {
 
     const pin = await createPinForUser(user.id);
 
-    // TODO: Send email via Resend/Postmark/SES
-    // For development, log the PIN
+    // Dev: log to console for testing
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[DEV] PIN for ${normalizedEmail}: ${pin}`);
+    }
+
+    // Send PIN via Resend
+    try {
+      const resend = getResend();
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: normalizedEmail,
+        subject: 'Situation Room — Your Sign-In PIN',
+        html: `
+          <div style="font-family: 'Courier New', monospace; max-width: 400px; margin: 0 auto; padding: 32px 24px; background: #f5f0e8; color: #2c2416;">
+            <div style="font-size: 10px; letter-spacing: 0.16em; color: #8b7355; margin-bottom: 4px;">SITUATION ROOM</div>
+            <div style="font-size: 14px; letter-spacing: 0.08em; margin-bottom: 24px;">SIGN-IN PIN</div>
+            <div style="font-size: 32px; letter-spacing: 0.5em; font-weight: bold; text-align: center; padding: 16px; background: #fff; border: 1px solid #c8b89a; margin-bottom: 16px;">
+              ${pin}
+            </div>
+            <div style="font-size: 11px; color: #8b7355; line-height: 1.6;">
+              This PIN expires in 10 minutes.<br>
+              If you did not request this, ignore this email.
+            </div>
+          </div>
+        `,
+      });
+      console.log(`[Auth] PIN email sent to ${normalizedEmail}`);
+    } catch (emailErr) {
+      // Log but don't fail the request — PIN is created, user can retry
+      console.error('[Auth] PIN email send failed:', emailErr);
     }
 
     return NextResponse.json({ success: true });
