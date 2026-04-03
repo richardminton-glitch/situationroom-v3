@@ -87,7 +87,7 @@ export default function LoginPage() {
           </Link>
         </div>
         <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
-          {step === 'email' ? 'Enter your email to sign in' : `Enter the PIN sent to ${email}`}
+          {step === 'email' ? 'Enter your email to sign in' : `Enter your 4-digit PIN`}
         </p>
 
         {error && (
@@ -131,13 +131,13 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={handleVerifyPin}>
             <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-              6-digit PIN
+              4-digit PIN
             </label>
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={6}
+              maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
               required
@@ -149,16 +149,16 @@ export default function LoginPage() {
                 color: 'var(--text-primary)',
                 fontFamily: 'var(--font-data)',
               }}
-              placeholder="000000"
+              placeholder="0000"
             />
             <button
               type="submit"
-              disabled={loading || pin.length !== 6}
+              disabled={loading || pin.length !== 4}
               className="w-full p-3 rounded font-medium transition-opacity"
               style={{
                 backgroundColor: 'var(--accent-primary)',
                 color: 'var(--bg-primary)',
-                opacity: loading || pin.length !== 6 ? 0.7 : 1,
+                opacity: loading || pin.length !== 4 ? 0.7 : 1,
               }}
             >
               {loading ? 'Verifying...' : 'Verify & Sign In'}

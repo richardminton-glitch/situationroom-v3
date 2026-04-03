@@ -43,16 +43,20 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [onlineCount] = useState(Math.floor(Math.random() * 12) + 3); // placeholder
+  const [onlineCount, setOnlineCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await fetch('/api/chat/messages?limit=50');
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
+      const [msgRes, viewerRes] = await Promise.all([
+        fetch('/api/chat/messages?limit=50'),
+        fetch('/api/viewers'),
+      ]);
+      if (msgRes.ok) setMessages(await msgRes.json());
+      if (viewerRes.ok) {
+        const { members } = await viewerRes.json();
+        setOnlineCount(members ?? 0);
       }
     } catch { /* non-critical */ }
   }, []);

@@ -14,6 +14,7 @@ model User {
   timezone     String   @default("Europe/London")
   currencyPref String   @default("USD") @map("currency_pref")
   themePref    String   @default("parchment") @map("theme_pref")
+  pin          String?                        // static 4-digit login PIN
   tier         String   @default("free")
   isPublic     Boolean  @default(false) @map("is_public")
   createdAt    DateTime @default(now()) @map("created_at")
