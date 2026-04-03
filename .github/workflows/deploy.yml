@@ -13,4 +13,4 @@ jobs:
           cd /opt/situationroom-v3
           git pull
           npm run build
-          pm2 restart situationroom-v3
+          sudo pm2 restart situationroom-v3
