@@ -326,6 +326,30 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'onchain',
   },
 
+  // ── AI Analysis ──
+  {
+    id: 'signal-interpreter',
+    name: 'Signal Synthesis',
+    category: 'ai',
+    defaultW: 748, defaultH: 396, minW: 528, minH: 264,
+    resizable: true,
+    refreshInterval: 43200,
+    dataSources: ['briefing'],
+    description: 'AI synthesis of current signals — auto-detects live market, on-chain, and macro readings',
+    icon: 'ai',
+  },
+  {
+    id: 'cohort-analysis',
+    name: 'Cohort Analysis',
+    category: 'ai',
+    defaultW: 748, defaultH: 352, minW: 528, minH: 220,
+    resizable: true,
+    refreshInterval: 21600,
+    dataSources: ['briefing'],
+    description: 'Dominant Bitcoin cohort, implication, and confidence — LTH/STH/whale/retail breakdown',
+    icon: 'ai',
+  },
+
   // ── UI Components ──
   {
     id: 'h-separator',
@@ -412,6 +436,19 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: [],
     description: 'Newsletter preferences, frequency settings, and portfolio fields',
     icon: 'settings',
+  },
+
+  // ── AI Analysis ──
+  {
+    id: 'bitcoin-argument',
+    name: 'Bitcoin Argument',
+    category: 'ai',
+    defaultW: 748, defaultH: 396, minW: 440, minH: 264,
+    resizable: true,
+    refreshInterval: 43200,
+    dataSources: ['briefing'],
+    description: 'AI-generated 3-point case for Bitcoin based on current macro and network data',
+    icon: 'ai',
   },
 ];
 

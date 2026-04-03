@@ -37,6 +37,9 @@ import { M2ChartPanel } from './M2ChartPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
 import { NetworkSignalsPanel } from './NetworkSignalsPanel';
+import { BitcoinArgumentPanel } from './BitcoinArgumentPanel';
+import { SignalInterpreterPanel } from './SignalInterpreterPanel';
+import { CohortAnalysisPanel } from './CohortAnalysisPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -73,4 +76,7 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,
   'network-signals':   NetworkSignalsPanel,
+  'bitcoin-argument':  BitcoinArgumentPanel,
+  'signal-interpreter': SignalInterpreterPanel,
+  'cohort-analysis':    CohortAnalysisPanel,
 };

@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth/session';
+import { hasAccess } from '@/lib/auth/tier';
+import { prisma } from '@/lib/db';
+import Anthropic from '@anthropic-ai/sdk';
+import type { Tier } from '@/types';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 45;
+
+const TTL_HOURS = 24;
+
+const SUPPORTED_PATTERNS = new Set([
+  'hash-ribbon-crossover',
+  'mvrv-reset',
+  'puell-capitulation',
+  'sopr-recovery',
+  'fear-greed-extreme',
+]);
+
+interface PatternResponse {
+  historicalContext: string;
+  medianReturn30d: string;
+  medianReturn90d: string;
+  medianReturn180d: string;
+  caveats: string;
+}
+
+let _client: Anthropic | null = null;
+function getClient() {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildPrompt(patternName: string, currentData: Record<string, number | string>): string {
+  const dataFormatted = Object.entries(currentData)
+    .map(([k, v]) => `  ${k}: ${v}`)
+    .join('\n');
+
+  return `You are a Bitcoin on-chain historian. The pattern "${patternName}" has just fired with the following data:
+${dataFormatted}
+
+Drawing on Bitcoin's historical price and on-chain data (2013–present), provide:
+1. When this pattern last fired and what happened (2–3 sentences)
+2. Estimated median returns 30/90/180 days after this pattern historically (give specific % ranges, acknowledge uncertainty)
+3. What makes the current macro context different (1–2 sentences)
+
+Output ONLY valid JSON matching this exact schema:
+{ "historicalContext": "...", "medianReturn30d": "...", "medianReturn90d": "...", "medianReturn180d": "...", "caveats": "..." }`;
+}
+
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const userTier = (session.user.tier as Tier) ?? 'free';
+  if (!hasAccess(userTier, 'members')) {
+    return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
+  }
+
+  let body: { patternName?: string; currentData?: Record<string, number | string> };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const { patternName, currentData } = body;
+
+  if (!patternName || !SUPPORTED_PATTERNS.has(patternName)) {
+    return NextResponse.json(
+      {
+        error: 'Unsupported pattern',
+        supported: Array.from(SUPPORTED_PATTERNS),
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!currentData || typeof currentData !== 'object') {
+    return NextResponse.json({ error: 'currentData object is required' }, { status: 400 });
+  }
+
+  const panelId = `pattern-historian-${patternName}`;
+  const valueKey = todayKey();
+
+  // Cache check — TTL 24 hours
+  const cached = await (prisma as any).signalAnnotation.findUnique({
+    where: { panelId_valueKey: { panelId, valueKey } },
+  });
+  if (cached && cached.expiresAt > new Date()) {
+    try {
+      const parsed: PatternResponse = JSON.parse(cached.annotation);
+      return NextResponse.json({ pattern: patternName, ...parsed });
+    } catch {
+      // Fall through to regenerate if cached annotation is malformed
+    }
+  }
+
+  // Generate via Claude
+  const prompt = buildPrompt(patternName, currentData);
+  let text: string;
+  try {
+    const client = getClient();
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    text = (msg.content[0] as { type: 'text'; text: string }).text.trim();
+  } catch (err) {
+    console.error('[pattern-historian] Anthropic error:', err);
+    return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
+  }
+
+  // Parse JSON response from Claude
+  let parsed: PatternResponse;
+  try {
+    // Strip markdown code fences if present
+    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    parsed = JSON.parse(clean);
+  } catch {
+    console.error('[pattern-historian] Failed to parse Claude JSON:', text);
+    return NextResponse.json({ error: 'AI service returned invalid response' }, { status: 503 });
+  }
+
+  const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
+  const generatedAt = new Date();
+
+  await (prisma as any).signalAnnotation.upsert({
+    where: { panelId_valueKey: { panelId, valueKey } },
+    create: { panelId, valueKey, annotation: text, expiresAt },
+    update: { annotation: text, expiresAt, generatedAt },
+  });
+
+  return NextResponse.json({ pattern: patternName, ...parsed });
+}

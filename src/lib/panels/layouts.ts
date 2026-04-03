@@ -135,6 +135,17 @@ const ONCHAIN_PRESET: DashboardLayout = {
   ],
 };
 
+const AI_PRESET: DashboardLayout = {
+  id: 'ai',
+  name: 'AI Analysis',
+  description: 'Claude-powered signal synthesis, cohort analysis, and market argument',
+  panels: [
+    { panelId: 'bitcoin-argument',   x: 0,   y: 0,   w: 748, h: 396, collapsed: false, resizable: true },
+    { panelId: 'cohort-analysis',    x: 748, y: 0,   w: 704, h: 352, collapsed: false, resizable: true },
+    { panelId: 'signal-interpreter', x: 0,   y: 396, w: 748, h: 396, collapsed: false, resizable: true },
+  ],
+};
+
 // ══════════════════════════════════════════════════════════
 // PARCHMENT PRESETS
 // ══════════════════════════════════════════════════════════
@@ -192,6 +203,7 @@ export const PARCHMENT_PRESETS: DashboardLayout[] = [
   FULL_DATA_PARCHMENT,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
+  AI_PRESET,
   PARCHMENT_MINIMAL_PRESET,
 ];
 
@@ -248,6 +260,7 @@ export const DARK_PRESETS: DashboardLayout[] = [
   FULL_DATA_DARK,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
+  AI_PRESET,
   DARK_MINIMAL_PRESET,
 ];
 

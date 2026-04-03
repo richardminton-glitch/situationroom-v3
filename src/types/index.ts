@@ -4,7 +4,7 @@ export type Currency = 'USD' | 'EUR' | 'GBP' | 'sats';
 export type NostrAuthType = 'email' | 'assigned' | 'native' | 'upgraded';
 export type ChatIcon = 'lightning' | 'email' | 'bot';
 
-export type PanelCategory = 'bitcoin' | 'macro' | 'geopolitical' | 'onchain' | 'ui';
+export type PanelCategory = 'bitcoin' | 'macro' | 'geopolitical' | 'onchain' | 'ui' | 'ai';
 
 export interface UserProfile {
   id: string;
