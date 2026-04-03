@@ -58,6 +58,12 @@ const MARKETS = [
   { name: 'Johannesburg (JSE)', lat: -26.2, lon: 28.05, openUTC: 7, closeUTC: 15 },
 ];
 
+function formatUTCHour(h: number): string {
+  const hours = Math.floor(h);
+  const mins = Math.round((h - hours) * 60);
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
+
 function isMarketOpen(market: typeof MARKETS[0]): boolean {
   const now = new Date();
   const utcHour = now.getUTCHours() + now.getUTCMinutes() / 60;
@@ -104,6 +110,26 @@ export function DarkGlobe() {
     renderer.setSize(w, h);
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
+
+    // Tooltip
+    const tooltipDiv = document.createElement('div');
+    tooltipDiv.style.cssText = [
+      'display:none',
+      'position:absolute',
+      'background:rgba(8,12,18,0.94)',
+      'border:1px solid rgba(0,212,200,0.35)',
+      'padding:8px 10px',
+      'font-size:11px',
+      'line-height:1.5',
+      'max-width:220px',
+      'z-index:30',
+      'box-shadow:0 2px 12px rgba(0,0,0,0.6)',
+      'pointer-events:none',
+      "font-family:'Courier New',monospace",
+      'color:#b8cece',
+      'border-radius:3px',
+    ].join(';');
+    container.appendChild(tooltipDiv);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 2000);
@@ -322,17 +348,27 @@ export function DarkGlobe() {
     // Market indicator dots with pulse rings
     interface PulseRing { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; dotMat: THREE.MeshBasicMaterial; market: typeof MARKETS[0]; phase: number }
     const pulseRings: PulseRing[] = [];
+    interface MarketDot { mesh: THREE.Mesh; market: typeof MARKETS[0] }
+    const marketDots: MarketDot[] = [];
 
     MARKETS.forEach((market, i) => {
       const pos = ll(market.lat, market.lon, GLOBE_R * 1.012);
       const normal = pos.clone().normalize();
 
-      // Static dot
+      // Static dot — larger hit area via a transparent sphere on top
       const dotGeo = new THREE.SphereGeometry(2.0, 8, 8);
       const dotMat = new THREE.MeshBasicMaterial({ color: C_ACCENT });
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.copy(pos);
       pivot.add(dot);
+
+      // Invisible hit sphere (larger radius for easier hover detection)
+      const hitGeo = new THREE.SphereGeometry(5.5, 8, 8);
+      const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.position.copy(pos);
+      pivot.add(hitMesh);
+      marketDots.push({ mesh: hitMesh, market });
 
       // Expanding pulse ring
       const ringGeo = new THREE.RingGeometry(1.8, 3.2, 20);
@@ -362,13 +398,51 @@ export function DarkGlobe() {
     });
     window.addEventListener('mouseup', () => { isDragging = false; el.style.cursor = 'grab'; });
 
+    // Market tooltip via raycasting
+    const raycaster = new THREE.Raycaster();
+    el.addEventListener('mousemove', (e) => {
+      if (isDragging) { tooltipDiv.style.display = 'none'; return; }
+      const rect = el.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(marketDots.map((m) => m.mesh));
+      if (hits.length > 0) {
+        const found = marketDots.find((m) => m.mesh === hits[0].object);
+        if (found) {
+          const mkt = found.market;
+          const open = isMarketOpen(mkt);
+          const statusCol = open ? '#00d4c8' : '#556060';
+          const statusTxt = open ? '● OPEN' : '○ CLOSED';
+          const now = new Date();
+          const hh = now.getUTCHours().toString().padStart(2, '0');
+          const mm = now.getUTCMinutes().toString().padStart(2, '0');
+          tooltipDiv.innerHTML =
+            `<div style="font-weight:bold;font-size:12px;color:#e0f4f4;letter-spacing:0.03em">${mkt.name}</div>` +
+            `<div style="margin-top:3px;font-size:10px;color:${statusCol};letter-spacing:0.12em">${statusTxt}</div>` +
+            `<div style="margin-top:4px;font-size:10px;color:#6a8888">Hours: ${formatUTCHour(mkt.openUTC)} – ${formatUTCHour(mkt.closeUTC)} UTC</div>` +
+            `<div style="font-size:10px;color:#4a6666">Now: ${hh}:${mm} UTC</div>`;
+          tooltipDiv.style.display = 'block';
+          tooltipDiv.style.left = (e.clientX - rect.left + 14) + 'px';
+          tooltipDiv.style.top = (e.clientY - rect.top - 10) + 'px';
+          el.style.cursor = 'default';
+          return;
+        }
+      }
+      tooltipDiv.style.display = 'none';
+      if (!isDragging) el.style.cursor = 'grab';
+    });
+    el.addEventListener('mouseleave', () => { tooltipDiv.style.display = 'none'; });
+
     // Animation loop
     let raf: number;
     let rotationPaused = false;
 
     // Globe controls — direct DOM buttons
     const controlsDiv = document.createElement('div');
-    controlsDiv.style.cssText = 'position:absolute;bottom:4px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:10;';
+    controlsDiv.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:10;';
 
     const btnStyle = 'width:24px;height:24px;border-radius:3px;border:1px solid rgba(45,54,64,0.8);background:rgba(10,15,20,0.85);color:#00d4c8;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
 
@@ -475,6 +549,7 @@ export function DarkGlobe() {
       renderer.dispose();
       container.removeChild(renderer.domElement);
       controlsDiv.remove();
+      tooltipDiv.remove();
     };
 
     return () => {
