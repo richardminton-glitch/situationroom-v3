@@ -21,9 +21,10 @@ function progressColor(pct: number): string {
 interface FundingBarProps {
   variant?: 'full' | 'compact';
   onSubscribeClick?: () => void;
+  onDonateClick?: () => void;
 }
 
-export function FundingBar({ variant = 'compact', onSubscribeClick }: FundingBarProps) {
+export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClick }: FundingBarProps) {
   const [status, setStatus] = useState<FundingStatus | null>(null);
 
   useEffect(() => {
@@ -112,7 +113,7 @@ export function FundingBar({ variant = 'compact', onSubscribeClick }: FundingBar
         {onSubscribeClick && (
           <>
             <button
-              onClick={onSubscribeClick}
+              onClick={onDonateClick ?? onSubscribeClick}
               style={{
                 padding: '10px 20px', background: 'var(--accent-primary)',
                 color: 'var(--bg-primary)', border: 'none', cursor: 'pointer',

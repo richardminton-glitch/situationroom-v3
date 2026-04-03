@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { FundingBar } from '@/components/widgets/FundingBar';
 import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
+import { DonationModal } from '@/components/auth/DonationModal';
 
 export default function SupportPage() {
   const [showModal, setShowModal] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
 
   return (
     <div style={{ fontFamily: 'var(--font-mono)', padding: '32px 24px', maxWidth: '640px', margin: '0 auto' }}>
@@ -33,7 +35,11 @@ export default function SupportPage() {
         keeps this independent.
       </p>
 
-      <FundingBar variant="full" onSubscribeClick={() => setShowModal(true)} />
+      <FundingBar
+        variant="full"
+        onSubscribeClick={() => setShowModal(true)}
+        onDonateClick={() => setShowDonate(true)}
+      />
 
       <div style={{ marginTop: '40px', borderTop: '1px solid var(--border-subtle)', paddingTop: '24px' }}>
         <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -79,6 +85,10 @@ export default function SupportPage() {
           onClose={() => setShowModal(false)}
           onSuccess={() => setShowModal(false)}
         />
+      )}
+
+      {showDonate && (
+        <DonationModal onClose={() => setShowDonate(false)} />
       )}
     </div>
   );
