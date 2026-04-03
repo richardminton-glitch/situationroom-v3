@@ -2,7 +2,7 @@ export type Theme = 'parchment' | 'dark';
 export type Tier = 'free' | 'premium';
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'sats';
 
-export type PanelCategory = 'bitcoin' | 'macro' | 'geopolitical' | 'onchain';
+export type PanelCategory = 'bitcoin' | 'macro' | 'geopolitical' | 'onchain' | 'ui';
 
 export interface UserProfile {
   id: string;

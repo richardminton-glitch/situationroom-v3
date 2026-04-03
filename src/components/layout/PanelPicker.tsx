@@ -14,11 +14,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   macro: 'Macro',
   onchain: 'On-Chain',
   geopolitical: 'Geopolitical',
+  ui: 'UI Components',
 };
+
+// Display order for categories in the picker
+const CATEGORY_ORDER = ['bitcoin', 'macro', 'onchain', 'geopolitical', 'ui'];
 
 export function PanelPicker({ currentPanels, onAdd, onClose }: PanelPickerProps) {
   const currentIds = new Set(currentPanels.map((p) => p.panelId));
-  const available = PANEL_REGISTRY.filter((p) => !currentIds.has(p.id));
+  // UI components (separators) can be added multiple times — always show them as available
+  const available = PANEL_REGISTRY.filter((p) => p.uiComponent || !currentIds.has(p.id));
 
   const grouped = available.reduce((acc, panel) => {
     const cat = panel.category;
@@ -63,7 +68,12 @@ export function PanelPicker({ currentPanels, onAdd, onClose }: PanelPickerProps)
             All panels are already in your layout.
           </p>
         ) : (
-          Object.entries(grouped).map(([category, panels]) => (
+          Object.entries(grouped)
+            .sort(([a], [b]) => {
+              const ai = CATEGORY_ORDER.indexOf(a); const bi = CATEGORY_ORDER.indexOf(b);
+              return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+            })
+            .map(([category, panels]) => (
             <div key={category} className="mb-4">
               <h3
                 className="text-xs uppercase tracking-wider mb-2"

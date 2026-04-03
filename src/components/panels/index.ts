@@ -30,6 +30,8 @@ import { UTXOAgeDistributionPanel } from './UTXOAgeDistributionPanel';
 import { LTHSTHSupplyPanel } from './LTHSTHSupplyPanel';
 import { CoinDaysDestroyedPanel } from './CoinDaysDestroyedPanel';
 import { URPDPanel } from './URPDPanel';
+import { HSeparatorPanel } from './HSeparatorPanel';
+import { VSeparatorPanel } from './VSeparatorPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -59,4 +61,6 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'lth-sth-supply':  LTHSTHSupplyPanel,
   'cdd':             CoinDaysDestroyedPanel,
   'urpd':            URPDPanel,
+  'h-separator':     HSeparatorPanel,
+  'v-separator':     VSeparatorPanel,
 };

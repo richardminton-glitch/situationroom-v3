@@ -22,13 +22,15 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
   const { guides, calcSnap, clearGuides, updateGuides } = useAlignmentGuides(layout);
 
   // Canvas must be large enough to contain all panels.
-  // Full-width bars (noHeader) are excluded from maxW — they stretch to fill the canvas.
+  // Full-width bars (noHeader && !uiComponent) are excluded from maxW — they stretch to fill.
+  // UI components (separators) are included so the canvas grows to fit them.
   const canvasSize = useMemo(() => {
     let maxW = 0;
     let maxH = 0;
     for (const p of layout) {
       const entry = getPanelById(p.panelId);
-      if (!entry?.noHeader) maxW = Math.max(maxW, p.x + p.w + 40);
+      const isBar = entry?.noHeader && !entry?.uiComponent;
+      if (!isBar) maxW = Math.max(maxW, p.x + p.w + 40);
       maxH = Math.max(maxH, p.y + p.h + 40);
     }
     return { width: Math.max(maxW, 1200), height: Math.max(maxH, 800) };
@@ -74,20 +76,25 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
       {layout.map((item) => {
         const entry = getPanelById(item.panelId);
         if (!entry) return null;
-        const PanelComponent = PANEL_COMPONENTS[item.panelId];
+        // UI components (separators) use unique instance IDs — resolve component by base id
+        const componentKey = entry.uiComponent
+          ? item.panelId.replace(/-\d+$/, '')
+          : item.panelId;
+        const PanelComponent = PANEL_COMPONENTS[componentKey];
+        const isBar = !!entry.noHeader && !entry.uiComponent;
 
         return (
           <Rnd
             key={item.panelId}
             position={{ x: item.x, y: item.y }}
-            size={{ width: entry.noHeader ? canvasSize.width : item.w, height: item.collapsed ? 44 : item.h }}
+            size={{ width: isBar ? canvasSize.width : item.w, height: item.collapsed ? 44 : item.h }}
             minWidth={entry.minW}
             minHeight={item.collapsed ? 44 : entry.minH}
             dragGrid={[GRID_SNAP, GRID_SNAP]}
             resizeGrid={[GRID_SNAP, GRID_SNAP]}
             bounds={false as unknown as string}
             enableResizing={editable && !item.collapsed && item.resizable
-              ? (entry.noHeader
+              ? (isBar
                 ? { right: true, top: false, bottom: false, left: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }
                 : true)
               : false}
@@ -117,10 +124,10 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
               const result = calcSnap(item.panelId, position.x, position.y, w, h);
               updateGuides(result.guides);
             }}
-            className={`panel-card${entry.noHeader ? ' panel-bar' : ''}${editable ? ' panel-editing' : ''}`}
+            className={`panel-card${isBar ? ' panel-bar' : ''}${entry.uiComponent ? ' panel-separator' : ''}${editable ? ' panel-editing' : ''}`}
             style={{
               zIndex: 1,
-              cursor: 'default',
+              cursor: editable && entry.uiComponent ? 'grab' : 'default',
             }}
             resizeHandleStyles={{
               bottomRight: { cursor: 'nwse-resize' },
@@ -190,7 +197,7 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
               </div>
             )}
 
-            {/* Remove button for noHeader panels (ticker bars) in edit mode */}
+            {/* Remove button for noHeader panels (ticker bars + separators) in edit mode */}
             {entry.noHeader && editable && (
               <button
                 onClick={(e) => { e.stopPropagation(); removePanel(item.panelId); }}
@@ -208,7 +215,7 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
                 className={entry.noHeader ? '' : 'px-3 py-2'}
                 style={
                   entry.noHeader
-                    ? { height: '100%' }
+                    ? { height: '100%' }   // bars and separators both use full height, no padding
                     : item.resizable
                       ? { height: 'calc(100% - 32px)', overflow: 'hidden' }
                       : {}

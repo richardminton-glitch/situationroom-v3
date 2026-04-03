@@ -45,6 +45,8 @@ export default function DashboardPage() {
   const addPanel = useCallback((panelId: string) => {
     const entry = getPanelById(panelId);
     if (!entry) return;
+    // UI components (separators) get unique instance IDs so multiple can coexist
+    const instanceId = entry.uiComponent ? `${panelId}-${Date.now()}` : panelId;
     // Spawn at current scroll position, snapped to grid, with a small stagger
     const scrollX = mainRef.current?.scrollLeft ?? 0;
     const scrollY = mainRef.current?.scrollTop ?? 0;
@@ -54,7 +56,7 @@ export default function DashboardPage() {
     setLayout((prev) => [
       ...prev,
       {
-        panelId,
+        panelId: instanceId,
         x,
         y,
         w: entry.defaultW,

@@ -9,7 +9,8 @@ export interface PanelRegistryEntry {
   minW: number;
   minH: number;
   resizable: boolean;
-  noHeader?: boolean; // full-width bars don't need panel chrome
+  noHeader?: boolean;     // full-width bars don't need panel chrome
+  uiComponent?: boolean;  // UI-only (separators) — noHeader but NOT stretched to full-width
   refreshInterval: number;
   dataSources: string[];
   description: string;
@@ -291,6 +292,34 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'chart',
   },
 
+  // ── UI Components ──
+  {
+    id: 'h-separator',
+    name: 'Horizontal Separator',
+    category: 'ui',
+    defaultW: 264, defaultH: 44, minW: 88, minH: 44,
+    resizable: true,
+    noHeader: true,
+    uiComponent: true,
+    refreshInterval: 0,
+    dataSources: [],
+    description: 'Horizontal rule — drag to position, resize to span columns',
+    icon: 'separator',
+  },
+  {
+    id: 'v-separator',
+    name: 'Vertical Separator',
+    category: 'ui',
+    defaultW: 44, defaultH: 264, minW: 44, minH: 88,
+    resizable: true,
+    noHeader: true,
+    uiComponent: true,
+    refreshInterval: 0,
+    dataSources: [],
+    description: 'Vertical rule — drag to position, resize to span rows',
+    icon: 'separator',
+  },
+
   // ── Full-width bars ──
   {
     id: 'wire',
@@ -331,7 +360,11 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
 ];
 
 export function getPanelById(id: string): PanelRegistryEntry | undefined {
-  return PANEL_REGISTRY.find((p) => p.id === id);
+  // Direct match first
+  const direct = PANEL_REGISTRY.find((p) => p.id === id);
+  if (direct) return direct;
+  // UI components use unique instance IDs (e.g. "h-separator-1712345678") — resolve by prefix
+  return PANEL_REGISTRY.find((p) => p.uiComponent && id.startsWith(p.id + '-'));
 }
 
 export function getPanelsByCategory(category: PanelCategory): PanelRegistryEntry[] {
