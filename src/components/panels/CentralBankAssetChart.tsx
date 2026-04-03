@@ -33,7 +33,9 @@ interface BankData {
   narrative: string;
 }
 
-// ─── Segment colour palette ───────────────────────────────────────────────────
+// ─── Segment colour palettes ─────────────────────────────────────────────────
+// Two mode-specific palettes share the same keys so AssetSlice.colorKey works
+// for both. Parchment uses warm documentary tones; dark uses the teal palette.
 
 const SEGMENT_COLORS = {
   govBonds:  '#d4a017',  // gold — treasuries / gilts / JGBs / sovereign bonds
@@ -44,6 +46,20 @@ const SEGMENT_COLORS = {
   corporate: '#7a6e88',  // slate purple — corporate bonds
   other:     '#4a4a4a',  // dark grey — other / unspecified
 } as const;
+
+const SEGMENT_COLORS_DARK = {
+  govBonds:  '#00d4aa',  // accent teal — dominant sovereign bonds slice
+  mbs:       '#007a62',  // mid teal — MBS
+  gold:      '#c8960c',  // amber gold — physical gold (semantic, kept across themes)
+  fx:        '#2a8a9a',  // blue-teal — FX reserves
+  equities:  '#3a6090',  // steel blue — equities / ETFs
+  corporate: '#5a4a7a',  // slate purple — corporate bonds
+  other:     '#2e4040',  // dark teal-grey — unspecified
+} as const;
+
+function segColor(key: keyof typeof SEGMENT_COLORS, mode: Mode): string {
+  return mode === 'dark' ? SEGMENT_COLORS_DARK[key] : SEGMENT_COLORS[key];
+}
 
 // ─── Static dataset ───────────────────────────────────────────────────────────
 //
@@ -417,7 +433,7 @@ export default function CentralBankAssetChart({ mode = 'parchment', defaultBank 
               animationBegin={0} animationDuration={400} animationEasing="ease-out"
             >
               {bank.assets.map((slice) => (
-                <Cell key={slice.name} fill={SEGMENT_COLORS[slice.colorKey]} />
+                <Cell key={slice.name} fill={segColor(slice.colorKey, mode)} />
               ))}
             </Pie>
             <DonutCentre cx={110} cy={100} bank={bank} mode={mode} />
@@ -444,7 +460,7 @@ export default function CentralBankAssetChart({ mode = 'parchment', defaultBank 
             const sliceVal = (slice.pct / 100 * rawTotal).toFixed(2);
             return (
               <div key={slice.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <div style={{ width: 10, height: 10, background: SEGMENT_COLORS[slice.colorKey], flexShrink: 0 }} />
+                <div style={{ width: 10, height: 10, background: segColor(slice.colorKey, mode), flexShrink: 0 }} />
                 <div style={{ flex: 1, fontSize: 9, letterSpacing: 0.8, color: t.textMuted }}>
                   {slice.name.toUpperCase()}
                 </div>
