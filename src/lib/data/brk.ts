@@ -48,7 +48,7 @@ export interface BrkSeriesResult {
 }
 
 interface BrkBulkEntry {
-  name: string;
+  name?: string;
   start: number;
   data: number[];
 }
@@ -147,15 +147,21 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
     // 3. Bulk fetch
     const seriesParam = series.join(',');
     const fetchUrl = `${BRK_BASE}/bulk?series=${seriesParam}&index=day1&start=${startOffset}&limit=${days}`;
-    const bulk = await brkFetch<BrkBulkEntry[]>(fetchUrl);
+    const rawBulk = await brkFetch<BrkBulkEntry | BrkBulkEntry[]>(fetchUrl);
+
+    // BRK returns a single object for 1 series, or an array for multiple
+    const bulk: BrkBulkEntry[] = Array.isArray(rawBulk) ? rawBulk : [rawBulk];
 
     // 4. Parse into aligned arrays
+    // BRK bulk entries don't include a 'name' field — map by position to requested series
     const seriesData: Record<string, number[]> = {};
     let maxLen = 0;
     let baseStart = startOffset;
 
-    for (const entry of bulk) {
-      seriesData[entry.name] = entry.data;
+    for (let idx = 0; idx < bulk.length; idx++) {
+      const entry = bulk[idx];
+      const seriesName = entry.name ?? series[idx] ?? `unknown_${idx}`;
+      seriesData[seriesName] = entry.data;
       if (entry.data.length > maxLen) {
         maxLen = entry.data.length;
         baseStart = entry.start;
