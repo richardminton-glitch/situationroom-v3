@@ -189,8 +189,8 @@ export async function POST(request: NextRequest) {
         winRatePct: 56,
       },
       alerts: [
-        { message: 'Conviction score crossed 70 (was 65)', time: '14:32 UTC' },
-        { message: 'BTC crossed $67,000 — your price alert triggered', time: '09:18 UTC' },
+        '[14:32 UTC] Conviction score crossed 70 (was 65)',
+        '[09:18 UTC] BTC crossed $67,000 — your price alert triggered',
       ],
     }));
     await resend.emails.send({
@@ -227,8 +227,8 @@ export async function POST(request: NextRequest) {
         winRatePct: 56,
       },
       alerts: [
-        { message: 'Conviction score crossed 70 (was 65)', time: '14:32 UTC' },
-        { message: 'LTH supply dropped below 74%', time: '06:05 UTC' },
+        '[14:32 UTC] Conviction score crossed 70 (was 65)',
+        '[06:05 UTC] LTH supply dropped below 74%',
       ],
     }));
     await resend.emails.send({
