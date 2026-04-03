@@ -26,7 +26,7 @@ export function HSeparatorPanel() {
         style={{
           width: '100%',
           height: '1px',
-          backgroundColor: 'var(--border-primary)',
+          backgroundColor: '#3a2a1a',
         }}
       />
     </div>

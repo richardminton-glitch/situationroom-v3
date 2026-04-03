@@ -26,7 +26,7 @@ export function VSeparatorPanel() {
         style={{
           width: '1px',
           height: '100%',
-          backgroundColor: 'var(--border-primary)',
+          backgroundColor: '#3a2a1a',
         }}
       />
     </div>
