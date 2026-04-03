@@ -47,12 +47,14 @@ export default function DashboardPage() {
     if (!entry) return;
     // UI components (separators) get unique instance IDs so multiple can coexist
     const instanceId = entry.uiComponent ? `${panelId}-${Date.now()}` : panelId;
-    // Spawn at current scroll position, snapped to grid, with a small stagger
+    // Spawn at current scroll position, snapped to grid, with a small stagger.
+    // Separators use half-grid (22px) snap so they sit between panel edges.
+    const snap = entry.uiComponent ? 22 : GRID_SNAP;
     const scrollX = mainRef.current?.scrollLeft ?? 0;
     const scrollY = mainRef.current?.scrollTop ?? 0;
-    const stagger = (layout.length % 4) * GRID_SNAP;
-    const x = Math.round((scrollX + stagger) / GRID_SNAP) * GRID_SNAP;
-    const y = Math.round((scrollY + stagger) / GRID_SNAP) * GRID_SNAP;
+    const stagger = (layout.length % 4) * snap;
+    const x = Math.round((scrollX + stagger) / snap) * snap + (entry.uiComponent ? 22 : 0);
+    const y = Math.round((scrollY + stagger) / snap) * snap + (entry.uiComponent ? 22 : 0);
     setLayout((prev) => [
       ...prev,
       {

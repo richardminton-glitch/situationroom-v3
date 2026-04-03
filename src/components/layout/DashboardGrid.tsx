@@ -9,7 +9,9 @@ import { useAlignmentGuides } from '@/lib/panels/useAlignmentGuides';
 import { AlignmentGuides } from './AlignmentGuides';
 
 const GRID_SNAP = 44; // matches the 44px visual grid lines
-const snapRound = (v: number) => Math.round(v / GRID_SNAP) * GRID_SNAP;
+const SEP_SNAP  = 22; // half-grid — separators sit between panel edges
+const snapRound    = (v: number) => Math.round(v / GRID_SNAP) * GRID_SNAP;
+const snapRoundSep = (v: number) => Math.round(v / SEP_SNAP)  * SEP_SNAP;
 
 interface DashboardGridProps {
   layout: LayoutPanelItem[];
@@ -90,8 +92,8 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
             size={{ width: isBar ? canvasSize.width : item.w, height: item.collapsed ? 44 : item.h }}
             minWidth={entry.minW}
             minHeight={item.collapsed ? 44 : entry.minH}
-            dragGrid={[GRID_SNAP, GRID_SNAP]}
-            resizeGrid={[GRID_SNAP, GRID_SNAP]}
+            dragGrid={entry.uiComponent ? [SEP_SNAP, SEP_SNAP] : [GRID_SNAP, GRID_SNAP]}
+            resizeGrid={entry.uiComponent ? [SEP_SNAP, SEP_SNAP] : [GRID_SNAP, GRID_SNAP]}
             bounds={false as unknown as string}
             enableResizing={editable && !item.collapsed && item.resizable
               ? (isBar
@@ -104,17 +106,18 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
               updateGuides(result.guides);
             }}
             onDragStop={(_e, d) => {
-              // Apply edge snap, then grid-round as safety net
+              const snap = entry.uiComponent ? snapRoundSep : snapRound;
               const result = calcSnap(item.panelId, d.x, d.y, item.w, item.collapsed ? 44 : item.h);
-              updatePanel(item.panelId, { x: snapRound(result.x), y: snapRound(result.y) });
+              updatePanel(item.panelId, { x: snap(result.x), y: snap(result.y) });
               clearGuides();
             }}
             onResizeStop={(_e, _dir, ref, _delta, position) => {
+              const snap = entry.uiComponent ? snapRoundSep : snapRound;
               updatePanel(item.panelId, {
-                x: snapRound(position.x),
-                y: snapRound(position.y),
-                w: snapRound(parseInt(ref.style.width, 10)),
-                h: snapRound(parseInt(ref.style.height, 10)),
+                x: snap(position.x),
+                y: snap(position.y),
+                w: snap(parseInt(ref.style.width, 10)),
+                h: snap(parseInt(ref.style.height, 10)),
               });
               clearGuides();
             }}
