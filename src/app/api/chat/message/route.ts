@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'members')) {
+  if (!isAdmin(session.user.email) && !hasAccess(userTier, 'members')) {
     return NextResponse.json({ error: 'Members tier required to post' }, { status: 403 });
   }
 

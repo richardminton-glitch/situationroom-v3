@@ -11,6 +11,7 @@ interface ChatMessage {
   authorIcon: 'lightning' | 'email' | 'bot';
   content: string;
   isBot: boolean;
+  isAdmin: boolean;
   eventType: string | null;
   createdAt: string;
 }
@@ -157,7 +158,8 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
-              <span style={{ fontSize: '10px', color: msg.isBot ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '10px', color: msg.isAdmin ? '#c04040' : msg.isBot ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                {msg.isAdmin && <span style={{ color: '#c04040', marginRight: '2px' }}>◆</span>}
                 {ICON[msg.authorIcon] ?? '?'} {msg.authorDisplay}
               </span>
               <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
