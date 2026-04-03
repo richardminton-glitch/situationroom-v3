@@ -71,32 +71,23 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
   name: 'Full Overview',
   description: 'The classic Situation Room — everything at a glance',
   panels: [
-    // Left column — 2+5+5+6 rows (y=0..792)
-    ...stack(L, 0, [
-      { id: 'btc-hero',    w: W, h: G * 2 },
-      { id: 'btc-market',  w: W, h: G * 5 },
-      { id: 'btc-network', w: W, h: G * 5 },
-      { id: 'conviction',  w: W, h: G * 6, resizable: true },
-    ]),
-
-    // Centre column (924px wide)
-    // Globe: 8 rows. Intel (12 cols) + AI (9 cols) side-by-side: 8 rows.
-    // Centre total = 704 = TIKR_Y (perfect alignment)
-    { panelId: 'globe',       x: W,           y: 0,        w: D_CW,      h: G * 8, collapsed: false, resizable: true },
-    { panelId: 'intel-feed',  x: W,           y: G * 8,    w: G * 12,    h: G * 8, collapsed: false, resizable: true },
-    { panelId: 'ai-briefing', x: W + G * 12,  y: G * 8,    w: G * 9,     h: G * 8, collapsed: false, resizable: true },
-
-    // Right column — 5+5+3+4 rows, ends at y=748=WIRE_Y
-    ...stack(D_R, 0, [
-      { id: 'market-indices', w: W, h: G * 5 },
-      { id: 'commodities',    w: W, h: G * 5 },
-      { id: 'fx-macro',       w: W, h: G * 3 },
-      { id: 'central-bank',   w: W, h: G * 4 },
-    ]),
-
-    // Bars — w stored but auto-fills canvas width via DashboardGrid
-    { panelId: 'tikr', x: 0, y: TIKR_Y, w: D_R + W, h: G, collapsed: false, resizable: true },
-    { panelId: 'wire', x: 0, y: WIRE_Y, w: D_R + W, h: G, collapsed: false, resizable: true },
+    { panelId: 'btc-hero',                    x:    0, y:   0, w: 264, h:  88, collapsed: false, resizable: false },
+    { panelId: 'btc-market',                  x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
+    { panelId: 'btc-network',                 x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
+    { panelId: 'conviction',                  x:    0, y: 528, w: 264, h: 264, collapsed: false, resizable: true  },
+    { panelId: 'globe',                       x:  264, y:   0, w: 924, h: 352, collapsed: false, resizable: true  },
+    { panelId: 'intel-feed',                  x:  264, y: 352, w: 528, h: 352, collapsed: false, resizable: true  },
+    { panelId: 'ai-briefing',                 x:  792, y: 352, w: 396, h: 352, collapsed: false, resizable: true  },
+    { panelId: 'market-indices',              x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
+    { panelId: 'commodities',                 x: 1188, y: 220, w: 264, h: 220, collapsed: false, resizable: false },
+    { panelId: 'fx-macro',                    x: 1188, y: 440, w: 264, h: 132, collapsed: false, resizable: false },
+    { panelId: 'central-bank',                x: 1188, y: 572, w: 264, h: 176, collapsed: false, resizable: false },
+    { panelId: 'tikr',                        x:    0, y: 704, w: 1452, h: 44, collapsed: false, resizable: true  },
+    { panelId: 'wire',                        x:    0, y: 748, w: 1452, h: 44, collapsed: false, resizable: true  },
+    // Separators — sit between columns/rows at half-grid offsets
+    { panelId: 'v-separator-1775215862655',   x:  242, y:   0, w:  44, h: 704, collapsed: false, resizable: true  },
+    { panelId: 'v-separator-1775215874353',   x: 1166, y:   0, w:  44, h: 704, collapsed: false, resizable: true  },
+    { panelId: 'h-separator-1775215892113',   x:  264, y: 330, w: 924, h:  44, collapsed: false, resizable: true  },
   ],
 };
 
