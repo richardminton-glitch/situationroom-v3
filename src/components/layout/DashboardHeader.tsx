@@ -77,7 +77,12 @@ const THREAT_COLORS_DARK: Record<string, string> = {
   HIGH: '#d06050', SEVERE: '#c04040', CRITICAL: '#ff4444',
 };
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  opsRoomOpen?: boolean;
+  onToggleOpsRoom?: () => void;
+}
+
+export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom }: DashboardHeaderProps) {
   const { data, loading } = useData();
   const { theme } = useTheme();
   const [utcTime, setUtcTime] = useState('--:--:-- UTC');
@@ -247,6 +252,24 @@ export function DashboardHeader() {
               </span>
             </span>
           </Tooltip>
+
+          {/* OPS ROOM toggle */}
+          {onToggleOpsRoom && (
+            <button
+              onClick={onToggleOpsRoom}
+              style={{
+                fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontSize: '10px',
+                backgroundColor: opsRoomOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
+                color: opsRoomOpen ? 'var(--bg-primary)' : 'var(--text-muted)',
+                border: '1px solid var(--border-primary)',
+                padding: '2px 10px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              OPS {opsRoomOpen ? '▸' : '◊'}
+            </button>
+          )}
 
           {/* Last refresh */}
           <span

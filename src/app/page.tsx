@@ -141,24 +141,10 @@ export default function DashboardPage() {
       <Sidebar dashboardControls={dashboardControls} />
 
       <div className="flex-1 flex flex-col min-w-0" style={{ marginRight: opsRoomOpen ? '320px' : '0', transition: 'margin-right 0.2s ease' }}>
-        <DashboardHeader />
-
-        {/* OPS ROOM button — always visible in header area */}
-        <div className="flex items-center justify-end px-4 py-1 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <button
-            onClick={() => setOpsRoomOpen((o) => !o)}
-            className="text-xs px-3 py-1"
-            style={{
-              fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontSize: '10px',
-              backgroundColor: opsRoomOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
-              color: opsRoomOpen ? 'var(--bg-primary)' : 'var(--text-muted)',
-              border: '1px solid var(--border-primary)',
-              cursor: 'pointer',
-            }}
-          >
-            OPS ROOM {opsRoomOpen ? '→' : '◊'}
-          </button>
-        </div>
+        <DashboardHeader
+          opsRoomOpen={opsRoomOpen}
+          onToggleOpsRoom={() => setOpsRoomOpen((o) => !o)}
+        />
 
         {/* Edit mode toolbar — only shows Add Panel button when editing */}
         {editMode && (
