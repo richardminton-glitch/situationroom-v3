@@ -9,10 +9,4 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Pull and build
-        run: |
-          cd /opt/situationroom-v3
-          git pull
-          # Ensure .next is writable by runner (root may have rebuilt manually)
-          sudo chown -R runner:runner /opt/situationroom-v3/.next 2>/dev/null || true
-          npm run build
-          sudo pm2 restart situationroom-v3
+        run: sudo /usr/local/bin/deploy-v3
