@@ -149,10 +149,10 @@ export const LAYOUT_PRESETS: DashboardLayout[] = [
     name: 'On-Chain Deep Dive',
     description: 'Network metrics, on-chain flows, and mining data',
     panels: [
-      { panelId: 'utxo-age-dist',  x: 0,   y: 0,   w: 748, h: 396, collapsed: false, resizable: true },
+      { panelId: 'cdd',            x: 0,   y: 0,   w: 748, h: 396, collapsed: false, resizable: true },
+      { panelId: 'urpd',           x: 748, y: 0,   w: 704, h: 396, collapsed: false, resizable: true },
       { panelId: 'lth-sth-supply', x: 0,   y: 396, w: 748, h: 396, collapsed: false, resizable: true },
-      { panelId: 'urpd',           x: 748, y: 396, w: 704, h: 396, collapsed: false, resizable: true },
-      { panelId: 'cdd',            x: 748, y: 0,   w: 704, h: 396, collapsed: false, resizable: true },
+      { panelId: 'utxo-age-dist',  x: 748, y: 396, w: 704, h: 396, collapsed: false, resizable: true },
     ],
   },
   {
