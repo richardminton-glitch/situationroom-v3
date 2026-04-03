@@ -3,8 +3,8 @@
  * Returns SOPR (Spent Output Profit Ratio) and Active Addresses with 7d MAs.
  *
  * Data: BRK (bitview.space) series
- *   sopr             — daily SOPR (ratio of price received vs paid for spent UTXOs)
- *   active_addresses — daily unique active addresses (sending + receiving)
+ *   sopr_24h         — daily SOPR (ratio of price received vs paid for spent UTXOs)
+ *   addr_count_24h   — daily unique active addresses (sending + receiving)
  *
  * SOPR interpretation:
  *   > 1.0  — UTXOs spent at profit (holders in profit, healthy)
@@ -49,8 +49,8 @@ function sma7(values: number[]): number[] {
 }
 
 function processRawData(seriesData: Record<string, number[]>, dates: string[]): NetworkSignalsResponse {
-  const soprVals   = (seriesData['sopr'] ?? []).map((v) => v ?? 1);            // default 1 = neutral
-  const activeVals = (seriesData['active_addresses'] ?? []).map((v) => v ?? 0);
+  const soprVals   = (seriesData['sopr_24h'] ?? []).map((v) => v ?? 1);            // default 1 = neutral
+  const activeVals = (seriesData['addr_count_24h'] ?? []).map((v) => v ?? 0);
 
   const soprMa7vals   = sma7(soprVals);
   const activeMa7vals = sma7(activeVals);
@@ -100,8 +100,8 @@ function processRawData(seriesData: Record<string, number[]>, dates: string[]): 
 export async function GET() {
   try {
     const raw = await fetchBrkSeries({
-      series: ['sopr', 'active_addresses'],
-      probeSeries: 'sopr',
+      series: ['sopr_24h', 'addr_count_24h'],
+      probeSeries: 'sopr_24h',
       days: FETCH_DAYS,
       cacheFile: 'network-signals-raw-cache.json',
     });
