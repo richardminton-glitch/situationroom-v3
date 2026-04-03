@@ -10,12 +10,16 @@ jobs:
     steps:
       - name: Pull and build
         run: |
+          LOG=/tmp/sr-deploy.log
+          exec > >(tee -a $LOG) 2>&1
           set -x
+          echo "=== START $(date) ==="
           echo "whoami: $(whoami)"
           echo "PATH: $PATH"
-          echo "node: $(node --version 2>&1 || echo NOT_FOUND)"
-          echo "npm: $(npm --version 2>&1 || echo NOT_FOUND)"
-          cd /opt/situationroom-v3
-          git pull
-          npm run build
+          node --version || echo "node not found"
+          npm --version || echo "npm not found"
+          cd /opt/situationroom-v3 || { echo "cd FAILED"; exit 1; }
+          git pull 2>&1 || { echo "git pull FAILED $?"; exit 1; }
+          npm run build 2>&1
           sudo pm2 restart situationroom-v3
+          echo "=== DONE ==="
