@@ -135,15 +135,24 @@ export function AIBriefingPanel() {
         ))}
       </div>
 
-      {/* Active section content — gated: General required */}
-      <BlurGate requiredTier="general" featureName="AI Intelligence">
+      {/* Active section content — Outlook is free; all other sections require General tier */}
+      {activeSection === 'outlook' ? (
         <div
           className="flex-1 overflow-y-auto text-sm leading-relaxed"
           style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)', minHeight: '80px' }}
         >
-          {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
+          {cleanText(briefing.sections.outlook || 'Section not available.')}
         </div>
-      </BlurGate>
+      ) : (
+        <BlurGate requiredTier="general" featureName="AI Intelligence">
+          <div
+            className="flex-1 overflow-y-auto text-sm leading-relaxed"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)', minHeight: '80px' }}
+          >
+            {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
+          </div>
+        </BlurGate>
+      )}
 
       {/* Archive link */}
       <a
