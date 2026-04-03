@@ -124,7 +124,7 @@ export function GlobePanel() {
           title="Switch to globe"
           style={{
             position: 'absolute',
-            bottom: '8px',
+            top: '8px',
             right: '8px',
             zIndex: 50,
             width: '28px',

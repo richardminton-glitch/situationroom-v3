@@ -259,7 +259,7 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
     // Globe controls — direct DOM buttons (V2 approach)
     const controlsDiv = document.createElement('div');
     controlsDiv.className = 'globe-controls';
-    controlsDiv.style.cssText = 'position:absolute;bottom:4px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:10;';
+    controlsDiv.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:10;';
 
     const btnStyle = 'width:24px;height:24px;border-radius:3px;border:1px solid var(--border-primary);background:var(--bg-card);color:var(--text-secondary);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
 
