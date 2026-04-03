@@ -57,27 +57,45 @@ const R = C + CW;        // right column x = 1056
 // SHARED PRESETS (identical in both themes)
 // ══════════════════════════════════════════════════════════
 
-const FULL_DATA_PRESET: DashboardLayout = {
+// Core panels shared by both themes for the Full Data preset
+const FULL_DATA_PANELS = [
+  { panelId: 'btc-hero',          x: 0,    y: 0,   w: 264, h: 132, collapsed: false, resizable: false },
+  { panelId: 'btc-market',        x: 0,    y: 132, w: 264, h: 264, collapsed: false, resizable: false },
+  { panelId: 'btc-network',       x: 0,    y: 352, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-mining',        x: 0,    y: 572, w: 264, h: 132, collapsed: false, resizable: false },
+  { panelId: 'fear-greed',        x: 264,  y: 0,   w: 264, h: 132, collapsed: false, resizable: false },
+  { panelId: 'lightning',         x: 264,  y: 132, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'onchain-sentiment', x: 264,  y: 352, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'conviction',        x: 264,  y: 572, w: 264, h: 176, collapsed: false, resizable: true  },
+  { panelId: 'intel-feed',        x: 528,  y: 0,   w: 660, h: 352, collapsed: false, resizable: true  },
+  { panelId: 'btc-charts',        x: 528,  y: 352, w: 660, h: 396, collapsed: false, resizable: true  },
+  { panelId: 'market-indices',    x: 1188, y: 0,   w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'commodities',       x: 1188, y: 220, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'fx-macro',          x: 1188, y: 440, w: 264, h: 176, collapsed: false, resizable: false },
+  { panelId: 'central-bank',      x: 1188, y: 616, w: 264, h: 132, collapsed: false, resizable: false },
+  { panelId: 'economic-events',   x: 0,    y: 748, w: 1452, h: 44,  collapsed: false, resizable: true  },
+] satisfies LayoutPanelItem[];
+
+// Parchment Full Data — includes separator panels
+const FULL_DATA_PARCHMENT: DashboardLayout = {
   id: 'full-data',
   name: 'Full Data',
   description: 'All panels — Bitcoin, macro, on-chain, AI briefing, whales',
   panels: [
-    { panelId: 'btc-hero',          x: 0,    y: 0,   w: 264, h: 132, collapsed: false, resizable: false },
-    { panelId: 'btc-market',        x: 0,    y: 132, w: 264, h: 264, collapsed: false, resizable: false },
-    { panelId: 'btc-network',       x: 0,    y: 352, w: 264, h: 220, collapsed: false, resizable: false },
-    { panelId: 'btc-mining',        x: 0,    y: 572, w: 264, h: 132, collapsed: false, resizable: false },
-    { panelId: 'fear-greed',        x: 264,  y: 0,   w: 264, h: 132, collapsed: false, resizable: false },
-    { panelId: 'lightning',         x: 264,  y: 132, w: 264, h: 220, collapsed: false, resizable: false },
-    { panelId: 'onchain-sentiment', x: 264,  y: 352, w: 264, h: 220, collapsed: false, resizable: false },
-    { panelId: 'conviction',        x: 264,  y: 572, w: 264, h: 176, collapsed: false, resizable: true  },
-    { panelId: 'intel-feed',        x: 528,  y: 0,   w: 660, h: 352, collapsed: false, resizable: true  },
-    { panelId: 'btc-charts',        x: 528,  y: 352, w: 660, h: 396, collapsed: false, resizable: true  },
-    { panelId: 'market-indices',    x: 1188, y: 0,   w: 264, h: 220, collapsed: false, resizable: false },
-    { panelId: 'commodities',       x: 1188, y: 220, w: 264, h: 220, collapsed: false, resizable: false },
-    { panelId: 'fx-macro',          x: 1188, y: 440, w: 264, h: 176, collapsed: false, resizable: false },
-    { panelId: 'central-bank',      x: 1188, y: 616, w: 264, h: 132, collapsed: false, resizable: false },
-    { panelId: 'economic-events',   x: 0,    y: 748, w: 1452, h: 44,  collapsed: false, resizable: true  },
+    ...FULL_DATA_PANELS,
+    { panelId: 'v-separator-1775223296023', x:  242, y:   0, w:  44, h: 748, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1775223309898', x:  506, y:   0, w:  44, h: 748, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1775223323571', x: 1166, y:   0, w:  44, h: 748, collapsed: false, resizable: true },
+    { panelId: 'h-separator-1775223352235', x:    0, y: 110, w:  528, h:  44, collapsed: false, resizable: true },
   ],
+};
+
+// Dark Full Data — same panels, no separators
+const FULL_DATA_DARK: DashboardLayout = {
+  id: 'full-data',
+  name: 'Full Data',
+  description: 'All panels — Bitcoin, macro, on-chain, AI briefing, whales',
+  panels: FULL_DATA_PANELS,
 };
 
 const MACRO_FOCUS_PRESET: DashboardLayout = {
@@ -163,7 +181,7 @@ const PARCHMENT_MINIMAL_PRESET: DashboardLayout = {
 
 export const PARCHMENT_PRESETS: DashboardLayout[] = [
   PARCHMENT_DEFAULT_LAYOUT,
-  FULL_DATA_PRESET,
+  FULL_DATA_PARCHMENT,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
   PARCHMENT_MINIMAL_PRESET,
@@ -219,7 +237,7 @@ const DARK_MINIMAL_PRESET: DashboardLayout = {
 
 export const DARK_PRESETS: DashboardLayout[] = [
   DARK_DEFAULT_LAYOUT,
-  FULL_DATA_PRESET,
+  FULL_DATA_DARK,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
   DARK_MINIMAL_PRESET,
