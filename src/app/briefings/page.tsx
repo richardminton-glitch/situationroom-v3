@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { GenerateButton } from '@/components/briefings/GenerateButton';
 
 export const metadata: Metadata = {
   title: 'Briefing Archive — Situation Room',
@@ -33,9 +32,6 @@ export default async function BriefingsArchivePage() {
   });
 
   const today = new Date().toISOString().split('T')[0];
-  const todayExists = briefings.some(
-    (b) => b.date.toISOString().split('T')[0] === today
-  );
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
@@ -81,11 +77,6 @@ export default async function BriefingsArchivePage() {
           <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: '10px' }} />
         </header>
 
-        {/* Generate button */}
-        <div className="mb-10">
-          <GenerateButton todayExists={todayExists} />
-        </div>
-
         {/* Archive */}
         {briefings.length === 0 ? (
           <div
@@ -98,7 +89,7 @@ export default async function BriefingsArchivePage() {
               borderTop: '1px solid var(--border-subtle)',
             }}
           >
-            No briefings generated yet. Click &ldquo;Generate&rdquo; above to create the first one.
+            No briefings available yet — the first one generates automatically at 06:00 UTC.
           </div>
         ) : (
           <div>
