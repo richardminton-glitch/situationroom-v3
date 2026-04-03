@@ -94,8 +94,8 @@ function getSignal(vocdd: number, ma30: number, isDark: boolean): Signal {
   if (ratio < 0.5) return {
     level: 'quiet',
     label: '● QUIET — Minimal economic dormancy destroyed. Accumulation conditions.',
-    bg:   isDark ? '#0a2a1a' : 'rgba(74,124,89,0.10)',
-    text: isDark ? '#66ddaa' : '#4a7c59',
+    bg:   isDark ? 'rgba(0,180,160,0.08)' : 'rgba(74,124,89,0.10)',
+    text: isDark ? '#00d4c8' : '#4a7c59',
   };
   return { level: null, label: '', bg: '', text: '' };
 }
@@ -210,7 +210,7 @@ export function CoinDaysDestroyedPanel() {
 
   // Accent colour — gold (parchment) / teal (dark)
   const accentColor = isDark ? '#00d4c8' : '#b8860b';
-  const mutedColor  = isDark ? '#2a3a3a' : '#9a8a78';
+  const mutedColor  = isDark ? '#2a5a56' : '#9a8a78';
 
   // Tick cadence — ~9 labels across 90 days ≈ every 10 days
   const tickInterval = Math.max(1, Math.floor(data.length / 9));

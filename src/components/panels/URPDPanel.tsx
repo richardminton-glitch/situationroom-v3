@@ -71,21 +71,23 @@ function formatSupply(v: number): string {
 }
 
 // Bar colour based on how far the bucket price is from current price
-function barColor(bucketPrice: number, currentPrice: number): string {
-  if (bucketPrice > currentPrice * 1.05)  return '#8b3a3a'; // above current — at a loss
-  if (bucketPrice >= currentPrice * 0.95) return '#b8860b'; // transition zone
-  return '#2d6a4f';                                          // below current — in profit
+function barColor(bucketPrice: number, currentPrice: number, isDark: boolean): string {
+  if (bucketPrice > currentPrice * 1.05)  return isDark ? '#c04050' : '#8b3a3a'; // above — at loss
+  if (bucketPrice >= currentPrice * 0.95) return '#b8860b';                       // transition zone
+  return isDark ? '#00b4a0' : '#2d6a4f';                                           // below — in profit
 }
 
 // Status callout text based on in-profit %
-function statusText(inProfit: number): { text: string; color: string } {
+function statusText(inProfit: number, isDark: boolean): { text: string; color: string } {
+  const green = isDark ? '#00b4a0' : '#2d6a4f';
+  const red   = isDark ? '#c04050' : '#8b3a3a';
   if (inProfit >= 85) return {
     text: 'Near-euphoric supply distribution — historically precedes local tops.',
     color: '#b8860b',
   };
   if (inProfit >= 70) return {
     text: 'Healthy majority in profit — bull market conditions.',
-    color: '#2d6a4f',
+    color: green,
   };
   if (inProfit >= 50) return {
     text: 'Mixed — market at an inflection point.',
@@ -93,7 +95,7 @@ function statusText(inProfit: number): { text: string; color: string } {
   };
   return {
     text: 'Majority underwater — capitulation or accumulation zone.',
-    color: '#8b3a3a',
+    color: red,
   };
 }
 
@@ -183,7 +185,7 @@ export function URPDPanel() {
 
   const { buckets, currentPrice, realisedPrice, inProfit, atLoss } = data;
   const totalSupply = buckets.reduce((s, b) => s + b.supply, 0);
-  const status      = statusText(inProfit);
+  const status      = statusText(inProfit, isDark);
 
   // Accent colour: gold (parchment) / teal (dark)
   const accentColor = isDark ? '#00d4c8' : '#b8860b';
@@ -228,8 +230,8 @@ export function URPDPanel() {
             marginBottom:    3,
           }}
         >
-          <span style={{ color: '#2d6a4f' }}>{inProfit.toFixed(1)}% of supply in profit</span>
-          <span style={{ color: '#8b3a3a' }}>{atLoss.toFixed(1)}% at a loss</span>
+          <span style={{ color: isDark ? '#00b4a0' : '#2d6a4f' }}>{inProfit.toFixed(1)}% of supply in profit</span>
+          <span style={{ color: isDark ? '#c04050' : '#8b3a3a' }}>{atLoss.toFixed(1)}% at a loss</span>
         </div>
         <div
           style={{
@@ -240,8 +242,8 @@ export function URPDPanel() {
             background:    isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
           }}
         >
-          <div style={{ flex: inProfit, background: '#2d6a4f', opacity: 0.85 }} />
-          <div style={{ flex: atLoss,   background: '#8b3a3a', opacity: 0.85 }} />
+          <div style={{ flex: inProfit, background: isDark ? '#00b4a0' : '#2d6a4f', opacity: 0.85 }} />
+          <div style={{ flex: atLoss,   background: isDark ? '#c04050' : '#8b3a3a', opacity: 0.85 }} />
         </div>
       </div>
 
@@ -352,7 +354,7 @@ export function URPDPanel() {
               {buckets.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={barColor(entry.price, currentPrice)}
+                  fill={barColor(entry.price, currentPrice, isDark)}
                   fillOpacity={0.85}
                 />
               ))}
@@ -372,9 +374,9 @@ export function URPDPanel() {
         }}
       >
         {[
-          { color: '#2d6a4f', label: 'In profit' },
-          { color: '#b8860b', label: 'Near price' },
-          { color: '#8b3a3a', label: 'Underwater' },
+          { color: isDark ? '#00b4a0' : '#2d6a4f', label: 'In profit' },
+          { color: '#b8860b',                       label: 'Near price' },
+          { color: isDark ? '#c04050' : '#8b3a3a',  label: 'Underwater' },
         ].map(({ color, label }) => (
           <span
             key={label}

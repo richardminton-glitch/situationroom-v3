@@ -60,14 +60,15 @@ function formatDateLabel(iso: string): string {
 
 // ── Signal / colour helpers ───────────────────────────────────────────────────
 
-function signalForPct(pct: number): { label: string; color: string } {
-  if (pct >= 70) return { label: 'ACCUMULATION', color: '#4a7c59' };
+function signalForPct(pct: number, isDark = false): { label: string; color: string } {
+  const green = isDark ? '#00b4a0' : '#4a7c59';
+  if (pct >= 70) return { label: 'ACCUMULATION', color: green };
   if (pct >= 60) return { label: 'NEUTRAL',       color: '#b8860b' };
   return              { label: 'DISTRIBUTION',   color: '#9b3232' };
 }
 
-function lineColorForPct(pct: number): string {
-  return signalForPct(pct).color;
+function lineColorForPct(pct: number, isDark = false): string {
+  return signalForPct(pct, isDark).color;
 }
 
 // ── Custom Tooltip ────────────────────────────────────────────────────────────
@@ -142,7 +143,7 @@ function CustomTooltip({ active, payload, isDark }: CustomTooltipProps) {
         }}
       >
         <span style={{ opacity: 0.7 }}>LTH %</span>
-        <span style={{ color: lineColorForPct(raw.lthPct), fontWeight: 600 }}>
+        <span style={{ color: lineColorForPct(raw.lthPct, isDark), fontWeight: 600 }}>
           {raw.lthPct.toFixed(1)}%
         </span>
       </div>
@@ -189,8 +190,8 @@ export function LTHSTHSupplyPanel() {
   if (!data.length) return null;
 
   const latest = data.at(-1)!;
-  const signal = signalForPct(latest.lthPct);
-  const lthLineColor = lineColorForPct(latest.lthPct);
+  const signal = signalForPct(latest.lthPct, isDark);
+  const lthLineColor = lineColorForPct(latest.lthPct, isDark);
 
   // LTH accent: gold (parchment) / teal (dark)
   const lthAccent = isDark ? '#00d4c8' : '#b8860b';
@@ -405,13 +406,13 @@ export function LTHSTHSupplyPanel() {
               {/* 70% — Strong Accumulation threshold */}
               <ReferenceLine
                 y={70}
-                stroke="#4a7c59"
+                stroke={isDark ? '#00b4a0' : '#4a7c59'}
                 strokeDasharray="4 3"
                 strokeWidth={1}
                 label={{
                   value: 'STRONG ACCUMULATION',
                   position: 'insideTopRight',
-                  fill: '#4a7c59',
+                  fill: isDark ? '#00b4a0' : '#4a7c59',
                   fontFamily: 'var(--font-mono)',
                   fontSize: 8,
                   letterSpacing: '0.06em',
