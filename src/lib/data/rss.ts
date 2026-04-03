@@ -2,9 +2,12 @@
  * RSS feed aggregator — fetches sources, parses XML, categorises headlines,
  * and assigns approximate lat/lon for globe event markers.
  * Filtering: V2-style altcoin exclusion, slop removal, strict categories.
+ * Geo: V2-style city-spreading — cycles through major cities per country so
+ * multiple headlines about the same region don't stack at one point.
  */
 
 import { categoriseHeadline, deduplicateHeadlines } from './headline-filters';
+import { classifyArticles, type ClassifiedArticle, type RawArticle } from '@/lib/rss/classifier';
 
 const RSS_FEEDS = [
   { name: 'Reuters', url: 'https://feeds.reuters.com/reuters/topNews', category: 'economy' },
@@ -36,62 +39,251 @@ export interface RSSEvent {
   lon: number;
 }
 
-// Keyword-based geolocation — maps headline keywords to approximate coordinates
-const GEO_KEYWORDS: { pattern: RegExp; lat: number; lon: number }[] = [
-  { pattern: /\b(ukraine|kyiv|kiev)\b/i, lat: 50.45, lon: 30.52 },
-  { pattern: /\b(russia|moscow|kremlin)\b/i, lat: 55.75, lon: 37.62 },
-  { pattern: /\b(china|beijing|shanghai)\b/i, lat: 39.9, lon: 116.4 },
-  { pattern: /\b(taiwan|taipei)\b/i, lat: 25.03, lon: 121.57 },
-  { pattern: /\b(iran|tehran)\b/i, lat: 35.69, lon: 51.39 },
-  { pattern: /\b(israel|tel aviv|jerusalem|gaza)\b/i, lat: 31.77, lon: 35.23 },
-  { pattern: /\b(palestine|hamas|west bank)\b/i, lat: 31.95, lon: 35.2 },
-  { pattern: /\b(lebanon|beirut|hezbollah)\b/i, lat: 33.89, lon: 35.50 },
-  { pattern: /\b(syria|damascus)\b/i, lat: 33.51, lon: 36.29 },
-  { pattern: /\b(iraq|baghdad)\b/i, lat: 33.31, lon: 44.37 },
-  { pattern: /\b(yemen|houthi|sanaa)\b/i, lat: 15.37, lon: 44.21 },
-  { pattern: /\b(saudi|riyadh)\b/i, lat: 24.71, lon: 46.68 },
-  { pattern: /\b(north korea|pyongyang)\b/i, lat: 39.04, lon: 125.76 },
-  { pattern: /\b(south korea|seoul)\b/i, lat: 37.57, lon: 126.98 },
-  { pattern: /\b(japan|tokyo)\b/i, lat: 35.68, lon: 139.69 },
-  { pattern: /\b(india|delhi|mumbai)\b/i, lat: 28.61, lon: 77.21 },
-  { pattern: /\b(pakistan|islamabad)\b/i, lat: 33.69, lon: 73.04 },
-  { pattern: /\b(turkey|ankara|istanbul|erdogan)\b/i, lat: 39.93, lon: 32.85 },
-  { pattern: /\b(germany|berlin)\b/i, lat: 52.52, lon: 13.41 },
-  { pattern: /\b(france|paris|macron)\b/i, lat: 48.86, lon: 2.35 },
-  { pattern: /\b(uk|london|britain|british)\b/i, lat: 51.51, lon: -0.13 },
-  { pattern: /\b(us|washington|congress|white house|pentagon|fed)\b/i, lat: 38.9, lon: -77.04 },
-  { pattern: /\b(wall street|new york|nyse|nasdaq)\b/i, lat: 40.71, lon: -74.01 },
-  { pattern: /\b(silicon valley|california|san francisco)\b/i, lat: 37.77, lon: -122.42 },
-  { pattern: /\b(canada|ottawa|toronto)\b/i, lat: 45.42, lon: -75.7 },
-  { pattern: /\b(brazil|brasilia|sao paulo)\b/i, lat: -15.79, lon: -47.88 },
-  { pattern: /\b(argentina|buenos aires)\b/i, lat: -34.6, lon: -58.38 },
-  { pattern: /\b(mexico|mexico city)\b/i, lat: 19.43, lon: -99.13 },
-  { pattern: /\b(nigeria|lagos|abuja)\b/i, lat: 9.06, lon: 7.49 },
-  { pattern: /\b(south africa|johannesburg|cape town)\b/i, lat: -26.2, lon: 28.05 },
-  { pattern: /\b(egypt|cairo)\b/i, lat: 30.04, lon: 31.24 },
-  { pattern: /\b(sudan|khartoum)\b/i, lat: 15.59, lon: 32.53 },
-  { pattern: /\b(ethiopia|addis ababa)\b/i, lat: 9.02, lon: 38.75 },
-  { pattern: /\b(australia|sydney|canberra)\b/i, lat: -33.87, lon: 151.21 },
-  { pattern: /\b(bitcoin|btc|crypto|satoshi|el salvador)\b/i, lat: 13.69, lon: -89.19 },
-  { pattern: /\b(opec|oil)\b/i, lat: 25.2, lon: 55.27 },
-  { pattern: /\b(nato|brussels|eu|european)\b/i, lat: 50.85, lon: 4.35 },
-  { pattern: /\b(swiss|switzerland|zurich|davos)\b/i, lat: 47.38, lon: 8.54 },
-  { pattern: /\b(singapore)\b/i, lat: 1.35, lon: 103.82 },
-  { pattern: /\b(hong kong)\b/i, lat: 22.32, lon: 114.17 },
+// ── Geo types ─────────────────────────────────────────────────────────────────
+
+type GeoCity = { lat: number; lon: number };
+
+interface GeoKeyword {
+  key: string;
+  pattern: RegExp;
+  lat: number;  // base lat (centre of country/region)
+  lon: number;  // base lon
+  cities: GeoCity[];  // major cities to cycle through when multiple headlines match
+}
+
+interface GeoResult {
+  lat: number;
+  lon: number;
+  _baseLat: number;
+  _baseLon: number;
+  _geoKey: string;
+  _cities: GeoCity[];
+}
+
+// ── Keyword-based geolocation ─────────────────────────────────────────────────
+// Cities are listed in descending population order so the most prominent city
+// gets the first headline, then subsequent headlines spread to other cities.
+
+const GEO_KEYWORDS: GeoKeyword[] = [
+  {
+    key: 'ukraine', pattern: /\b(ukraine|kyiv|kiev)\b/i, lat: 50.45, lon: 30.52,
+    cities: [{ lat: 50.45, lon: 30.52 }, { lat: 49.84, lon: 24.03 }, { lat: 46.97, lon: 31.99 }, { lat: 47.85, lon: 35.12 }],
+  },
+  {
+    key: 'russia', pattern: /\b(russia|moscow|kremlin|putin)\b/i, lat: 55.75, lon: 37.62,
+    cities: [{ lat: 55.75, lon: 37.62 }, { lat: 59.93, lon: 30.32 }, { lat: 56.85, lon: 60.61 }, { lat: 55.00, lon: 82.92 }],
+  },
+  {
+    key: 'china', pattern: /\b(china|beijing|shanghai|xi jinping)\b/i, lat: 39.9, lon: 116.4,
+    cities: [{ lat: 39.90, lon: 116.40 }, { lat: 31.23, lon: 121.47 }, { lat: 23.13, lon: 113.27 }, { lat: 30.59, lon: 114.31 }],
+  },
+  {
+    key: 'taiwan', pattern: /\b(taiwan|taipei)\b/i, lat: 25.03, lon: 121.57,
+    cities: [{ lat: 25.03, lon: 121.57 }, { lat: 24.15, lon: 120.67 }, { lat: 22.99, lon: 120.21 }],
+  },
+  {
+    key: 'iran', pattern: /\b(iran|tehran)\b/i, lat: 35.69, lon: 51.39,
+    cities: [{ lat: 35.69, lon: 51.39 }, { lat: 32.65, lon: 51.68 }, { lat: 29.59, lon: 52.58 }, { lat: 38.08, lon: 46.29 }],
+  },
+  {
+    key: 'israel', pattern: /\b(israel|tel aviv|jerusalem)\b/i, lat: 31.77, lon: 35.23,
+    cities: [{ lat: 31.77, lon: 35.23 }, { lat: 32.08, lon: 34.78 }, { lat: 32.82, lon: 34.99 }, { lat: 31.25, lon: 34.79 }],
+  },
+  {
+    key: 'gaza', pattern: /\b(gaza|hamas|west bank|palestine|palestinian)\b/i, lat: 31.52, lon: 34.46,
+    cities: [{ lat: 31.52, lon: 34.46 }, { lat: 31.95, lon: 35.20 }, { lat: 31.90, lon: 35.20 }, { lat: 32.22, lon: 35.26 }],
+  },
+  {
+    key: 'lebanon', pattern: /\b(lebanon|beirut|hezbollah)\b/i, lat: 33.89, lon: 35.50,
+    cities: [{ lat: 33.89, lon: 35.50 }, { lat: 33.56, lon: 35.38 }, { lat: 34.44, lon: 35.84 }],
+  },
+  {
+    key: 'syria', pattern: /\b(syria|damascus)\b/i, lat: 33.51, lon: 36.29,
+    cities: [{ lat: 33.51, lon: 36.29 }, { lat: 36.20, lon: 37.16 }, { lat: 32.63, lon: 36.10 }],
+  },
+  {
+    key: 'iraq', pattern: /\b(iraq|baghdad)\b/i, lat: 33.31, lon: 44.37,
+    cities: [{ lat: 33.31, lon: 44.37 }, { lat: 36.34, lon: 43.13 }, { lat: 30.51, lon: 47.78 }],
+  },
+  {
+    key: 'yemen', pattern: /\b(yemen|houthi|sanaa)\b/i, lat: 15.37, lon: 44.21,
+    cities: [{ lat: 15.37, lon: 44.21 }, { lat: 12.78, lon: 45.03 }, { lat: 14.80, lon: 42.95 }],
+  },
+  {
+    key: 'saudi', pattern: /\b(saudi|riyadh)\b/i, lat: 24.71, lon: 46.68,
+    cities: [{ lat: 24.71, lon: 46.68 }, { lat: 21.49, lon: 39.19 }, { lat: 26.33, lon: 50.21 }],
+  },
+  {
+    key: 'north_korea', pattern: /\b(north korea|pyongyang)\b/i, lat: 39.04, lon: 125.76,
+    cities: [{ lat: 39.04, lon: 125.76 }, { lat: 39.92, lon: 127.54 }, { lat: 38.73, lon: 125.32 }],
+  },
+  {
+    key: 'south_korea', pattern: /\b(south korea|seoul)\b/i, lat: 37.57, lon: 126.98,
+    cities: [{ lat: 37.57, lon: 126.98 }, { lat: 35.18, lon: 129.07 }, { lat: 35.87, lon: 128.60 }],
+  },
+  {
+    key: 'japan', pattern: /\b(japan|tokyo)\b/i, lat: 35.68, lon: 139.69,
+    cities: [{ lat: 35.68, lon: 139.69 }, { lat: 34.69, lon: 135.50 }, { lat: 35.18, lon: 136.91 }, { lat: 43.07, lon: 141.35 }],
+  },
+  {
+    key: 'india', pattern: /\b(india|delhi|mumbai|modi)\b/i, lat: 28.61, lon: 77.21,
+    cities: [{ lat: 28.61, lon: 77.21 }, { lat: 19.08, lon: 72.88 }, { lat: 13.08, lon: 80.27 }, { lat: 22.57, lon: 88.36 }],
+  },
+  {
+    key: 'pakistan', pattern: /\b(pakistan|islamabad|karachi)\b/i, lat: 33.69, lon: 73.04,
+    cities: [{ lat: 33.69, lon: 73.04 }, { lat: 24.86, lon: 67.01 }, { lat: 31.56, lon: 74.35 }],
+  },
+  {
+    key: 'turkey', pattern: /\b(turkey|ankara|istanbul|erdogan)\b/i, lat: 39.93, lon: 32.85,
+    cities: [{ lat: 41.01, lon: 28.96 }, { lat: 39.93, lon: 32.85 }, { lat: 38.42, lon: 27.14 }, { lat: 37.00, lon: 35.32 }],
+  },
+  {
+    key: 'germany', pattern: /\b(germany|berlin)\b/i, lat: 52.52, lon: 13.41,
+    cities: [{ lat: 52.52, lon: 13.41 }, { lat: 53.57, lon: 10.02 }, { lat: 48.14, lon: 11.58 }, { lat: 50.94, lon: 6.96 }],
+  },
+  {
+    key: 'france', pattern: /\b(france|paris|macron)\b/i, lat: 48.86, lon: 2.35,
+    cities: [{ lat: 48.86, lon: 2.35 }, { lat: 45.75, lon: 4.85 }, { lat: 43.30, lon: 5.37 }, { lat: 43.61, lon: 3.88 }],
+  },
+  {
+    key: 'uk', pattern: /\b(uk|london|britain|british)\b/i, lat: 51.51, lon: -0.13,
+    cities: [{ lat: 51.51, lon: -0.13 }, { lat: 52.48, lon: -1.90 }, { lat: 53.48, lon: -2.24 }, { lat: 55.86, lon: -4.25 }],
+  },
+  {
+    key: 'us_dc', pattern: /\b(washington|congress|white house|pentagon|trump|biden)\b/i, lat: 38.9, lon: -77.04,
+    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 39.95, lon: -75.17 }, { lat: 39.29, lon: -76.61 }, { lat: 42.36, lon: -71.06 }],
+  },
+  {
+    key: 'us_ny', pattern: /\b(wall street|new york|nyse|nasdaq)\b/i, lat: 40.71, lon: -74.01,
+    cities: [{ lat: 40.71, lon: -74.01 }, { lat: 40.65, lon: -73.95 }, { lat: 40.73, lon: -74.17 }],
+  },
+  {
+    key: 'us_west', pattern: /\b(silicon valley|california|san francisco|los angeles)\b/i, lat: 37.77, lon: -122.42,
+    cities: [{ lat: 37.77, lon: -122.42 }, { lat: 34.05, lon: -118.24 }, { lat: 37.34, lon: -121.89 }, { lat: 47.61, lon: -122.33 }],
+  },
+  {
+    key: 'us_fed', pattern: /\b(\bfed\b|federal reserve)\b/i, lat: 38.9, lon: -77.04,
+    cities: [{ lat: 38.90, lon: -77.04 }],
+  },
+  {
+    key: 'canada', pattern: /\b(canada|ottawa|toronto)\b/i, lat: 45.42, lon: -75.70,
+    cities: [{ lat: 45.42, lon: -75.70 }, { lat: 43.65, lon: -79.38 }, { lat: 45.51, lon: -73.55 }, { lat: 51.05, lon: -114.07 }],
+  },
+  {
+    key: 'brazil', pattern: /\b(brazil|brasilia|sao paulo)\b/i, lat: -15.79, lon: -47.88,
+    cities: [{ lat: -23.55, lon: -46.63 }, { lat: -15.79, lon: -47.88 }, { lat: -22.91, lon: -43.17 }, { lat: -12.97, lon: -38.50 }],
+  },
+  {
+    key: 'argentina', pattern: /\b(argentina|buenos aires|milei)\b/i, lat: -34.60, lon: -58.38,
+    cities: [{ lat: -34.60, lon: -58.38 }, { lat: -31.42, lon: -64.18 }, { lat: -32.89, lon: -68.85 }],
+  },
+  {
+    key: 'mexico', pattern: /\b(mexico|mexico city)\b/i, lat: 19.43, lon: -99.13,
+    cities: [{ lat: 19.43, lon: -99.13 }, { lat: 20.97, lon: -89.62 }, { lat: 25.67, lon: -100.31 }],
+  },
+  {
+    key: 'nigeria', pattern: /\b(nigeria|lagos|abuja)\b/i, lat: 9.06, lon: 7.49,
+    cities: [{ lat: 6.45, lon: 3.38 }, { lat: 9.06, lon: 7.49 }, { lat: 12.00, lon: 8.52 }],
+  },
+  {
+    key: 'south_africa', pattern: /\b(south africa|johannesburg|cape town)\b/i, lat: -26.20, lon: 28.05,
+    cities: [{ lat: -26.20, lon: 28.05 }, { lat: -33.92, lon: 18.42 }, { lat: -25.74, lon: 28.19 }],
+  },
+  {
+    key: 'egypt', pattern: /\b(egypt|cairo)\b/i, lat: 30.04, lon: 31.24,
+    cities: [{ lat: 30.04, lon: 31.24 }, { lat: 31.20, lon: 29.92 }, { lat: 25.69, lon: 32.64 }],
+  },
+  {
+    key: 'sudan', pattern: /\b(sudan|khartoum)\b/i, lat: 15.59, lon: 32.53,
+    cities: [{ lat: 15.59, lon: 32.53 }, { lat: 19.61, lon: 37.22 }],
+  },
+  {
+    key: 'ethiopia', pattern: /\b(ethiopia|addis ababa)\b/i, lat: 9.02, lon: 38.75,
+    cities: [{ lat: 9.02, lon: 38.75 }, { lat: 11.59, lon: 37.39 }],
+  },
+  {
+    key: 'australia', pattern: /\b(australia|sydney|canberra|melbourne)\b/i, lat: -33.87, lon: 151.21,
+    cities: [{ lat: -33.87, lon: 151.21 }, { lat: -37.81, lon: 144.96 }, { lat: -35.28, lon: 149.13 }, { lat: -27.47, lon: 153.03 }],
+  },
+  {
+    key: 'bitcoin', pattern: /\b(bitcoin|btc|satoshi|el salvador)\b/i, lat: 13.69, lon: -89.19,
+    cities: [{ lat: 13.69, lon: -89.19 }, { lat: 14.07, lon: -87.21 }, { lat: 9.93, lon: -84.09 }],
+  },
+  {
+    key: 'crypto', pattern: /\b(crypto|blockchain|defi|stablecoin)\b/i, lat: 40.71, lon: -74.01,
+    cities: [{ lat: 40.71, lon: -74.01 }, { lat: 37.77, lon: -122.42 }, { lat: 1.35, lon: 103.82 }],
+  },
+  {
+    key: 'opec', pattern: /\b(opec|oil prices?|crude)\b/i, lat: 25.20, lon: 55.27,
+    cities: [{ lat: 25.20, lon: 55.27 }, { lat: 24.47, lon: 54.37 }, { lat: 23.61, lon: 58.59 }],
+  },
+  {
+    key: 'nato_eu', pattern: /\b(nato|brussels|eu|european union|european)\b/i, lat: 50.85, lon: 4.35,
+    cities: [{ lat: 50.85, lon: 4.35 }, { lat: 48.21, lon: 16.37 }, { lat: 52.38, lon: 4.90 }, { lat: 48.86, lon: 2.35 }],
+  },
+  {
+    key: 'switzerland', pattern: /\b(swiss|switzerland|zurich|davos)\b/i, lat: 47.38, lon: 8.54,
+    cities: [{ lat: 47.38, lon: 8.54 }, { lat: 46.95, lon: 7.45 }, { lat: 46.23, lon: 6.07 }],
+  },
+  {
+    key: 'singapore', pattern: /\b(singapore)\b/i, lat: 1.35, lon: 103.82,
+    cities: [{ lat: 1.35, lon: 103.82 }],
+  },
+  {
+    key: 'hong_kong', pattern: /\b(hong kong)\b/i, lat: 22.32, lon: 114.17,
+    cities: [{ lat: 22.32, lon: 114.17 }, { lat: 22.39, lon: 114.21 }],
+  },
 ];
 
-function geolocate(title: string): { lat: number; lon: number } | null {
+function geolocate(title: string): GeoResult | null {
   for (const geo of GEO_KEYWORDS) {
     if (geo.pattern.test(title)) {
-      // Add small random offset to avoid stacking
-      const jitter = () => (Math.random() - 0.5) * 3;
-      return { lat: geo.lat + jitter(), lon: geo.lon + jitter() };
+      return {
+        lat: geo.lat,
+        lon: geo.lon,
+        _baseLat: geo.lat,
+        _baseLon: geo.lon,
+        _geoKey: geo.key,
+        _cities: geo.cities,
+      };
     }
   }
   return null;
 }
 
-// categoriseHeadline imported from headline-filters.ts — handles V2 filtering
+/**
+ * Distribute event markers across major cities so multiple headlines about the
+ * same country/region don't stack at a single point.
+ * Mirrors V2 `distributeEventCoords()` — sorts by title (deterministic), then
+ * cycles through the city array for each geo key.
+ */
+type RSSEventWithGeo = RSSEvent & Partial<GeoResult>;
+
+function distributeEventCoords(events: RSSEventWithGeo[]): void {
+  const sorted = [...events].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  const countByKey: Record<string, number> = {};
+
+  for (const ev of sorted) {
+    const key = ev._geoKey ?? `${ev._baseLat ?? ev.lat},${ev._baseLon ?? ev.lon}`;
+    const idx = countByKey[key] ?? 0;
+    countByKey[key] = idx + 1;
+
+    const cities = ev._cities;
+    if (cities && cities.length > 0) {
+      const city = cities[idx % cities.length];
+      ev.lat = city.lat;
+      ev.lon = city.lon;
+    } else {
+      // Fallback: golden-angle spiral from base coords
+      const angle = (idx * 137.5) * (Math.PI / 180);
+      const dist = idx * 1.5;
+      ev.lat = (ev._baseLat ?? ev.lat) + Math.cos(angle) * dist;
+      ev.lon = (ev._baseLon ?? ev.lon) + Math.sin(angle) * dist;
+    }
+  }
+}
+
+// ── categoriseHeadline imported from headline-filters.ts ──────────────────────
 
 function decodeEntities(s: string): string {
   return s
@@ -107,37 +299,34 @@ function decodeEntities(s: string): string {
     .trim();
 }
 
-function parseXML(xml: string): { title: string; link: string; pubDate: string }[] {
-  const items: { title: string; link: string; pubDate: string }[] = [];
+function parseXML(xml: string): { title: string; link: string; pubDate: string; description: string }[] {
+  const items: { title: string; link: string; pubDate: string; description: string }[] = [];
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
     const titleMatch = block.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const linkMatch = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
-    const dateMatch = block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
+    const linkMatch  = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
+    const dateMatch  = block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
+    const descMatch  = block.match(/<description[^>]*>([\s\S]*?)<\/description>/i);
     if (titleMatch) {
-      const title = decodeEntities(titleMatch[1]);
-      const link = linkMatch ? decodeEntities(linkMatch[1]) : '';
-      const pubDate = dateMatch ? dateMatch[1].trim() : '';
-      if (title) items.push({ title, link, pubDate });
+      const title       = decodeEntities(titleMatch[1]);
+      const link        = linkMatch  ? decodeEntities(linkMatch[1])  : '';
+      const pubDate     = dateMatch  ? dateMatch[1].trim()           : '';
+      const description = descMatch  ? decodeEntities(descMatch[1]).substring(0, 300) : '';
+      if (title) items.push({ title, link, pubDate, description });
     }
   }
   return items;
 }
 
-export interface RSSHeadline {
-  title: string;
-  category: string;
-  source: string;
-  link: string;
-  time: number;
-}
+/** RSSHeadline is now ClassifiedArticle — backward compat alias. */
+export type RSSHeadline = ClassifiedArticle;
 
-// ── Module-level cache shared by ALL callers (route handler + briefing pipeline) ──
-let _cache: { events: RSSEvent[]; headlines: RSSHeadline[] } | null = null;
+// ── Module-level cache shared by ALL callers ──────────────────────────────────
+let _cache: { events: RSSEvent[]; headlines: ClassifiedArticle[] } | null = null;
 let _cacheTime = 0;
-const CACHE_DURATION = 300_000; // 5 minutes — same as dashboard header poll interval
+const CACHE_DURATION = 300_000; // 5 minutes
 
 /**
  * Unified fetch — single pass fetches all RSS feeds, returns both
@@ -145,42 +334,62 @@ const CACHE_DURATION = 300_000; // 5 minutes — same as dashboard header poll i
  * Cache is shared: the dashboard header and the briefing pipeline always
  * compute threat level from the same dataset.
  */
-export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: RSSHeadline[] }> {
+export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: ClassifiedArticle[] }> {
   if (_cache && Date.now() - _cacheTime < CACHE_DURATION) {
     return _cache;
   }
-  const allEvents: RSSEvent[] = [];
-  const allHeadlines: RSSHeadline[] = [];
+  const allEvents: RSSEventWithGeo[] = [];
+  const allRawHeadlines: RawArticle[] = [];
 
   const results = await Promise.allSettled(
     RSS_FEEDS.map(async (feed) => {
       try {
         const res = await fetch(feed.url, { signal: AbortSignal.timeout(10_000) });
-        if (!res.ok) return { events: [] as RSSEvent[], headlines: [] as RSSHeadline[] };
+        if (!res.ok) return { events: [] as RSSEventWithGeo[], rawHeadlines: [] as RawArticle[] };
         const xml = await res.text();
         const items = parseXML(xml);
 
-        const events: RSSEvent[] = [];
-        const headlines: RSSHeadline[] = [];
+        const events: RSSEventWithGeo[] = [];
+        const rawHeadlines: RawArticle[] = [];
 
         for (const item of items.slice(0, 12)) {
           const category = categoriseHeadline(item.title, feed.category);
-          if (!category) continue;
+          if (!category) continue; // altcoin / slop gate (unchanged)
           const time = item.pubDate ? Math.floor(new Date(item.pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000);
 
-          // All valid items go to headlines
-          headlines.push({ title: item.title, category, source: feed.name, link: item.link, time });
+          // Collect raw article for batch classification
+          rawHeadlines.push({
+            title:               item.title,
+            description:         item.description,
+            link:                item.link,
+            source:              feed.name,
+            feedUrl:             feed.url,
+            feedDefaultCategory: category, // from categoriseHeadline gate — used as low-conf fallback
+            time,
+          });
 
-          // Geolocated items also go to events
+          // Geolocated items also go to events (coords spread later — unchanged)
           const geo = geolocate(item.title);
           if (geo) {
-            events.push({ title: item.title, category, source: feed.name, link: item.link, time, lat: geo.lat, lon: geo.lon });
+            events.push({
+              title:    item.title,
+              category,
+              source:   feed.name,
+              link:     item.link,
+              time,
+              lat:      geo.lat,
+              lon:      geo.lon,
+              _baseLat: geo._baseLat,
+              _baseLon: geo._baseLon,
+              _geoKey:  geo._geoKey,
+              _cities:  geo._cities,
+            });
           }
         }
 
-        return { events, headlines };
+        return { events, rawHeadlines };
       } catch {
-        return { events: [] as RSSEvent[], headlines: [] as RSSHeadline[] };
+        return { events: [] as RSSEventWithGeo[], rawHeadlines: [] as RawArticle[] };
       }
     })
   );
@@ -188,16 +397,31 @@ export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: RS
   for (const result of results) {
     if (result.status === 'fulfilled') {
       allEvents.push(...result.value.events);
-      allHeadlines.push(...result.value.headlines);
+      allRawHeadlines.push(...result.value.rawHeadlines);
     }
   }
 
   allEvents.sort((a, b) => b.time - a.time);
-  allHeadlines.sort((a, b) => b.time - a.time);
+  allRawHeadlines.sort((a, b) => b.time - a.time);
+
+  // Deduplicate, then spread markers across major cities (V2 approach — unchanged)
+  const dedupedEvents = deduplicateHeadlines(allEvents).slice(0, 100) as RSSEventWithGeo[];
+  distributeEventCoords(dedupedEvents);
+
+  // Strip internal geo fields before caching
+  const cleanEvents: RSSEvent[] = dedupedEvents.map(({ title, category, source, link, time, lat, lon }) => ({
+    title, category, source, link, time, lat, lon,
+  }));
+
+  // Deduplicate raw headlines then run classification pipeline.
+  // classifyArticles() returns keyword results immediately; Grok results
+  // are written to the DB cache async and available on the next refresh.
+  const dedupedRaw = deduplicateHeadlines(allRawHeadlines).slice(0, 150);
+  const classifiedHeadlines = await classifyArticles(dedupedRaw);
 
   const result = {
-    events: deduplicateHeadlines(allEvents).slice(0, 100),
-    headlines: deduplicateHeadlines(allHeadlines).slice(0, 150),
+    events: cleanEvents,
+    headlines: classifiedHeadlines,
   };
 
   _cache = result;
@@ -211,6 +435,6 @@ export async function fetchRSSEvents(): Promise<RSSEvent[]> {
   return (await fetchRSSAll()).events;
 }
 
-export async function fetchRSSHeadlines(): Promise<RSSHeadline[]> {
+export async function fetchRSSHeadlines(): Promise<ClassifiedArticle[]> {
   return (await fetchRSSAll()).headlines;
 }

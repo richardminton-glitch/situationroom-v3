@@ -1,6 +1,11 @@
 /**
- * Grok (xAI) API client for multi-agent briefing generation.
- * Uses the Responses API with web search tool.
+ * Grok (xAI) API client.
+ *
+ * Two surfaces:
+ *   callGrokAgent()      — Responses API + web search, used by the briefing pipeline.
+ *   callGrokClassifier() — Chat completions API, no web search, used by RSS classifier.
+ *
+ * Both use the same GROK_API_KEY env var. No new key needed.
  */
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
@@ -8,6 +13,12 @@ const PRIMARY_MODEL = 'grok-4.20-multi-agent-0309';
 const FALLBACK_MODEL = 'grok-3';
 const MAX_OUTPUT_TOKENS = 1200;
 const RETRY_DELAY = 5000;
+
+// ── Classifier surface (chat completions — no web search) ─────────────────────
+
+const CLASSIFIER_URL   = 'https://api.x.ai/v1/chat/completions';
+const CLASSIFIER_MODEL = 'grok-3';          // fast, supports json_object format
+const CLASSIFIER_TIMEOUT_MS = 15_000;       // classification should be sub-5s
 
 interface GrokResponse {
   content: string;
@@ -87,4 +98,51 @@ export async function callGrokAgent(prompt: string, retries = 1): Promise<GrokRe
   }
 
   return { content: '', sources: [], model: 'failed', failed: true };
+}
+
+// ── callGrokClassifier ────────────────────────────────────────────────────────
+
+/**
+ * Lightweight Grok call for article classification.
+ * Uses the OpenAI-compatible chat completions endpoint — no web search,
+ * JSON mode, low token budget.
+ *
+ * Returns the raw JSON string from the model, or null on any failure.
+ * Caller is responsible for parsing and validation.
+ */
+export async function callGrokClassifier(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GROK_API_KEY;
+  if (!apiKey) {
+    console.error('[GrokClassifier] GROK_API_KEY not set');
+    return null;
+  }
+
+  try {
+    const res = await fetch(CLASSIFIER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model:           CLASSIFIER_MODEL,
+        messages:        [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens:      200,
+      }),
+      signal: AbortSignal.timeout(CLASSIFIER_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[GrokClassifier] HTTP ${res.status}: ${body.substring(0, 200)}`);
+      return null;
+    }
+
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content ?? null;
+  } catch (err) {
+    console.error('[GrokClassifier] Request failed:', err);
+    return null;
+  }
 }

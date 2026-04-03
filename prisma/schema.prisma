@@ -262,3 +262,23 @@ model BtcPriceHistory {
 
   @@map("btc_price_history")
 }
+
+// ── RSS Classification Cache ──────────────────────────────────────────────────
+// Stores article classification results keyed by sha256(title|feedUrl).
+// TTL = 7 days. Populated by the classifier pipeline; cleaned up by daily cron.
+// Run: npx prisma migrate dev --name add_classification_cache
+
+model ClassificationCache {
+  contentHash         String   @id @map("content_hash")
+  primaryCategory     String   @map("primary_category")
+  secondaryCategories String[] @map("secondary_categories")
+  confidence          Float
+  relevanceToBitcoin  Int      @map("relevance_to_bitcoin")
+  method              String
+  reasoning           String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  expiresAt           DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("classification_cache")
+}

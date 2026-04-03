@@ -113,7 +113,7 @@ const CATEGORY_PATTERNS: { category: string; pattern: RegExp }[] = [
   },
   {
     category: 'conflict',
-    pattern: /\b(war|missile|airstrike|bombing|troops|invasion|military|attack|killed|casualties|strike|drone|assassination|hostage|siege|artillery|ceasefire|NATO|soldiers|weapon|nuclear|sanctions.*war|terrorist|insurgent|rebel|militia|sniper|shelling|ambush|coup|martial law)\b/i,
+    pattern: /\b(war|missile|airstrike|bombing|troops|invasion|military|attack|killed|casualties|strike|drone|assassination|hostage|siege|artillery|ceasefire|NATO|soldiers|weapon|nuclear|sanctions.*war|terrorist|insurgent|rebel|militia|sniper|shelling|ambush|coup|martial law|downed|retaliat|warplane|warship|blockade|escalat|ultimatum|bombardment|gunfire|fighter jet|armed forces|no.fly zone)\b|\bmilitary (option|threat|action|operation|buildup)\b|\bthreatens?(?=.{0,80}\b(Iran|Iranian|Russia|Russian|China|Chinese|North Korea|Syria|Syrian|Iraq|Iraqi|Israel|Israeli|Lebanon|Lebanese|Ukraine|Ukrainian|Hamas|Hezbollah|Taliban|nuclear)\b)/i,
   },
   {
     category: 'disaster',
