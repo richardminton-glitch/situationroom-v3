@@ -229,41 +229,13 @@ const GEO_KEYWORDS: GeoKeyword[] = [
   },
 
   // ── Topic-based fallbacks (lowest priority) ───────────────────────────────
-  // These only match if no country/region pattern matched first.
-  // Cities spread across global financial hubs so markers don't cluster.
+  // Only topics with a clear geographic centre get markers.
+  // Bitcoin/crypto are excluded — they scatter markers globally with no
+  // meaningful location.  Bitcoin articles that mention a specific country
+  // will already match the country pattern above.
   {
     key: 'opec', pattern: /\b(opec|oil prices?|crude)\b/i, lat: 25.20, lon: 55.27,
     cities: [{ lat: 25.20, lon: 55.27 }, { lat: 24.47, lon: 54.37 }, { lat: 23.61, lon: 58.59 }, { lat: 29.38, lon: 47.99 }],
-  },
-  {
-    key: 'bitcoin', pattern: /\b(bitcoin|btc|satoshi)\b/i, lat: 40.71, lon: -74.01,
-    cities: [
-      { lat: 40.71, lon: -74.01 },   // New York
-      { lat: 51.51, lon: -0.13 },     // London
-      { lat: 35.68, lon: 139.69 },    // Tokyo
-      { lat: 1.35, lon: 103.82 },     // Singapore
-      { lat: 47.38, lon: 8.54 },      // Zurich
-      { lat: 22.32, lon: 114.17 },    // Hong Kong
-      { lat: 52.52, lon: 13.41 },     // Berlin
-      { lat: 37.77, lon: -122.42 },   // San Francisco
-      { lat: -33.87, lon: 151.21 },   // Sydney
-      { lat: 25.20, lon: 55.27 },     // Dubai
-      { lat: 43.65, lon: -79.38 },    // Toronto
-      { lat: -23.55, lon: -46.63 },   // Sao Paulo
-    ],
-  },
-  {
-    key: 'crypto', pattern: /\b(crypto|blockchain|defi|stablecoin)\b/i, lat: 37.77, lon: -122.42,
-    cities: [
-      { lat: 37.77, lon: -122.42 },   // San Francisco
-      { lat: 40.71, lon: -74.01 },     // New York
-      { lat: 1.35, lon: 103.82 },      // Singapore
-      { lat: 51.51, lon: -0.13 },      // London
-      { lat: 25.20, lon: 55.27 },      // Dubai
-      { lat: 22.32, lon: 114.17 },     // Hong Kong
-      { lat: 47.38, lon: 8.54 },       // Zurich
-      { lat: -37.81, lon: 144.96 },    // Melbourne
-    ],
   },
 ];
 
@@ -291,14 +263,23 @@ function geolocate(title: string): GeoResult | null {
  */
 type RSSEventWithGeo = RSSEvent & Partial<GeoResult>;
 
+/** Max markers per geo key — keeps the globe readable when one region dominates the news */
+const MAX_PER_GEO = 3;
+
 function distributeEventCoords(events: RSSEventWithGeo[]): void {
-  const sorted = [...events].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  // Sort by time desc so we keep the most recent headlines per geo key
+  const sorted = [...events].sort((a, b) => b.time - a.time);
   const countByKey: Record<string, number> = {};
+  const keep = new Set<RSSEventWithGeo>();
 
   for (const ev of sorted) {
     const key = ev._geoKey ?? `${ev._baseLat ?? ev.lat},${ev._baseLon ?? ev.lon}`;
     const idx = countByKey[key] ?? 0;
+
+    // Cap markers per region — drop excess
+    if (idx >= MAX_PER_GEO) continue;
     countByKey[key] = idx + 1;
+    keep.add(ev);
 
     const cities = ev._cities;
     if (cities && cities.length > 0) {
@@ -312,6 +293,11 @@ function distributeEventCoords(events: RSSEventWithGeo[]): void {
       ev.lat = (ev._baseLat ?? ev.lat) + Math.cos(angle) * dist;
       ev.lon = (ev._baseLon ?? ev.lon) + Math.sin(angle) * dist;
     }
+  }
+
+  // Remove dropped events from the original array (in-place)
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (!keep.has(events[i])) events.splice(i, 1);
   }
 
   // Cross-key proximity nudge: if two events from DIFFERENT keys land
