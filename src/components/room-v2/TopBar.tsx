@@ -34,6 +34,14 @@ const STATE_LABELS: Record<ThreatState, string> = {
   CRITICAL: 'CRITICAL',
 };
 
+const THREAT_THRESHOLDS: { state: ThreatState; min: number; color: string }[] = [
+  { state: 'CRITICAL', min: 76, color: STATE_COLORS.CRITICAL },
+  { state: 'ALERT', min: 56, color: STATE_COLORS.ALERT },
+  { state: 'ELEVATED', min: 36, color: STATE_COLORS.ELEVATED },
+  { state: 'MONITORING', min: 16, color: STATE_COLORS.MONITORING },
+  { state: 'QUIET', min: 0, color: STATE_COLORS.QUIET },
+];
+
 export default function TopBar({
   threatState,
   threatScore,
@@ -49,6 +57,7 @@ export default function TopBar({
   convictionBand,
 }: TopBarProps) {
   const [utc, setUtc] = useState('');
+  const [threatHover, setThreatHover] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -151,56 +160,174 @@ export default function TopBar({
         </div>
       </div>
 
-      {/* Centre: Threat state */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Indicator dot with optional ring */}
-        <div style={{ position: 'relative', width: 12, height: 12 }}>
+      {/* Centre: Threat state (with hover popover) */}
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => setThreatHover(true)}
+        onMouseLeave={() => setThreatHover(false)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'help' }}>
+          {/* Indicator dot with optional ring */}
+          <div style={{ position: 'relative', width: 12, height: 12 }}>
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: stateColor,
+                position: 'absolute',
+                top: 2,
+                left: 2,
+                boxShadow: `0 0 6px ${stateColor}`,
+              }}
+            />
+            {isElevated && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  border: `1.5px solid ${stateColor}`,
+                  animation: 'threatPulse 1.5s ease-in-out infinite',
+                }}
+              />
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.12em',
+              color: stateColor,
+            }}
+          >
+            {STATE_LABELS[threatState]}
+          </span>
+          <span
+            style={{
+              fontSize: 9,
+              color: '#6b7a8d',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            [{threatScore}]
+          </span>
+        </div>
+
+        {/* Threat score explanation popover */}
+        {threatHover && (
           <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: stateColor,
               position: 'absolute',
-              top: 2,
-              left: 2,
-              boxShadow: `0 0 6px ${stateColor}`,
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginTop: 8,
+              width: 320,
+              background: 'rgba(9, 13, 18, 0.96)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 4,
+              padding: '12px 14px',
+              fontFamily: FONT,
+              zIndex: 100,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              animation: 'threatPopIn 0.15s ease-out',
             }}
-          />
-          {isElevated && (
+          >
+            {/* Arrow */}
             <div
               style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                border: `1.5px solid ${stateColor}`,
-                animation: 'threatPulse 1.5s ease-in-out infinite',
+                top: -5,
+                left: '50%',
+                transform: 'translateX(-50%) rotate(45deg)',
+                width: 8,
+                height: 8,
+                background: 'rgba(9, 13, 18, 0.96)',
+                borderTop: '1px solid rgba(255,255,255,0.12)',
+                borderLeft: '1px solid rgba(255,255,255,0.12)',
               }}
             />
-          )}
-        </div>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            color: stateColor,
-          }}
-        >
-          {STATE_LABELS[threatState]}
-        </span>
-        <span
-          style={{
-            fontSize: 9,
-            color: '#6b7a8d',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          [{threatScore}]
-        </span>
+
+            {/* Title */}
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', marginBottom: 8 }}>
+              THREAT POSTURE MODEL
+            </div>
+
+            {/* Current score bar */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: '#8a9aad' }}>Current Score</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: stateColor, fontVariantNumeric: 'tabular-nums' }}>
+                  {threatScore}/100
+                </span>
+              </div>
+              {/* Score bar */}
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${threatScore}%`,
+                    background: stateColor,
+                    borderRadius: 2,
+                    boxShadow: `0 0 6px ${stateColor}`,
+                    transition: 'width 0.5s ease',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Thresholds */}
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+              STATE THRESHOLDS
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
+              {THREAT_THRESHOLDS.map((t) => (
+                <div
+                  key={t.state}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '2px 0',
+                    opacity: threatState === t.state ? 1 : 0.5,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: t.color,
+                        boxShadow: threatState === t.state ? `0 0 4px ${t.color}` : 'none',
+                      }}
+                    />
+                    <span style={{ fontSize: 9, fontWeight: threatState === t.state ? 600 : 400, color: threatState === t.state ? t.color : '#6b7a8d', letterSpacing: '0.08em' }}>
+                      {t.state}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 9, color: '#4a5a6d', fontVariantNumeric: 'tabular-nums' }}>
+                    {t.state === 'QUIET' ? '0 – 15' : t.state === 'MONITORING' ? '16 – 35' : t.state === 'ELEVATED' ? '36 – 55' : t.state === 'ALERT' ? '56 – 75' : '76 – 100'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Methodology */}
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+              METHODOLOGY
+            </div>
+            <div style={{ fontSize: 9, color: '#6b7a8d', lineHeight: '14px' }}>
+              Score is the sum of all intelligence event impacts with exponential time-decay.
+              Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: '#8a9aad' }}>3-hour half-life</span>.
+              Events older than ~12 hours contribute negligibly. Score is capped at 100 and recalculated every second.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right: Feed status */}
@@ -233,11 +360,15 @@ export default function TopBar({
         </div>
       </div>
 
-      {/* Pulse animation */}
+      {/* Pulse + popover animations */}
       <style>{`
         @keyframes threatPulse {
           0%, 100% { transform: scale(1); opacity: 0.6; }
           50% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes threatPopIn {
+          0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
     </div>

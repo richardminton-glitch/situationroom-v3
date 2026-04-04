@@ -2,7 +2,7 @@
 
 /**
  * Bitcoin information panel for Members Room left sidebar.
- * Displays BTC price, network stats, macro markets, and conviction score
+ * Displays BTC price, network stats, and macro markets
  * in a compact dark-themed ops room style.
  */
 
@@ -15,16 +15,6 @@ const COLORS = {
   negative: '#e03030',
   amber: '#f0a500',
   dimBorder: 'rgba(255,255,255,0.06)',
-};
-
-// Dark-mode overrides for conviction band colours
-// (engine returns parchment-themed colours that are invisible on dark bg)
-const DARK_BAND_COLORS: Record<string, string> = {
-  'Maximum Conviction': '#2dd4bf',
-  'Strong Conviction':  '#0aa89e',
-  'Moderate':           '#c4885a',
-  'Weak Signal':        '#d06050',
-  'Contra-Conviction':  '#c04040',
 };
 
 /* ------------------------------------------------------------------ */
@@ -41,11 +31,6 @@ interface BtcInfoPanelProps {
     mempoolStatus: 'CLEAR' | 'CONGESTED';
     feeFast: number;
     feeStatus: 'LOW' | 'ELEVATED';
-  } | null;
-  conviction: {
-    composite: number;
-    band: string;
-    bandColor: string;
   } | null;
   goldPrice: number;
   goldDelta: number;
@@ -248,64 +233,6 @@ function MarketRow({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Conviction bar                                                     */
-/* ------------------------------------------------------------------ */
-
-function ConvictionBar({
-  score,
-  band,
-  bandColor,
-}: {
-  score: number;
-  band: string;
-  bandColor: string;
-}) {
-  // Always use dark-mode colours (Members Room is always dark)
-  const displayColor = DARK_BAND_COLORS[band] ?? bandColor;
-  const totalBlocks = 20;
-  const filled = Math.round((score / 100) * totalBlocks);
-  const bar =
-    '\u2588'.repeat(filled) + '\u2591'.repeat(totalBlocks - filled);
-
-  return (
-    <div style={{ padding: '4px 12px 8px' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          marginBottom: 4,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 14,
-            fontFamily: FONT,
-            color: COLORS.primary,
-            fontWeight: 600,
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {score}
-        </span>
-        <StatusBadge label={band} color={displayColor} />
-      </div>
-      <div
-        style={{
-          fontFamily: FONT,
-          fontSize: 10,
-          letterSpacing: '0.04em',
-          color: displayColor,
-          lineHeight: 1,
-        }}
-      >
-        {bar}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -313,7 +240,6 @@ export default function BtcInfoPanel({
   btcPrice,
   btcDelta,
   network,
-  conviction,
   goldPrice,
   goldDelta,
   oilPrice,
@@ -459,25 +385,6 @@ export default function BtcInfoPanel({
           <MarketRow label="DXY" price={dxyPrice.toFixed(2)} delta={dxyDelta} />
         </div>
 
-        {/* -- CONVICTION ----------------------------------------- */}
-        <SectionLabel>CONVICTION</SectionLabel>
-        {conviction ? (
-          <ConvictionBar
-            score={conviction.composite}
-            band={conviction.band}
-            bandColor={conviction.bandColor}
-          />
-        ) : (
-          <div
-            style={{
-              padding: '4px 12px 8px',
-              fontSize: 9,
-              color: COLORS.label,
-            }}
-          >
-            CALCULATING...
-          </div>
-        )}
       </div>
 
       {/* Scanline overlay */}

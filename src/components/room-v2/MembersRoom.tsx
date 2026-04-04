@@ -125,11 +125,6 @@ export default function MembersRoom() {
                 btcPrice={btcPrice}
                 btcDelta={btcDelta}
                 network={data.network}
-                conviction={data.conviction ? {
-                  composite: data.conviction.composite,
-                  band: data.conviction.band,
-                  bandColor: data.conviction.bandColor,
-                } : null}
                 goldPrice={goldAsset?.price || 0}
                 goldDelta={goldAsset?.delta || 0}
                 oilPrice={oilAsset?.price || 0}
