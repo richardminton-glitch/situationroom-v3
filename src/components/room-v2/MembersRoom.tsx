@@ -14,9 +14,8 @@
  * └──────────────────────────────────────────┴─────────────────────┘
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useTheme } from '@/components/layout/ThemeProvider';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
 import { useOpsRoom } from '@/hooks/useOpsRoom';
@@ -38,7 +37,6 @@ const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const RIGHT_COL_WIDTH = 320;
 
 export default function MembersRoom() {
-  const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { canAccess } = useTier();
   const { data, sendMessage } = useOpsRoom();
@@ -51,23 +49,6 @@ export default function MembersRoom() {
   // Heatmap overlay
   const [heatmapOpen, setHeatmapOpen] = useState(false);
 
-  // Theme forcing — silent dark mode override
-  const [transitionPhase, setTransitionPhase] = useState<'entering' | 'visible'>('entering');
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem('sr-theme') || 'parchment';
-    sessionStorage.setItem('sr-ops-room-prev-theme', storedTheme);
-    if (theme !== 'dark') setTheme('dark');
-    const timer = setTimeout(() => setTransitionPhase('visible'), 300);
-    return () => {
-      clearTimeout(timer);
-      const prev = sessionStorage.getItem('sr-ops-room-prev-theme');
-      sessionStorage.removeItem('sr-ops-room-prev-theme');
-      if (prev && prev !== 'dark') setTheme(prev as 'dark' | 'parchment');
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Chat props
   const canPost = canAccess('members');
   const displayName = user?.chatDisplayName || 'anon';
@@ -79,22 +60,8 @@ export default function MembersRoom() {
   const btcDelta = btcAsset?.delta || 0;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {/* Transition overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#090d12',
-          zIndex: 9999,
-          pointerEvents: transitionPhase === 'visible' ? 'none' : 'auto',
-          opacity: transitionPhase === 'entering' ? 1 : 0,
-          transition: 'opacity 300ms ease-out',
-        }}
-      />
-
-      {/* Full viewport layout */}
-      <div
+    <>
+    <div
         style={{
           width: '100%',
           height: '100%',
@@ -232,6 +199,6 @@ export default function MembersRoom() {
           100% { opacity: 0; }
         }
       `}</style>
-    </div>
+    </>
   );
 }
