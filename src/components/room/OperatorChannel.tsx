@@ -162,17 +162,16 @@ export default function OperatorChannel({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '6px 10px',
+          padding: '4px 6px',
           boxSizing: 'border-box',
           borderLeft: '1px solid #1a2e2e',
-          gap: 4,
+          gap: 3,
         }}
       >
         {canPost ? (
           <>
-            {/* Input row */}
-            <div style={{ display: 'flex', flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+            {/* Input row — fills available height */}
+            <div style={{ display: 'flex', flexDirection: 'row', gap: 4, flex: 1, minHeight: 0 }}>
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -182,7 +181,7 @@ export default function OperatorChannel({
                 style={{
                   flex: 1,
                   minWidth: 0,
-                  height: 28,
+                  height: '100%',
                   resize: 'none',
                   background: '#111a1a',
                   border: '1px solid #1a2e2e',
@@ -211,7 +210,8 @@ export default function OperatorChannel({
                   cursor: sending || !draft.trim() ? 'default' : 'pointer',
                   whiteSpace: 'nowrap',
                   letterSpacing: '0.5px',
-                  height: 28,
+                  height: '100%',
+                  alignSelf: 'stretch',
                 }}
               >
                 TRANSMIT &uarr;
@@ -224,6 +224,7 @@ export default function OperatorChannel({
                 fontSize: 8,
                 color: '#4a6060',
                 letterSpacing: '0.5px',
+                flexShrink: 0,
               }}
             >
               {operatorCount} operators
@@ -236,6 +237,9 @@ export default function OperatorChannel({
               fontSize: 10,
               color: '#4a6060',
               lineHeight: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%',
             }}
           >
             Members upgrade required to transmit &#x26A1;{' '}
