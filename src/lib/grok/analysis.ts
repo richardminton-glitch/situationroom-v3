@@ -8,7 +8,7 @@
  */
 
 const GROK_ANALYSIS_URL = 'https://api.x.ai/v1/chat/completions';
-const GROK_ANALYSIS_MODEL = 'grok-4.1-fast';
+const GROK_ANALYSIS_MODEL = 'grok-4-1-fast-non-reasoning';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 export interface GrokAnalysisOptions {

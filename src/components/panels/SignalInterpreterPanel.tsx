@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { PanelLoading } from './shared';
 import { useTier } from '@/hooks/useTier';
 
 interface SignalInterpreterResponse {
@@ -10,16 +9,16 @@ interface SignalInterpreterResponse {
 }
 
 export function SignalInterpreterPanel() {
-  const { userTier } = useTier();
+  const { userTier, canAccess } = useTier();
   const [data, setData] = useState<SignalInterpreterResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (userTier !== 'vip') {
+  if (!canAccess('members')) {
     return (
       <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-        Signal Synthesis requires VIP access.
-        <br /><a href="/account" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Upgrade →</a>
+        Signal Synthesis requires Members access.
+        <br /><a href="/account" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Upgrade &rarr;</a>
       </div>
     );
   }
@@ -36,7 +35,14 @@ export function SignalInterpreterPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ autoDetect: true }),
       });
-      if (!res.ok) throw new Error('Request failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          setError(`Daily AI limit reached. Resets at ${new Date(body.resetAt).toLocaleTimeString()}`);
+          return;
+        }
+        throw new Error('Request failed');
+      }
       const json = await res.json();
       setData(json);
     } catch {
@@ -57,7 +63,7 @@ export function SignalInterpreterPanel() {
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}>
-          Signal Synthesis · AI Interpreter
+          Signal Synthesis &middot; AI Interpreter
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)',
@@ -68,7 +74,7 @@ export function SignalInterpreterPanel() {
           padding: '1px 5px',
           letterSpacing: '0.06em',
         }}>
-          VIP
+          MEMBERS+
         </span>
       </div>
 
@@ -90,7 +96,7 @@ export function SignalInterpreterPanel() {
             letterSpacing: '0.05em',
           }}
         >
-          ⚡ ANALYSE SIGNALS
+          ANALYSE SIGNALS
         </button>
         {data && (
           <button
@@ -191,7 +197,7 @@ export function SignalInterpreterPanel() {
               padding: '1px 5px',
               letterSpacing: '0.06em',
             }}>
-              CLAUDE HAIKU
+              GROK
             </span>
           </div>
           <div style={{

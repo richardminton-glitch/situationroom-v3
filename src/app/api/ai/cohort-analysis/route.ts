@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
   let latestBands: number[];
   let totalBtc: number;
   try {
-    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:${process.env.PORT ?? '3000'}`;
     const res = await fetch(`${baseUrl}/api/data/utxo-age?days=7`, {
       signal: AbortSignal.timeout(15_000),
     });
