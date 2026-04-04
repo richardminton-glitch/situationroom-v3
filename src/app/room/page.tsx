@@ -10,7 +10,7 @@
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
 import { UpgradePrompt } from '@/components/auth/UpgradePrompt';
-import OpsRoomPage from '@/components/room/OpsRoomPage';
+import MembersRoom from '@/components/room-v2/MembersRoom';
 
 export default function RoomPage() {
   const { user, loading } = useAuth();
@@ -24,11 +24,11 @@ export default function RoomPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#080d0d',
-          fontFamily: "'IBM Plex Mono', 'SF Mono', monospace",
+          backgroundColor: '#090d12',
+          fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
         }}
       >
-        <p style={{ color: '#4a6060', fontSize: 12, letterSpacing: '0.1em' }}>LOADING OPS ROOM...</p>
+        <p style={{ color: '#6b7a8d', fontSize: 11, letterSpacing: '0.14em' }}>INITIALISING...</p>
       </div>
     );
   }
@@ -42,28 +42,29 @@ export default function RoomPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'var(--bg-primary)',
-          fontFamily: "'IBM Plex Mono', 'SF Mono', monospace",
+          backgroundColor: '#090d12',
+          fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
           padding: '40px 20px',
         }}
       >
-        <p style={{ fontSize: 9, letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: 8 }}>
+        <p style={{ fontSize: 9, letterSpacing: '0.18em', color: '#6b7a8d', marginBottom: 8 }}>
           SITUATION ROOM
         </p>
         <h1
           style={{
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontSize: 26,
-            color: 'var(--text-primary)',
+            fontFamily: "'JetBrains Mono', 'IBM Plex Mono', monospace",
+            fontSize: 22,
+            color: '#e8edf2',
             marginBottom: 12,
-            fontWeight: 'normal',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
           }}
         >
-          Ops Room
+          MEMBERS ROOM
         </h1>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6, textAlign: 'center', maxWidth: 400 }}>
-          The Ops Room is a live intelligence centre for Members.
-          Sign in to access real-time signals, the global theatre, and the operator channel.
+        <p style={{ fontSize: 11, color: '#6b7a8d', marginBottom: 24, lineHeight: 1.6, textAlign: 'center', maxWidth: 400 }}>
+          Live intelligence centre. Real-time agent network, threat analysis,
+          and operator channel access for authenticated members.
         </p>
         <a
           href="/login"
@@ -72,10 +73,11 @@ export default function RoomPage() {
             padding: '8px 20px',
             fontSize: 11,
             letterSpacing: '0.1em',
-            backgroundColor: 'var(--accent-primary)',
-            color: 'var(--bg-primary)',
+            backgroundColor: '#00e5c8',
+            color: '#090d12',
             textDecoration: 'none',
-            fontFamily: "'IBM Plex Mono', 'SF Mono', monospace",
+            fontFamily: "'JetBrains Mono', 'IBM Plex Mono', monospace",
+            fontWeight: 600,
           }}
         >
           SIGN IN
@@ -86,5 +88,5 @@ export default function RoomPage() {
 
   // Render the full Ops Room for all authenticated users.
   // Posting in the operator channel is gated at Members+ within the component.
-  return <OpsRoomPage />;
+  return <MembersRoom />;
 }
