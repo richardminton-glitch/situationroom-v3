@@ -16,8 +16,8 @@ import {
 } from '@/lib/room/logTemplates';
 
 const MAX_ENTRIES = 200;
-const AMBIENT_MIN_MS = 3000;
-const AMBIENT_MAX_MS = 8000;
+const AMBIENT_MIN_MS = 6000;
+const AMBIENT_MAX_MS = 14000;
 
 export function useAgentLog(events: AgentEvent[]) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
@@ -92,7 +92,7 @@ export function useAgentLog(events: AgentEvent[]) {
           if (mountedRef.current) {
             pushEntry(entry);
           }
-        }, i * 300);
+        }, i * 600);
       });
     }
 

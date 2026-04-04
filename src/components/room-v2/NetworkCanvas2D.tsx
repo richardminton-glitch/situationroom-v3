@@ -468,15 +468,40 @@ function drawDataOverlays(
     ctx.fillText(lbl, mx, my);
   });
 
-  // -- Data feed pulse dots: sub -> agent continuous looping dot --
-  s.agents.forEach(ag => {
-    ag._subs.forEach(sub => {
-      const progress = (t * 0.0004 * (1 + ag.act * 2)) % 1;
+  // -- Data feed pulse dots: sub -> agent continuous looping dots --
+  s.agents.forEach((ag, ai) => {
+    ag._subs.forEach((sub, si) => {
+      // Each sub gets its own phase offset so dots don't all move together
+      const phase = ai * 1.2 + si * 0.8;
+      const progress = (t * 0.0005 * (1 + ag.act * 2) + phase) % 1;
       const dx = sub.x + (ag.x - sub.x) * progress;
       const dy = sub.y + (ag.y - sub.y) * progress;
-      ctx.beginPath(); ctx.arc(dx, dy, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = ag.col + ha(0.3 * 255); ctx.fill();
+      const dotAlpha = Math.sin(progress * Math.PI) * 0.55; // fade at ends
+      ctx.beginPath(); ctx.arc(dx, dy, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = ag.col + ha(dotAlpha * 255); ctx.fill();
+
+      // Second dot offset by half cycle for denser feel
+      const p2 = (progress + 0.5) % 1;
+      const dx2 = sub.x + (ag.x - sub.x) * p2;
+      const dy2 = sub.y + (ag.y - sub.y) * p2;
+      const a2 = Math.sin(p2 * Math.PI) * 0.3;
+      ctx.beginPath(); ctx.arc(dx2, dy2, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = ag.col + ha(a2 * 255); ctx.fill();
     });
+  });
+
+  // -- Agent -> coordinator pulse dots --
+  s.agents.forEach((ag, ai) => {
+    const phase = ai * 1.7;
+    const progress = (t * 0.0003 * (1 + ag.act * 2) + phase) % 1;
+    const mx = (ag.x + coord.x) / 2 + (ag.y - coord.y) * 0.16;
+    const my = (ag.y + coord.y) / 2 + (coord.x - ag.x) * 0.16;
+    // Bezier position along the curve
+    const px = (1 - progress) * (1 - progress) * ag.x + 2 * (1 - progress) * progress * mx + progress * progress * coord.x;
+    const py = (1 - progress) * (1 - progress) * ag.y + 2 * (1 - progress) * progress * my + progress * progress * coord.y;
+    const dotAlpha = Math.sin(progress * Math.PI) * 0.5;
+    ctx.beginPath(); ctx.arc(px, py, 2.0, 0, Math.PI * 2);
+    ctx.fillStyle = ag.col + ha(dotAlpha * 255); ctx.fill();
   });
 }
 
@@ -594,7 +619,7 @@ export default function NetworkCanvas2D({
 }: NetworkCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneState | null>(null);
-  const poolRef = useRef<CPart[]>(createPool(60));
+  const poolRef = useRef<CPart[]>(createPool(100));
   const threatRef = useRef<ThreatState>(threatState);
   const threatScoreRef = useRef<number>(threatScore);
   const processedRef = useRef(new Set<string>());
@@ -700,6 +725,66 @@ export default function NetworkCanvas2D({
     });
     ro.observe(canvas.parentElement || canvas);
 
+    // ── Ambient particle flow ──
+    // Continuous trickle: random sub→agent particles every 1.5–3s
+    const ambientTimers: ReturnType<typeof setTimeout>[] = [];
+    const scheduleAmbientParticle = () => {
+      const delay = 1500 + Math.random() * 1500;
+      const timer = setTimeout(() => {
+        const s = sceneRef.current;
+        if (s) {
+          const agIdx = Math.floor(Math.random() * s.agents.length);
+          const ag = s.agents[agIdx];
+          const sub = ag._subs[Math.floor(Math.random() * ag._subs.length)];
+          if (sub) {
+            const part = takeParticle(pool);
+            if (part) part.reset(sub, ag, ag.col, 0.005 + Math.random() * 0.004, 1.0 + Math.random() * 0.8);
+          }
+        }
+        scheduleAmbientParticle();
+      }, delay);
+      ambientTimers.push(timer);
+    };
+    // Start 3 staggered ambient streams for density
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => scheduleAmbientParticle(), i * 800);
+    }
+
+    // Agent→coordinator trickle: every 2.5–5s
+    const scheduleAgentToCoord = () => {
+      const delay = 2500 + Math.random() * 2500;
+      const timer = setTimeout(() => {
+        const s = sceneRef.current;
+        if (s) {
+          const agIdx = Math.floor(Math.random() * s.agents.length);
+          const ag = s.agents[agIdx];
+          const part = takeParticle(pool);
+          if (part) part.reset(ag, s.coord, ag.col, 0.004 + Math.random() * 0.003, 1.2 + Math.random() * 1.0);
+        }
+        scheduleAgentToCoord();
+      }, delay);
+      ambientTimers.push(timer);
+    };
+    // Start 2 staggered agent→coord streams
+    for (let i = 0; i < 2; i++) {
+      setTimeout(() => scheduleAgentToCoord(), i * 1200);
+    }
+
+    // ── Heartbeat cascade: every 8–15s, fire a full cascade on a random agent
+    const scheduleHeartbeat = () => {
+      const delay = 8000 + Math.random() * 7000;
+      const timer = setTimeout(() => {
+        const s = sceneRef.current;
+        if (s) {
+          const agIdx = Math.floor(Math.random() * s.agents.length);
+          fireEventCascade(s, agIdx, pool);
+        }
+        scheduleHeartbeat();
+      }, delay);
+      ambientTimers.push(timer);
+    };
+    scheduleHeartbeat();
+
     // Animation loop
     let animId: number;
     let frameCount = 0;
@@ -722,6 +807,7 @@ export default function NetworkCanvas2D({
 
     return () => {
       cancelAnimationFrame(animId);
+      ambientTimers.forEach(clearTimeout);
       ro.disconnect();
       sceneRef.current = null;
     };
