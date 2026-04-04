@@ -69,7 +69,7 @@ const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
   miners_network_section: 'members',
   edit_layout:            'vip',
   personal_conviction:    'vip',
-  ai_annotations:         'vip',
+  ai_annotations:         'members',
   alerts:                 'vip',
   vip_briefing:           'vip',
   newsletter_daily:       'general',

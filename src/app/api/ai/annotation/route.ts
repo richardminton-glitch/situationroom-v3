@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysis } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -19,17 +20,11 @@ const PANEL_PROMPTS: Record<string, (value: string) => string> = {
   'onchain-sentiment':(v) => `MVRV ratio: ${v}. Write 2 sentences on what unrealised profit ratios reveal about where we are in the Bitcoin market cycle. Be direct.`,
 };
 
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'general')) return NextResponse.json({ error: 'General tier required' }, { status: 403 });
+  if (!hasAccess(userTier, 'members')) return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const panelId  = searchParams.get('panel') ?? '';
@@ -45,15 +40,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ annotation: cached.annotation, panelId, cached: true });
   }
 
-  // Generate
+  // Rate limit check (only for non-cached responses)
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
+  }
+
+  // Generate via Grok
   const prompt = PANEL_PROMPTS[panelId](valueKey);
-  const msg = await getClient().messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 150,
+  const annotation = await callGrokAnalysis(prompt, {
     system: 'You are a sharp Bitcoin market analyst. Write concise, specific, data-driven annotations. Never be preachy or evangelistic. Connect numbers to principles.',
-    messages: [{ role: 'user', content: prompt }],
+    maxTokens: 150,
   });
-  const annotation = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
+
+  if (!annotation) {
+    return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
+  }
+
+  await incrementAiUsage(session.user.id);
+
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   await (prisma as any).signalAnnotation.upsert({

@@ -1,22 +1,16 @@
 /**
  * SitRoom AI bot posting utilities.
- * Posts auto-generated messages into the Ops Room chat as the 🤖 SitRoom AI identity.
+ * Posts auto-generated messages into the Ops Room chat as the SitRoom AI identity.
  */
 
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysis } from '@/lib/grok/analysis';
 
 const BOT_NPUB = 'sitroom-ai';
 const BOT_DISPLAY = 'SitRoom AI';
 const BOT_ICON = 'bot';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://situationroom.space';
-
-let _anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _anthropic;
-}
 
 // ── Dedup guard ────────────────────────────────────────────────────────────────
 
@@ -63,15 +57,12 @@ export async function postBotMessage(content: string, eventType: string): Promis
 // ── AI content generation ──────────────────────────────────────────────────────
 
 async function generateBotContent(systemPrompt: string, userPrompt: string): Promise<string> {
-  const client = getAnthropic();
-  const msg = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 120,
+  const text = await callGrokAnalysis(userPrompt, {
     system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    maxTokens: 120,
+    timeoutMs: 15_000,
   });
-  const block = msg.content[0];
-  return block.type === 'text' ? block.text.trim() : '';
+  return text ?? '';
 }
 
 // ── Event handlers ─────────────────────────────────────────────────────────────
@@ -85,10 +76,10 @@ export async function handleBtcPriceMove(priceBefore: number, priceNow: number):
   if (await isDuplicate('btc_price_move', eventKey, 3600000)) return; // 1hr dedup
 
   const content = await generateBotContent(
-    'You are SitRoom AI, a sharp Bitcoin market intelligence bot. Write a single brief chat message (max 80 chars) about a BTC price movement. No hashtags. No emojis except ⚡ occasionally. Be direct and analytical.',
+    'You are SitRoom AI, a sharp Bitcoin market intelligence bot. Write a single brief chat message (max 80 chars) about a BTC price movement. No hashtags. No emojis except occasionally. Be direct and analytical.',
     `BTC moved ${dir} ${Math.abs(pctChange).toFixed(1)}% in the last hour. Price now $${priceNow.toLocaleString()}. Write a brief chat comment.`
   );
-  await postBotMessage(`⚡ ${content}`, 'btc_price_move');
+  await postBotMessage(`${content}`, 'btc_price_move');
 }
 
 export async function handleConvictionBandChange(scoreBefore: number, scoreNow: number): Promise<void> {
@@ -97,12 +88,12 @@ export async function handleConvictionBandChange(scoreBefore: number, scoreNow: 
     const crossed = (scoreBefore < threshold && scoreNow >= threshold) || (scoreBefore >= threshold && scoreNow < threshold);
     if (!crossed) continue;
 
-    const dir = scoreNow >= threshold ? '▲' : '▼';
+    const dir = scoreNow >= threshold ? '>' : '<';
     const eventKey = `conviction_${threshold}_${dir}_${Math.floor(Date.now() / 86400000)}`;
     if (await isDuplicate('conviction_band', eventKey)) return;
 
     const label = scoreNow >= 70 ? 'Strong conviction' : scoreNow >= 50 ? 'Moderate conviction' : 'Low conviction';
-    await postBotMessage(`${dir} Conviction crossed ${threshold} — ${label} (${scoreNow}/100).`, 'conviction_band');
+    await postBotMessage(`${dir === '>' ? '\u25B2' : '\u25BC'} Conviction crossed ${threshold} \u2014 ${label} (${scoreNow}/100).`, 'conviction_band');
   }
 }
 
@@ -111,7 +102,7 @@ export async function handleNewBriefing(headline: string, date: string, threatLe
   if (await isDuplicate('new_briefing', eventKey)) return;
 
   const url = `${SITE_URL}/briefing/${date}`;
-  await postBotMessage(`📋 Today's briefing: ${headline} [THREAT: ${threatLevel}] → ${url}`, 'new_briefing');
+  await postBotMessage(`Today's briefing: ${headline} [THREAT: ${threatLevel}] \u2192 ${url}`, 'new_briefing');
 }
 
 export async function handleWhaleTx(amountBtc: number, direction: string): Promise<void> {
@@ -119,7 +110,7 @@ export async function handleWhaleTx(amountBtc: number, direction: string): Promi
   const eventKey = `whale_${Math.floor(Date.now() / 3600000)}_${amountBtc.toFixed(0)}`;
   if (await isDuplicate('whale_tx', eventKey, 3600000)) return;
 
-  await postBotMessage(`🐋 Whale movement detected: ${amountBtc.toLocaleString()} BTC moved ${direction}.`, 'whale_tx');
+  await postBotMessage(`Whale movement detected: ${amountBtc.toLocaleString()} BTC moved ${direction}.`, 'whale_tx');
 }
 
 export async function handleFearGreedExtreme(value: number): Promise<void> {
@@ -127,5 +118,5 @@ export async function handleFearGreedExtreme(value: number): Promise<void> {
   const eventKey = `fg_extreme_${Math.floor(Date.now() / 86400000)}`;
   if (await isDuplicate('fear_greed_extreme', eventKey)) return;
 
-  await postBotMessage(`🔴 Fear & Greed at ${value} — Extreme Fear. Historically notable accumulation zone.`, 'fear_greed_extreme');
+  await postBotMessage(`Fear & Greed at ${value} \u2014 Extreme Fear. Historically notable accumulation zone.`, 'fear_greed_extreme');
 }

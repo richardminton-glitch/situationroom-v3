@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -25,22 +26,16 @@ interface CohortResponse {
 
 const BAND_LABELS = [
   '<1d',
-  '1d–1w',
-  '1w–1m',
-  '1m–3m',
-  '3m–6m',
-  '6m–1yr',
-  '1yr–2yr',
-  '2yr–3yr',
-  '3yr–5yr',
+  '1d-1w',
+  '1w-1m',
+  '1m-3m',
+  '3m-6m',
+  '6m-1yr',
+  '1yr-2yr',
+  '2yr-3yr',
+  '3yr-5yr',
   '5yr+',
 ];
-
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -91,6 +86,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Rate limit check
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
+  }
+
   // Fetch UTXO age data internally
   let latestBands: number[];
   let totalBtc: number;
@@ -115,39 +116,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unable to retrieve UTXO data' }, { status: 503 });
   }
 
-  // Generate via Claude
+  // Generate via Grok
   const prompt = buildPrompt(latestBands, totalBtc);
-  let text: string;
-  try {
-    const client = getClient();
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    text = (msg.content[0] as { type: 'text'; text: string }).text.trim();
-  } catch (err) {
-    console.error('[cohort-analysis] Anthropic error:', err);
+  const parsed = await callGrokAnalysisJSON<CohortResponse>(prompt, {
+    maxTokens: 512,
+    timeoutMs: 30_000,
+  });
+
+  if (!parsed) {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
   }
 
-  // Parse JSON response from Claude
-  let parsed: CohortResponse;
-  try {
-    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    parsed = JSON.parse(clean);
-  } catch {
-    console.error('[cohort-analysis] Failed to parse Claude JSON:', text);
-    return NextResponse.json({ error: 'AI service returned invalid response' }, { status: 503 });
-  }
+  await incrementAiUsage(session.user.id);
 
   const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
   const generatedAt = new Date();
 
   await (prisma as any).signalAnnotation.upsert({
     where: { panelId_valueKey: { panelId: PANEL_ID, valueKey } },
-    create: { panelId: PANEL_ID, valueKey, annotation: text, expiresAt },
-    update: { annotation: text, expiresAt, generatedAt },
+    create: { panelId: PANEL_ID, valueKey, annotation: JSON.stringify(parsed), expiresAt },
+    update: { annotation: JSON.stringify(parsed), expiresAt, generatedAt },
   });
 
   return NextResponse.json(parsed);

@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'general')) {
-    return NextResponse.json({ error: 'General tier required' }, { status: 403 });
+  if (!hasAccess(userTier, 'members')) {
+    return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
   }
 
   let body: { date?: string };
@@ -32,6 +27,12 @@ export async function POST(request: NextRequest) {
   const { date } = body;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json({ error: 'date is required (YYYY-MM-DD)' }, { status: 400 });
+  }
+
+  // Rate limit check
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
   }
 
   // Fetch past briefing
@@ -66,32 +67,24 @@ Conviction: ${currentBriefing.convictionScore}/100
 
 Assess:
 1. Whether the past outlook proved accurate, partially accurate, or was too early/inaccurate
-2. What key developments changed the picture (1–2 sentences)
+2. What key developments changed the picture (1-2 sentences)
 3. One lesson for reading Bitcoin signals from this comparison
 
 Output ONLY valid JSON:
 { "pastSummary": "1-sentence summary of past briefing thesis", "retrospective": "2-3 sentence comparison", "accuracyAssessment": "accurate|partially-accurate|inaccurate|too-early", "lesson": "1 sentence lesson" }`;
 
-  const msg = await getClient().messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 500,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const raw = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
-
-  let parsed: {
+  const parsed = await callGrokAnalysisJSON<{
     pastSummary: string;
     retrospective: string;
     accuracyAssessment: 'accurate' | 'partially-accurate' | 'inaccurate' | 'too-early';
     lesson: string;
-  };
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    parsed = JSON.parse(cleaned);
-  } catch {
+  }>(prompt, { maxTokens: 500 });
+
+  if (!parsed) {
     return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
   }
+
+  await incrementAiUsage(session.user.id);
 
   return NextResponse.json(parsed);
 }

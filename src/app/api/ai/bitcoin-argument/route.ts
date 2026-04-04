@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
 export async function GET(_request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'general')) {
-    return NextResponse.json({ error: 'General tier required' }, { status: 403 });
+  if (!hasAccess(userTier, 'members')) {
+    return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
   }
 
   const panelId = 'bitcoin-argument';
@@ -32,6 +27,12 @@ export async function GET(_request: NextRequest) {
   if (cached && cached.expiresAt > new Date()) {
     const parsed = JSON.parse(cached.annotation);
     return NextResponse.json({ ...parsed, updatedAt: cached.generatedAt, cached: true });
+  }
+
+  // Rate limit check
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
   }
 
   // Fetch latest briefing
@@ -47,27 +48,20 @@ Network health: ${briefing.networkSection}
 Threat level: ${briefing.threatLevel}
 Conviction score: ${briefing.convictionScore}/100
 
-Construct a 3-point case FOR holding Bitcoin right now, grounded in the actual data above. Each point should be 1–2 sentences. Then provide a 1-sentence honest counterpoint — what could prove this wrong.
+Construct a 3-point case FOR holding Bitcoin right now, grounded in the actual data above. Each point should be 1-2 sentences. Then provide a 1-sentence honest counterpoint — what could prove this wrong.
 
 Output ONLY valid JSON:
 { "points": [{"title": "...", "body": "..."}, ...], "counterpoint": "..." }`;
 
-  const msg = await getClient().messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 600,
-    messages: [{ role: 'user', content: prompt }],
+  const parsed = await callGrokAnalysisJSON<{ points: Array<{ title: string; body: string }>; counterpoint: string }>(prompt, {
+    maxTokens: 600,
   });
 
-  const raw = msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
-
-  let parsed: { points: Array<{ title: string; body: string }>; counterpoint: string };
-  try {
-    // Strip potential markdown code fences
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    parsed = JSON.parse(cleaned);
-  } catch {
+  if (!parsed) {
     return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
   }
+
+  await incrementAiUsage(session.user.id);
 
   const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
   const annotation = JSON.stringify(parsed);

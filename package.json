@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.82.0",
     "@ln-markets/api": "^3.0.1",
     "@prisma/client": "^6.19.2",
     "@react-email/components": "^1.0.11",

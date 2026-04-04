@@ -12,16 +12,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysis } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
-let _client: Anthropic | null = null;
-function getClient(): Anthropic {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
-// Simple in-memory cache: queryHash → { result, ts }
+// Simple in-memory cache: queryHash -> { result, ts }
 const cache = new Map<string, { result: object; ts: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24hr
 
@@ -71,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ matches: [], synthesis: 'No briefings available to search.' });
     }
 
-    // Build compressed archive for Claude context
+    // Build compressed archive for Grok context
     const archiveSummary = briefings.map((b) => {
       const dateStr = b.date.toISOString().split('T')[0];
       let snapshot = '';
@@ -95,11 +89,10 @@ MACRO: ${(b.macroSection || '').slice(0, 200)}
 OUTLOOK: ${(b.outlookSection || '').slice(0, 200)}`;
     }).join('\n---\n');
 
-    const client = getClient();
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1200,
-      system: `You are Situation Room's briefing archive analyst. You search through daily Bitcoin & macro intelligence briefings to answer user queries.
+    const text = await callGrokAnalysis(
+      `BRIEFING ARCHIVE (${briefings.length} days):\n\n${archiveSummary}\n\n---\n\nUSER QUERY: "${trimmedQuery}"\n\nRespond with JSON only:\n{\n  "matches": [\n    { "date": "YYYY-MM-DD", "headline": "...", "relevance": "1-sentence reason this matches", "keyData": "relevant metric values" }\n  ],\n  "synthesis": "Cross-briefing observation answering the query (max 150 words)"\n}`,
+      {
+        system: `You are Situation Room's briefing archive analyst. You search through daily Bitcoin & macro intelligence briefings to answer user queries.
 
 Rules:
 - Return ONLY relevant briefing dates, key data points, and a concise synthesis
@@ -109,18 +102,19 @@ Rules:
 - Keep synthesis under 150 words
 - Format matches as structured data the client can render
 - If no briefings match, say so clearly`,
-      messages: [{
-        role: 'user',
-        content: `BRIEFING ARCHIVE (${briefings.length} days):\n\n${archiveSummary}\n\n---\n\nUSER QUERY: "${trimmedQuery}"\n\nRespond with JSON only:\n{\n  "matches": [\n    { "date": "YYYY-MM-DD", "headline": "...", "relevance": "1-sentence reason this matches", "keyData": "relevant metric values" }\n  ],\n  "synthesis": "Cross-briefing observation answering the query (max 150 words)"\n}`,
-      }],
-    });
+        maxTokens: 1200,
+        timeoutMs: 45_000,
+        jsonMode: true,
+      }
+    );
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    if (!text) {
+      return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    }
 
-    // Parse Claude's JSON response
+    // Parse Grok's JSON response
     let parsed;
     try {
-      // Extract JSON from possible markdown code blocks
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { matches: [], synthesis: text };
     } catch {

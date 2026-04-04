@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -26,12 +27,6 @@ interface PatternResponse {
   caveats: string;
 }
 
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -44,10 +39,10 @@ function buildPrompt(patternName: string, currentData: Record<string, number | s
   return `You are a Bitcoin on-chain historian. The pattern "${patternName}" has just fired with the following data:
 ${dataFormatted}
 
-Drawing on Bitcoin's historical price and on-chain data (2013–present), provide:
-1. When this pattern last fired and what happened (2–3 sentences)
+Drawing on Bitcoin's historical price and on-chain data (2013-present), provide:
+1. When this pattern last fired and what happened (2-3 sentences)
 2. Estimated median returns 30/90/180 days after this pattern historically (give specific % ranges, acknowledge uncertainty)
-3. What makes the current macro context different (1–2 sentences)
+3. What makes the current macro context different (1-2 sentences)
 
 Output ONLY valid JSON matching this exact schema:
 { "historicalContext": "...", "medianReturn30d": "...", "medianReturn90d": "...", "medianReturn180d": "...", "caveats": "..." }`;
@@ -101,40 +96,32 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Generate via Claude
+  // Rate limit check
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
+  }
+
+  // Generate via Grok
   const prompt = buildPrompt(patternName, currentData);
-  let text: string;
-  try {
-    const client = getClient();
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    text = (msg.content[0] as { type: 'text'; text: string }).text.trim();
-  } catch (err) {
-    console.error('[pattern-historian] Anthropic error:', err);
+  const parsed = await callGrokAnalysisJSON<PatternResponse>(prompt, {
+    maxTokens: 512,
+    timeoutMs: 30_000,
+  });
+
+  if (!parsed) {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
   }
 
-  // Parse JSON response from Claude
-  let parsed: PatternResponse;
-  try {
-    // Strip markdown code fences if present
-    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    parsed = JSON.parse(clean);
-  } catch {
-    console.error('[pattern-historian] Failed to parse Claude JSON:', text);
-    return NextResponse.json({ error: 'AI service returned invalid response' }, { status: 503 });
-  }
+  await incrementAiUsage(session.user.id);
 
   const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
   const generatedAt = new Date();
 
   await (prisma as any).signalAnnotation.upsert({
     where: { panelId_valueKey: { panelId, valueKey } },
-    create: { panelId, valueKey, annotation: text, expiresAt },
-    update: { annotation: text, expiresAt, generatedAt },
+    create: { panelId, valueKey, annotation: JSON.stringify(parsed), expiresAt },
+    update: { annotation: JSON.stringify(parsed), expiresAt, generatedAt },
   });
 
   return NextResponse.json({ pattern: patternName, ...parsed });

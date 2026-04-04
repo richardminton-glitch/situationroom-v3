@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysis } from '@/lib/grok/analysis';
 import * as crypto from 'crypto';
 import type { Tier } from '@/types';
 
@@ -60,8 +60,6 @@ async function generateVipContent(
   topics: string[],
   portfolioContext: PortfolioContext,
 ): Promise<VipContent> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   const topicNames = topics
     .map((t) => VIP_TOPICS[t as keyof typeof VIP_TOPICS]?.name ?? t)
     .join(', ');
@@ -78,42 +76,24 @@ async function generateVipContent(
   // Generate personalised portfolio context paragraph if portfolio data available
   let portfolioCtx: string | null = null;
   if (portfolioNote) {
-    const portRes = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'user',
-          content: `${portfolioNote}\n\nToday's briefing headline: "${baseBriefing.headline}"\nThreat level: ${baseBriefing.threatLevel}\nConviction score: ${Math.round(baseBriefing.convictionScore)}/100\n\nWrite a 2-3 sentence personalised paragraph about what today's market conditions mean specifically for this user's Bitcoin position. Be direct and analytical, not reassuring. Focus on what the data means for their specific situation.`,
-        },
-      ],
-    });
-    portfolioCtx =
-      portRes.content[0].type === 'text' ? portRes.content[0].text.trim() : null;
+    portfolioCtx = await callGrokAnalysis(
+      `${portfolioNote}\n\nToday's briefing headline: "${baseBriefing.headline}"\nThreat level: ${baseBriefing.threatLevel}\nConviction score: ${Math.round(baseBriefing.convictionScore)}/100\n\nWrite a 2-3 sentence personalised paragraph about what today's market conditions mean specifically for this user's Bitcoin position. Be direct and analytical, not reassuring. Focus on what the data means for their specific situation.`,
+      { maxTokens: 200 },
+    );
   }
 
   // Personalise the outlook section with topic focus
-  const outlookRes = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 300,
-    messages: [
-      {
-        role: 'user',
-        content: `Original outlook section:\n${baseBriefing.outlookSection}\n\nThis user's focus topics: ${topicNames}\n\nRewrite this outlook section (same length) emphasising the insights most relevant to these focus topics. Keep the same analytical tone. Do not add new information — just reframe existing conclusions through the lens of these topics.`,
-      },
-    ],
-  });
-  const personalisedOutlook =
-    outlookRes.content[0].type === 'text'
-      ? outlookRes.content[0].text.trim()
-      : baseBriefing.outlookSection;
+  const personalisedOutlook = await callGrokAnalysis(
+    `Original outlook section:\n${baseBriefing.outlookSection}\n\nThis user's focus topics: ${topicNames}\n\nRewrite this outlook section (same length) emphasising the insights most relevant to these focus topics. Keep the same analytical tone. Do not add new information — just reframe existing conclusions through the lens of these topics.`,
+    { maxTokens: 300 },
+  );
 
   const content = {
     market:  baseBriefing.marketSection,
     network: baseBriefing.networkSection,
     geo:     baseBriefing.geopoliticalSection,
     macro:   baseBriefing.macroSection,
-    outlook: personalisedOutlook,
+    outlook: personalisedOutlook ?? baseBriefing.outlookSection,
   };
 
   return {

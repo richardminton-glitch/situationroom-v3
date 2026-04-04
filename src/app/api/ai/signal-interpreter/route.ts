@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
+import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
-import Anthropic from '@anthropic-ai/sdk';
+import { callGrokAnalysis } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -18,12 +19,6 @@ interface Signal {
   signal: 'bullish' | 'bearish' | 'neutral';
 }
 
-let _client: Anthropic | null = null;
-function getClient() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return _client;
-}
-
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -37,13 +32,13 @@ function buildPrompt(signals: Signal[]): string {
 
 ${formatted}
 
-Provide a 3–4 paragraph synthesised interpretation:
+Provide a 3-4 paragraph synthesised interpretation:
 1. What the confluence of these signals suggests about Bitcoin's current macro regime
 2. Historical precedents where similar signal combinations occurred and what happened
 3. Key risks and what would invalidate the current thesis
 4. A direct, actionable bottom line
 
-Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150–200 words total.`;
+Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -51,8 +46,8 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'vip')) {
-    return NextResponse.json({ error: 'VIP tier required' }, { status: 403 });
+  if (!hasAccess(userTier, 'members')) {
+    return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
   }
 
   let body: { signals?: Signal[]; autoDetect?: boolean };
@@ -73,15 +68,15 @@ export async function POST(request: NextRequest) {
         type SigVal = Signal['signal'];
         const bull: SigVal = 'bullish', bear: SigVal = 'bearish', neut: SigVal = 'neutral';
         signals = ([
-          { panel: 'Market',   metric: 'BTC Price',    value: ds.btcPrice    ? `$${Number(ds.btcPrice).toLocaleString()}` : '—', signal: (ds.btc24hPct ?? 0) >= 0 ? bull : bear },
-          { panel: 'Sentiment',metric: 'Fear & Greed', value: String(ds.fearGreed ?? '—'), signal: (ds.fearGreed ?? 50) > 60 ? bull : (ds.fearGreed ?? 50) < 30 ? bear : neut },
-          { panel: 'Network',  metric: 'Hashrate',     value: ds.hashrateEH  ? `${Number(ds.hashrateEH).toFixed(1)} EH/s` : '—', signal: neut },
-          { panel: 'On-Chain', metric: 'MVRV',         value: ds.mvrv        ? Number(ds.mvrv).toFixed(2) : '—', signal: (ds.mvrv ?? 1) > 3.5 ? bear : (ds.mvrv ?? 1) < 1 ? bull : neut },
-          { panel: 'Macro',    metric: 'VIX',          value: ds.vix         ? Number(ds.vix).toFixed(2) : '—', signal: (ds.vix ?? 20) > 30 ? bear : neut },
-          { panel: 'Macro',    metric: 'DXY',          value: ds.dxy         ? Number(ds.dxy).toFixed(2) : '—', signal: (ds.dxy ?? 100) > 105 ? bear : neut },
+          { panel: 'Market',   metric: 'BTC Price',    value: ds.btcPrice    ? `$${Number(ds.btcPrice).toLocaleString()}` : '-', signal: (ds.btc24hPct ?? 0) >= 0 ? bull : bear },
+          { panel: 'Sentiment',metric: 'Fear & Greed', value: String(ds.fearGreed ?? '-'), signal: (ds.fearGreed ?? 50) > 60 ? bull : (ds.fearGreed ?? 50) < 30 ? bear : neut },
+          { panel: 'Network',  metric: 'Hashrate',     value: ds.hashrateEH  ? `${Number(ds.hashrateEH).toFixed(1)} EH/s` : '-', signal: neut },
+          { panel: 'On-Chain', metric: 'MVRV',         value: ds.mvrv        ? Number(ds.mvrv).toFixed(2) : '-', signal: (ds.mvrv ?? 1) > 3.5 ? bear : (ds.mvrv ?? 1) < 1 ? bull : neut },
+          { panel: 'Macro',    metric: 'VIX',          value: ds.vix         ? Number(ds.vix).toFixed(2) : '-', signal: (ds.vix ?? 20) > 30 ? bear : neut },
+          { panel: 'Macro',    metric: 'DXY',          value: ds.dxy         ? Number(ds.dxy).toFixed(2) : '-', signal: (ds.dxy ?? 100) > 105 ? bear : neut },
           { panel: 'Briefing', metric: 'Conviction',   value: `${Math.round(briefing.convictionScore)}/100`, signal: briefing.convictionScore >= 65 ? bull : briefing.convictionScore <= 35 ? bear : neut },
           { panel: 'Briefing', metric: 'Threat Level', value: briefing.threatLevel, signal: briefing.threatLevel === 'LOW' ? bull : briefing.threatLevel === 'CRITICAL' ? bear : neut },
-        ] as Signal[]).filter((s) => s.value !== '—');
+        ] as Signal[]).filter((s) => s.value !== '-');
       }
     } catch {
       // fall through with empty signals
@@ -105,21 +100,21 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Generate via Claude
+  // Rate limit check
+  const rateCheck = await checkAiRateLimit(session.user.id, userTier, session.user.email);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Daily AI limit reached', resetAt: rateCheck.resetAt }, { status: 429 });
+  }
+
+  // Generate via Grok
   const prompt = buildPrompt(signals);
-  let text: string;
-  try {
-    const client = getClient();
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    text = (msg.content[0] as { type: 'text'; text: string }).text.trim();
-  } catch (err) {
-    console.error('[signal-interpreter] Anthropic error:', err);
+  const text = await callGrokAnalysis(prompt, { maxTokens: 512, timeoutMs: 30_000 });
+
+  if (!text) {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
   }
+
+  await incrementAiUsage(session.user.id);
 
   const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
   const generatedAt = new Date();

@@ -138,10 +138,10 @@ const ONCHAIN_PRESET: DashboardLayout = {
 const AI_PRESET: DashboardLayout = {
   id: 'ai',
   name: 'AI Analysis',
-  description: 'Claude-powered signal synthesis, cohort analysis, and market argument',
+  description: 'AI-powered signal synthesis, cohort analysis, and structured market argument',
   panels: [
     { panelId: 'bitcoin-argument',   x: 0,   y: 0,   w: 748, h: 396, collapsed: false, resizable: true },
-    { panelId: 'cohort-analysis',    x: 748, y: 0,   w: 704, h: 352, collapsed: false, resizable: true },
+    { panelId: 'cohort-analysis',    x: 748, y: 0,   w: 704, h: 792, collapsed: false, resizable: true },
     { panelId: 'signal-interpreter', x: 0,   y: 396, w: 748, h: 396, collapsed: false, resizable: true },
   ],
 };
