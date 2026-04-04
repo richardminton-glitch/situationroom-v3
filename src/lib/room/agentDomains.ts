@@ -36,8 +36,8 @@ export const AGENTS: Record<AgentId, AgentDefinition> = {
     id: 'SENTIMENT',
     label: 'SENTIMENT-AGENT',
     shortLabel: 'SENT',
-    color: '#5b9bd5',
-    dimColor: '#2d4e6b',
+    color: '#9b7fdd',
+    dimColor: '#4d3f6e',
     description: 'Narrative shifts, social, media, adoption signals',
   },
   RISK: {

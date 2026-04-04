@@ -14,7 +14,7 @@
  * └──────────────────────────────────────────┴─────────────────────┘
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useAuth } from '@/components/layout/AuthProvider';
@@ -23,15 +23,14 @@ import { useOpsRoom } from '@/hooks/useOpsRoom';
 import { useAgentEvents } from '@/hooks/useAgentEvents';
 import { useThreatScore } from '@/hooks/useThreatScore';
 import { useAgentLog } from '@/hooks/useAgentLog';
-import { useAnimationQueue } from '@/hooks/useAnimationQueue';
 import TopBar from './TopBar';
 import NostrChatSlot from './NostrChatSlot';
 import AgentLogPanel from './AgentLogPanel';
 import HeatmapOverlay from './HeatmapOverlay';
 
-// Lazy-load R3F canvas — heavy, client-only
-const NetworkGraphCanvas = dynamic(
-  () => import('./NetworkGraph/NetworkGraphCanvas'),
+// Lazy-load 2D canvas — client-only (uses requestAnimationFrame)
+const NetworkCanvas2D = dynamic(
+  () => import('./NetworkCanvas2D'),
   { ssr: false },
 );
 
@@ -48,23 +47,6 @@ export default function MembersRoom() {
   const { events, connected, lastEventTime } = useAgentEvents();
   const threat = useThreatScore(events);
   const { entries: logEntries } = useAgentLog(events);
-  const animQueue = useAnimationQueue();
-
-  // Enqueue animations for new events
-  const processedRef = useRef(new Set<string>());
-  useEffect(() => {
-    for (const evt of events) {
-      if (!processedRef.current.has(evt.id)) {
-        processedRef.current.add(evt.id);
-        animQueue.enqueue(evt);
-      }
-    }
-    // Prune processed set
-    if (processedRef.current.size > 600) {
-      const arr = Array.from(processedRef.current);
-      processedRef.current = new Set(arr.slice(-300));
-    }
-  }, [events, animQueue]);
 
   // Heatmap overlay
   const [heatmapOpen, setHeatmapOpen] = useState(false);
@@ -137,18 +119,12 @@ export default function MembersRoom() {
 
         {/* ── Main content ── */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          {/* ── Centre: R3F graph + heatmap ── */}
+          {/* ── Centre: 2D orbital graph + heatmap ── */}
           <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-            {/* R3F network graph — full bleed background */}
-            <NetworkGraphCanvas
+            {/* Orbital network graph — full bleed background */}
+            <NetworkCanvas2D
               threatState={threat.state}
-              animationState={{
-                currentAnimation: animQueue.currentAnimation,
-                isPlaying: animQueue.isPlaying,
-                nodeActivations: animQueue.nodeActivations,
-                edgeBrightness: animQueue.edgeBrightness,
-                nodeScales: animQueue.nodeScales,
-              }}
+              events={events}
             />
 
             {/* Heatmap toggle button */}

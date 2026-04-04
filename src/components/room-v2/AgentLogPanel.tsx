@@ -16,9 +16,9 @@ const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const DOMAIN_COLORS: Record<string, string> = {
   MACRO: '#f0a500',
   PRICE: '#00e5c8',
-  SENTIMENT: '#5b9bd5',
+  SENTIMENT: '#9b7fdd',
   RISK: '#e03030',
-  COORDINATOR: '#8a8aff',
+  COORDINATOR: '#00e5c8',
   SYSTEM: '#ffffff',
 };
 
