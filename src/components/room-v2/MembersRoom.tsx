@@ -55,7 +55,7 @@ export default function MembersRoom() {
   // Agent event system
   const { events, connected, lastEventTime } = useAgentEvents();
   const threat = useThreatScore(events);
-  const { entries: logEntries } = useAgentLog(events);
+  const { entries: logEntries } = useAgentLog(events, threat.state);
 
   // Chat props
   const canPost = canAccess('members');
@@ -160,12 +160,7 @@ export default function MembersRoom() {
               dxyPrice={dxyAsset?.price || 0}
               dxyDelta={dxyAsset?.delta || 0}
               fearGreed={data.conviction?.signals?.find(s => s.key === 'sentiment')?.rawValue ?? null}
-              convictionScore={data.conviction?.composite ?? null}
-              convictionBand={data.conviction?.band ?? null}
-              convictionSignals={data.conviction?.signals?.map(s => ({
-                key: s.key, score: s.score, weight: s.weight,
-                direction: s.direction, name: s.name, interpretation: s.interpretation,
-              })) ?? []}
+              domainContributions={threat.domainContributions}
             />
 
             {/* Scan-line texture over the entire centre area */}

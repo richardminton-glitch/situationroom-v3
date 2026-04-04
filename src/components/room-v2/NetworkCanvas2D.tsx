@@ -18,41 +18,22 @@ import type { ThreatState } from '@/lib/room/threatEngine';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-// 5 agents named after conviction signals
-const AGENT_KEYS = ['sentiment', 'momentum', 'onchain', 'macro', 'network'];
-const LABS = ['SENTIMENT', 'MOMENTUM', 'ON-CHAIN', 'MACRO', 'NETWORK'];
+// 5 threat-domain agents feeding the Threat Assessment Module
+const AGENT_KEYS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
+const LABS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
+const AGENT_COLORS = ['#e03030', '#f0a500', '#00e5c8', '#9b7fdd', '#4a9eff'];
 const APOS = [
-  { fx: 0.18, fy: 0.68 }, // SENTIMENT  — lower-left
-  { fx: 0.78, fy: 0.28 }, // MOMENTUM   — upper-right
-  { fx: 0.80, fy: 0.72 }, // ON-CHAIN   — lower-right
-  { fx: 0.20, fy: 0.28 }, // MACRO      — upper-left
-  { fx: 0.50, fy: 0.82 }, // NETWORK    — bottom-centre
+  { fx: 0.18, fy: 0.68 }, // GEOPOLITICAL — lower-left
+  { fx: 0.78, fy: 0.28 }, // ECONOMIC     — upper-right
+  { fx: 0.80, fy: 0.72 }, // BITCOIN      — lower-right
+  { fx: 0.20, fy: 0.28 }, // DISASTER     — upper-left
+  { fx: 0.50, fy: 0.82 }, // POLITICAL    — bottom-centre
 ];
 // Map event domains to agent indices
 const DOMAIN_IDX: Record<string, number> = {
-  MACRO: 3, PRICE: 1, SENTIMENT: 0, RISK: 2,
+  GEOPOLITICAL: 0, ECONOMIC: 1, BITCOIN: 2, DISASTER: 3, POLITICAL: 4,
 };
-const COORD_COLOR = '#f0a500'; // orange coordinator
-
-/** Score-to-colour (hex): 0→dark red, 50→amber, 100→teal */
-function scoreToColor(score: number): string {
-  const s = Math.max(0, Math.min(100, score));
-  let r: number, g: number, b: number;
-  if (s <= 50) {
-    // Dark red (#8b2020) → amber (#f0a500)
-    const t = s / 50;
-    r = Math.round(139 + (240 - 139) * t);
-    g = Math.round(32 + (165 - 32) * t);
-    b = Math.round(32 + (0 - 32) * t);
-  } else {
-    // Amber (#f0a500) → teal (#00e5c8)
-    const t = (s - 50) / 50;
-    r = Math.round(240 + (0 - 240) * t);
-    g = Math.round(165 + (229 - 165) * t);
-    b = Math.round(0 + (200 - 0) * t);
-  }
-  return '#' + ha(r) + ha(g) + ha(b);
-}
+const COORD_COLOR = '#f0a500'; // orange Threat Assessment Module
 
 // Threat-driven parameters computed each frame
 const THREAT_SCORE_MAP = {
@@ -62,7 +43,7 @@ const THREAT_SCORE_MAP = {
   coordPulseHz:   (score: number) => 0.5 + (score / 100) * 2.5,        // 0.5 -> 3.0 Hz
 };
 
-const FLOW_LABELS = ['F&G', 'BTC \u0394', 'MVRV', 'DXY', 'HASH'];
+const FLOW_LABELS = ['INTEL', 'MACRO', 'CHAIN', 'HAZARD', 'LEGAL'];
 
 // ── Hex-alpha helper ─────────────────────────────────────────────────────────
 
@@ -280,22 +261,17 @@ interface SceneState {
   dust: Dust[];
 }
 
-interface ConvictionSignalData {
-  key: string;
-  score: number;
-  weight: number;
-  direction: 'bullish' | 'bearish' | 'neutral';
-  name: string;
-  interpretation: string;
+/** Per-domain threat contribution (decaying sum per domain) */
+interface DomainContribution {
+  domain: string;
+  score: number;  // decayed impact sum for this domain
 }
 
 interface LiveData {
   btcPrice: number; btcDelta: number;
   dxyPrice: number; dxyDelta: number;
   fearGreed: number | null;
-  convictionScore: number | null;
-  convictionBand: string | null;
-  convictionSignals: ConvictionSignalData[];
+  domainContributions: DomainContribution[];
 }
 
 function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): SceneState {
@@ -307,13 +283,12 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
 
   const coord = new CNode({
     bx: W * 0.5, by: H * 0.44, r: 20, col: COORD_COLOR,
-    type: 'coord', label: 'COORDINATOR', dR: 9, dSpd: 0.00016,
+    type: 'coord', label: 'THREAT ASSESSOR', dR: 9, dSpd: 0.00016,
   });
 
-  // Default colour — will be overridden per-frame by signal scores
-  const defaultAgentCol = '#6b7a8d';
+  // Each agent gets its own fixed colour
   const agents = APOS.map((p, i) => new CNode({
-    bx: p.fx * W, by: p.fy * H, r: 12, col: defaultAgentCol,
+    bx: p.fx * W, by: p.fy * H, r: 12, col: AGENT_COLORS[i],
     type: 'agent', label: LABS[i], dR: 22,
     dSpd: 0.00022 + i * 0.00003, phase: i * 1.26,
   }));
@@ -323,7 +298,7 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
     for (let j = 0; j < 3; j++) {
       const sr = 50 + j * 18 + Math.random() * 22;
       const s = new CNode({
-        r: 5.5 + Math.random() * 2.5, col: defaultAgentCol, type: 'sub', parent: ag,
+        r: 5.5 + Math.random() * 2.5, col: AGENT_COLORS[ai], type: 'sub', parent: ag,
         oR: sr, oRY: sr * 0.58,
         oSpd: (0.009 + Math.random() * 0.009) * (j % 2 ? 1 : -1),
         oA: (j / 3) * Math.PI * 2 + ai * 0.63,
@@ -399,42 +374,36 @@ function drawDataOverlays(
 ) {
   const coord = s.coord;
 
-  // -- Update agent + sub colours from signal scores --
+  // -- Agent threat contribution arcs --
+  // Each agent's arc shows how much of the total threat score its domain contributes
+  const totalThreat = threatScore;
   s.agents.forEach((ag, ai) => {
-    const sigKey = AGENT_KEYS[ai];
-    const sig = data.convictionSignals.find(s => s.key === sigKey);
-    const score = sig ? sig.score : 50;
-    const newCol = scoreToColor(score);
-    ag.col = newCol;
-    ag._subs.forEach(sub => { sub.col = newCol; });
-  });
+    const domainKey = AGENT_KEYS[ai];
+    const contrib = data.domainContributions.find(d => d.domain === domainKey);
+    const domainScore = contrib ? contrib.score : 0;
 
-  // -- Agent data overlays: score beneath each agent --
-  s.agents.forEach((ag, ai) => {
-    const sigKey = AGENT_KEYS[ai];
-    const sig = data.convictionSignals.find(s => s.key === sigKey);
-    const score = sig ? sig.score : 0;
-    if (score === 0) return;
+    // Show domain contribution beneath agent label
+    if (domainScore > 0) {
+      const labelY = ag.y + ag.r * 3.6 + 22;
+      ctx.font = '700 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = ag.col + 'cc';
+      ctx.fillText('+' + domainScore.toFixed(1), ag.x, labelY);
 
-    const labelY = ag.y + ag.r * 3.6 + 22;
-    ctx.font = '700 8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = ag.col + 'cc';
-    ctx.fillText(score.toFixed(0) + '/100', ag.x, labelY);
-
-    // Direction indicator
-    if (sig) {
-      const dirLabel = sig.direction === 'bullish' ? '\u25B2' : sig.direction === 'bearish' ? '\u25BC' : '\u25C6';
+      // Percentage of total
+      const pct = totalThreat > 0 ? (domainScore / totalThreat) * 100 : 0;
       ctx.font = '700 7px monospace';
       ctx.fillStyle = ag.col + '99';
-      ctx.fillText(dirLabel + ' ' + (sig.weight * 100).toFixed(0) + '%', ag.x, labelY + 11);
+      ctx.fillText(pct.toFixed(0) + '% OF TOTAL', ag.x, labelY + 11);
     }
 
-    // Agent conviction arc — 10 segments
+    // Agent threat contribution arc — 10 segments
+    // Arc fill = domain's proportion of max possible contribution (capped at 100%)
     const segments = 10;
     const segAngle = (Math.PI * 2) / segments;
     const arcR = ag.r * 4.8;
-    const filled = Math.round((score / 100) * segments);
+    const fillPct = Math.min(1, domainScore / 40); // 40 = tier 4 max impact
+    const filled = Math.round(fillPct * segments);
     for (let i = 0; i < segments; i++) {
       const startA = -Math.PI / 2 + i * segAngle + 0.04;
       const endA = -Math.PI / 2 + (i + 1) * segAngle - 0.04;
@@ -449,12 +418,11 @@ function drawDataOverlays(
     }
   });
 
-  // -- COORDINATOR conviction arc (orange) --
-  if (data.convictionScore != null) {
-    const cScore = data.convictionScore;
+  // -- THREAT ASSESSOR arc (orange) — overall threat score --
+  {
     const arcR = coord.r * 4.2;
     const segAngle = (Math.PI * 2) / 10;
-    const filled = Math.round(cScore / 10);
+    const filled = Math.round(threatScore / 10);
 
     for (let i = 0; i < 10; i++) {
       const startA = -Math.PI / 2 + i * segAngle + 0.03;
@@ -472,7 +440,7 @@ function drawDataOverlays(
     ctx.font = '700 7px monospace';
     ctx.textAlign = 'center';
     ctx.fillStyle = COORD_COLOR + 'cc';
-    ctx.fillText('CONVICTION ' + cScore.toFixed(0), coord.x, coord.y - arcR - 6);
+    ctx.fillText('THREAT ' + threatScore, coord.x, coord.y - arcR - 6);
   }
 
   // -- Flow direction labels on agent->coordinator bezier midpoints --
@@ -629,15 +597,13 @@ interface NetworkCanvas2DProps {
   dxyPrice: number;
   dxyDelta: number;
   fearGreed: number | null;
-  convictionScore: number | null;
-  convictionBand?: string | null;
-  convictionSignals?: ConvictionSignalData[];
+  domainContributions?: DomainContribution[];
 }
 
 export default function NetworkCanvas2D({
   threatState, threatScore, events,
-  btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore,
-  convictionBand, convictionSignals,
+  btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed,
+  domainContributions,
 }: NetworkCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneState | null>(null);
@@ -651,8 +617,7 @@ export default function NetworkCanvas2D({
   // Live data ref for the render loop
   const dataRef = useRef<LiveData>({
     btcPrice: 0, btcDelta: 0, dxyPrice: 0, dxyDelta: 0,
-    fearGreed: null, convictionScore: null,
-    convictionBand: null, convictionSignals: [],
+    fearGreed: null, domainContributions: [],
   });
 
   // Keep threat state current for the render loop
@@ -662,11 +627,10 @@ export default function NetworkCanvas2D({
   // Update data ref when props change
   useEffect(() => {
     dataRef.current = {
-      btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore,
-      convictionBand: convictionBand ?? null,
-      convictionSignals: convictionSignals ?? [],
+      btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed,
+      domainContributions: domainContributions ?? [],
     };
-  }, [btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore, convictionBand, convictionSignals]);
+  }, [btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, domainContributions]);
 
   // BTC price trigger — fire particles on significant moves
   useEffect(() => {
@@ -680,25 +644,25 @@ export default function NetworkCanvas2D({
 
     const pctChange = Math.abs(btcPrice - prev) / prev;
     if (pctChange > 0.005) {
-      const priceAgent = scene.agents[1];
-      if (!priceAgent) return;
+      const btcAgent = scene.agents[2]; // BITCOIN agent
+      if (!btcAgent) return;
       const coord = scene.coord;
-      const headCol = btcPrice > prev ? '#f0a500' : '#e03030';
+      const headCol = btcPrice > prev ? '#00e5c8' : '#e03030';
 
-      // Fire particles from subs inward to PRICE agent
-      priceAgent._subs.forEach((sub, i) => {
+      // Fire particles from subs inward to BITCOIN agent
+      btcAgent._subs.forEach((sub, i) => {
         setTimeout(() => {
           const part = takeParticle(pool);
-          if (part) part.reset(sub, priceAgent, headCol, 0.008 + Math.random() * 0.004);
+          if (part) part.reset(sub, btcAgent, headCol, 0.008 + Math.random() * 0.004);
         }, i * 60);
       });
 
-      // Then 3 particles from PRICE agent to coordinator
+      // Then 3 particles from BITCOIN agent to coordinator
       setTimeout(() => {
         for (let p = 0; p < 3; p++) {
           setTimeout(() => {
             const part = takeParticle(pool);
-            if (part) part.reset(priceAgent, coord, headCol, 0.005 + Math.random() * 0.003);
+            if (part) part.reset(btcAgent, coord, headCol, 0.005 + Math.random() * 0.003);
           }, p * 80);
         }
       }, 350);
@@ -868,12 +832,13 @@ export default function NetworkCanvas2D({
 
   // Build hover overlay data
   const hoverData = dataRef.current;
-  const SIGNAL_LABELS: Record<string, string> = {
-    sentiment: 'SENTIMENT',
-    momentum: 'MOMENTUM',
-    onchain: 'ON-CHAIN',
-    macro: 'MACRO',
-    network: 'NETWORK',
+  const stateColor = ({ QUIET: '#00e5c8', MONITORING: '#00e5c8', ELEVATED: '#f0a500', ALERT: '#f07000', CRITICAL: '#e03030' } as Record<string, string>)[threatState] || '#00e5c8';
+  const DOMAIN_LABELS: Record<string, { label: string; color: string }> = {
+    GEOPOLITICAL: { label: 'GEOPOLITICAL', color: '#e03030' },
+    ECONOMIC: { label: 'ECONOMIC', color: '#f0a500' },
+    BITCOIN: { label: 'BITCOIN', color: '#00e5c8' },
+    DISASTER: { label: 'DISASTER', color: '#9b7fdd' },
+    POLITICAL: { label: 'POLITICAL', color: '#4a9eff' },
   };
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
@@ -889,8 +854,8 @@ export default function NetworkCanvas2D({
         }}
       />
 
-      {/* Coordinator hover overlay */}
-      {coordHover && hoverData.convictionScore != null && (
+      {/* Threat Assessment Module hover overlay */}
+      {coordHover && (
         <div
           style={{
             position: 'absolute',
@@ -902,60 +867,61 @@ export default function NetworkCanvas2D({
             fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
             pointerEvents: 'none',
             zIndex: 20,
-            minWidth: 200,
+            minWidth: 220,
           }}
         >
           {/* Title */}
           <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', marginBottom: 6 }}>
-            CONVICTION BREAKDOWN
+            THREAT ASSESSMENT MODULE
           </div>
 
-          {/* Composite score */}
+          {/* Composite threat score */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
             <span style={{
-              fontSize: 22, fontWeight: 700, color: COORD_COLOR,
+              fontSize: 22, fontWeight: 700, color: stateColor,
               fontVariantNumeric: 'tabular-nums',
             }}>
-              {hoverData.convictionScore.toFixed(0)}
+              {threatScore}
             </span>
             <span style={{ fontSize: 9, color: '#6b7a8d' }}>/100</span>
-            {hoverData.convictionBand && (
-              <span style={{
-                fontSize: 8, letterSpacing: '0.08em',
-                color: COORD_COLOR,
-                background: COORD_COLOR + '26',
-                padding: '1px 5px',
-              }}>
-                {hoverData.convictionBand.toUpperCase()}
-              </span>
-            )}
+            <span style={{
+              fontSize: 8, letterSpacing: '0.08em',
+              color: stateColor,
+              background: stateColor + '26',
+              padding: '1px 5px',
+            }}>
+              {threatState}
+            </span>
           </div>
 
-          {/* Signal bars */}
-          {hoverData.convictionSignals.length > 0 ? (
+          {/* Domain contribution bars */}
+          <div style={{ fontSize: 8, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+            DOMAIN CONTRIBUTIONS
+          </div>
+          {hoverData.domainContributions.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {hoverData.convictionSignals.map((sig) => {
-                const pct = sig.score;
-                const barW = 100;
-                const filledW = (pct / 100) * barW;
-                const sigCol = scoreToColor(pct);
+              {AGENT_KEYS.map((key) => {
+                const contrib = hoverData.domainContributions.find(d => d.domain === key);
+                const score = contrib ? contrib.score : 0;
+                const pct = threatScore > 0 ? (score / threatScore) * 100 : 0;
+                const barW = 120;
+                const filledW = Math.min(barW, (score / 40) * barW); // 40 = max tier impact
+                const info = DOMAIN_LABELS[key] || { label: key, color: '#6b7a8d' };
                 return (
-                  <div key={sig.key}>
+                  <div key={key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                      <span style={{ fontSize: 8, letterSpacing: '0.1em', color: '#6b7a8d' }}>
-                        {SIGNAL_LABELS[sig.key] || sig.key.toUpperCase()}
-                        <span style={{ color: '#4a5a6d', marginLeft: 4 }}>
-                          {(sig.weight * 100).toFixed(0)}%
-                        </span>
+                      <span style={{ fontSize: 8, letterSpacing: '0.08em', color: info.color }}>
+                        {info.label}
                       </span>
-                      <span style={{ fontSize: 9, color: sigCol, fontWeight: 600 }}>
-                        {pct.toFixed(0)}
+                      <span style={{ fontSize: 9, color: score > 0 ? info.color : '#4a5a6d', fontWeight: 600 }}>
+                        {score > 0 ? '+' + score.toFixed(1) : '0'}
+                        {pct > 0 && <span style={{ color: '#4a5a6d', marginLeft: 4, fontWeight: 400 }}>{pct.toFixed(0)}%</span>}
                       </span>
                     </div>
                     <div style={{ width: barW, height: 3, background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
                       <div style={{
                         width: filledW, height: '100%',
-                        background: sigCol,
+                        background: info.color,
                         opacity: 0.7,
                       }} />
                     </div>
@@ -964,8 +930,13 @@ export default function NetworkCanvas2D({
               })}
             </div>
           ) : (
-            <div style={{ fontSize: 9, color: '#4a5a6d' }}>AWAITING SIGNAL DATA...</div>
+            <div style={{ fontSize: 9, color: '#4a5a6d' }}>NO ACTIVE THREATS</div>
           )}
+
+          {/* Methodology note */}
+          <div style={{ fontSize: 7, color: '#3a4a5a', marginTop: 6, lineHeight: '10px' }}>
+            Exponential decay · 3h half-life · Recalculated every second
+          </div>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AgentEvent } from '@/lib/room/agentDomains';
 import {
   computeDecayedScore,
+  computeDomainContributions,
   getStateForScore,
   type ThreatState,
   type ThreatStatus,
@@ -16,12 +17,18 @@ import {
 
 const TICK_INTERVAL = 1000; // Recalculate every second
 
+export interface DomainContribution {
+  domain: string;
+  score: number;
+}
+
 export interface ThreatScoreState {
   score: number;
   state: ThreatState;
   prevState: ThreatState;
   stateChanged: boolean;
   history: { score: number; time: number }[];
+  domainContributions: DomainContribution[];
 }
 
 export function useThreatScore(events: AgentEvent[]) {
@@ -31,6 +38,7 @@ export function useThreatScore(events: AgentEvent[]) {
     prevState: 'QUIET',
     stateChanged: false,
     history: [],
+    domainContributions: [],
   });
 
   const prevStateRef = useRef<ThreatState>('QUIET');
@@ -52,12 +60,19 @@ export function useThreatScore(events: AgentEvent[]) {
       { score: result.score, time: now },
     ];
 
+    // Compute per-domain contributions
+    const domainMap = computeDomainContributions(events, now);
+    const domainContributions: DomainContribution[] = Object.entries(domainMap)
+      .map(([domain, score]) => ({ domain, score }))
+      .sort((a, b) => b.score - a.score);
+
     setStatus({
       score: result.score,
       state: result.state,
       prevState,
       stateChanged,
       history: historyRef.current,
+      domainContributions,
     });
   }, [events]);
 

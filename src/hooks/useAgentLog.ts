@@ -2,13 +2,14 @@
 
 /**
  * Agent log — generates ambient + event-driven telemetry entries.
- * Ambient: 1 random entry per domain every 3–8 seconds.
- * Event-driven: entries from the event sequencer.
+ * Ambient entries are threat-level-aware: at QUIET they report
+ * routine scans; at CRITICAL they report emergency protocols.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AgentEvent } from '@/lib/room/agentDomains';
 import { DOMAIN_AGENTS } from '@/lib/room/agentDomains';
+import type { ThreatState } from '@/lib/room/threatEngine';
 import {
   randomAmbientEntry,
   eventLogEntries,
@@ -19,11 +20,17 @@ const MAX_ENTRIES = 200;
 const AMBIENT_MIN_MS = 6000;
 const AMBIENT_MAX_MS = 14000;
 
-export function useAgentLog(events: AgentEvent[]) {
+export function useAgentLog(events: AgentEvent[], threatState: ThreatState = 'QUIET') {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const entriesRef = useRef<LogEntry[]>([]);
   const processedEventsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
+  const threatStateRef = useRef<ThreatState>(threatState);
+
+  // Keep threat state ref current
+  useEffect(() => {
+    threatStateRef.current = threatState;
+  }, [threatState]);
 
   const pushEntry = useCallback((entry: LogEntry) => {
     entriesRef.current = [...entriesRef.current, entry].slice(-MAX_ENTRIES);
@@ -32,14 +39,7 @@ export function useAgentLog(events: AgentEvent[]) {
     }
   }, []);
 
-  const pushEntries = useCallback((newEntries: LogEntry[]) => {
-    entriesRef.current = [...entriesRef.current, ...newEntries].slice(-MAX_ENTRIES);
-    if (mountedRef.current) {
-      setEntries([...entriesRef.current]);
-    }
-  }, []);
-
-  // Ambient log generation
+  // Ambient log generation — uses current threat level
   useEffect(() => {
     mountedRef.current = true;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -48,7 +48,7 @@ export function useAgentLog(events: AgentEvent[]) {
       const delay = AMBIENT_MIN_MS + Math.random() * (AMBIENT_MAX_MS - AMBIENT_MIN_MS);
       const timer = setTimeout(() => {
         if (!mountedRef.current) return;
-        pushEntry(randomAmbientEntry(domain));
+        pushEntry(randomAmbientEntry(domain, threatStateRef.current));
         scheduleAmbient(domain);
       }, delay);
       timers.push(timer);
@@ -56,11 +56,10 @@ export function useAgentLog(events: AgentEvent[]) {
 
     // Start ambient for all domains + coordinator
     for (const domain of [...DOMAIN_AGENTS, 'COORDINATOR' as const]) {
-      // Stagger initial start
       const initialDelay = Math.random() * 3000;
       const timer = setTimeout(() => {
         if (!mountedRef.current) return;
-        pushEntry(randomAmbientEntry(domain));
+        pushEntry(randomAmbientEntry(domain, threatStateRef.current));
         scheduleAmbient(domain);
       }, initialDelay);
       timers.push(timer);

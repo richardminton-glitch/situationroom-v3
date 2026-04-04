@@ -1,6 +1,8 @@
 /**
  * Maps ClassifiedArticle objects from the RSS pipeline into AgentEvent objects
  * for the reactive intelligence network.
+ *
+ * 5 threat domains: GEOPOLITICAL, ECONOMIC, BITCOIN, DISASTER, POLITICAL
  */
 
 import type { AgentDomain, AgentEvent } from './agentDomains';
@@ -20,58 +22,72 @@ interface ClassifiedArticleInput {
 
 // ── Domain routing keywords ──────────────────────────────────────────────────
 
-const MACRO_KEYWORDS = [
+const GEOPOLITICAL_KEYWORDS = [
+  'geopolitical', 'sanctions', 'war', 'conflict', 'military', 'nato',
+  'attack', 'missile', 'nuclear', 'invasion', 'occupation', 'embargo',
+  'blockade', 'coup', 'martial law', 'escalation', 'troops',
+  'strait of hormuz', 'south china sea', 'taiwan', 'ukraine', 'russia',
+  'iran', 'north korea', 'assassination', 'ceasefire', 'insurgent',
+  'territorial', 'annex', 'proxy war', 'arms', 'defense',
+];
+
+const ECONOMIC_KEYWORDS = [
   'monetary policy', 'fed ', 'federal reserve', 'ecb', 'boe', 'boj',
   'central bank', 'yields', 'yield curve', 'dxy', 'dollar index',
   'inflation', 'cpi', 'ppi', 'gdp', 'employment', 'unemployment',
   'rate decision', 'rate hike', 'rate cut', 'fomc', 'taper',
   'quantitative', 'stimulus', 'treasury', 'bond', 'debt ceiling',
   'm2', 'money supply', 'interest rate', 'yen', 'euro',
+  'bank run', 'default', 'contagion', 'market halt', 'recession',
+  'credit', 'liquidity', 'solvency', 'bailout', 'banking crisis',
 ];
 
-const PRICE_KEYWORDS = [
+const BITCOIN_KEYWORDS = [
   'bitcoin', 'btc', 'etf', 'exchange', 'hashrate', 'hash rate',
   'mining', 'halving', 'crypto', 'spot price', 'futures',
   'liquidation', 'whale', 'accumulation', 'outflow', 'inflow',
   'mempool', 'difficulty', 'block reward', 'sats', 'satoshi',
   'lightning network', 'layer 2', 'coinbase', 'binance',
   'microstrategy', 'grayscale', 'blackrock', 'fidelity',
+  'chain halt', 'insolvency', 'hack', 'exploit', 'rug pull',
 ];
 
-const SENTIMENT_KEYWORDS = [
-  'narrative', 'social', 'fear', 'greed', 'sentiment', 'mainstream',
-  'adoption', 'institutional', 'retail', 'fomo', 'capitulation',
-  'media', 'opinion', 'poll', 'survey', 'trust', 'confidence',
-  'public', 'regulation', 'regulatory', 'sec ', 'cftc',
-  'framework', 'legislation', 'bill', 'law', 'compliance',
-  'el salvador', 'legal tender', 'cbdc',
+const DISASTER_KEYWORDS = [
+  'earthquake', 'tsunami', 'hurricane', 'typhoon', 'volcano',
+  'flood', 'wildfire', 'tornado', 'pandemic', 'epidemic',
+  'outbreak', 'nuclear accident', 'meltdown', 'radiation',
+  'infrastructure failure', 'power grid', 'blackout', 'dam',
+  'famine', 'drought', 'climate disaster', 'emergency declared',
+  'natural disaster', 'evacuation', 'catastroph', 'devastat',
+  'cyber attack', 'ransomware', 'grid failure', 'pipeline',
 ];
 
-const RISK_KEYWORDS = [
-  'geopolitical', 'sanctions', 'war', 'energy', 'oil',
-  'conflict', 'military', 'nato', 'attack', 'missile',
-  'nuclear', 'invasion', 'occupation', 'embargo', 'blockade',
-  'coup', 'martial law', 'emergency', 'crisis', 'escalation',
-  'cyber', 'hack', 'exploit', 'breach', 'infrastructure',
-  'ban', 'government', 'seize', 'freeze', 'shutdown',
-  'strait of hormuz', 'south china sea', 'taiwan',
+const POLITICAL_KEYWORDS = [
+  'regulation', 'regulatory', 'sec ', 'cftc', 'legislation',
+  'bill', 'law', 'compliance', 'framework', 'executive order',
+  'arrest', 'indictment', 'enforcement', 'ban', 'government',
+  'seize', 'freeze', 'shutdown', 'election', 'congress',
+  'senate', 'parliament', 'president', 'prime minister',
+  'policy', 'cbdc', 'legal tender', 'el salvador',
+  'court ruling', 'supreme court', 'antitrust', 'subpoena',
 ];
 
 const DOMAIN_KEYWORD_MAP: Record<AgentDomain, string[]> = {
-  MACRO: MACRO_KEYWORDS,
-  PRICE: PRICE_KEYWORDS,
-  SENTIMENT: SENTIMENT_KEYWORDS,
-  RISK: RISK_KEYWORDS,
+  GEOPOLITICAL: GEOPOLITICAL_KEYWORDS,
+  ECONOMIC: ECONOMIC_KEYWORDS,
+  BITCOIN: BITCOIN_KEYWORDS,
+  DISASTER: DISASTER_KEYWORDS,
+  POLITICAL: POLITICAL_KEYWORDS,
 };
 
 // ── Category-to-domain base mapping ──────────────────────────────────────────
 
 const CATEGORY_DOMAIN_MAP: Record<string, AgentDomain> = {
-  bitcoin: 'PRICE',
-  economy: 'MACRO',
-  conflict: 'RISK',
-  disaster: 'RISK',
-  political: 'SENTIMENT',
+  bitcoin: 'BITCOIN',
+  economy: 'ECONOMIC',
+  conflict: 'GEOPOLITICAL',
+  disaster: 'DISASTER',
+  political: 'POLITICAL',
 };
 
 // ── Mapper ───────────────────────────────────────────────────────────────────
@@ -94,9 +110,9 @@ function matchDomains(headline: string, category: string): AgentDomain[] {
     }
   }
 
-  // Fallback: if nothing matched, use category base or default to MACRO
+  // Fallback: if nothing matched, use category base or default to ECONOMIC
   if (matched.size === 0) {
-    matched.add(baseDomain || 'MACRO');
+    matched.add(baseDomain || 'ECONOMIC');
   }
 
   return Array.from(matched);

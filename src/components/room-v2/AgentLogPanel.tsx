@@ -14,11 +14,12 @@ const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 // Domain colours matching agent definitions
 const DOMAIN_COLORS: Record<string, string> = {
-  MACRO: '#f0a500',
-  PRICE: '#00e5c8',
-  SENTIMENT: '#9b7fdd',
-  RISK: '#e03030',
-  COORDINATOR: '#00e5c8',
+  GEOPOLITICAL: '#e03030',
+  ECONOMIC: '#f0a500',
+  BITCOIN: '#00e5c8',
+  DISASTER: '#9b7fdd',
+  POLITICAL: '#4a9eff',
+  COORDINATOR: '#f0a500',
   SYSTEM: '#ffffff',
 };
 

@@ -322,9 +322,9 @@ export default function TopBar({
               METHODOLOGY
             </div>
             <div style={{ fontSize: 9, color: '#6b7a8d', lineHeight: '14px' }}>
-              Score is the sum of all intelligence event impacts with exponential time-decay.
+              Five domain agents (Geopolitical, Economic, Bitcoin, Disaster, Political) feed intelligence to the Threat Assessment Module.
               Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: '#8a9aad' }}>3-hour half-life</span>.
-              Events older than ~12 hours contribute negligibly. Score is capped at 100 and recalculated every second.
+              Score is the decaying sum of all impacts, capped at 100, recalculated every second.
             </div>
           </div>
         )}

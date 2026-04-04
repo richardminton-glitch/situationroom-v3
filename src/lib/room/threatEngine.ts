@@ -82,6 +82,34 @@ export function computeDecayedScore(
 }
 
 /**
+ * Compute per-domain decayed contributions.
+ * Returns an object mapping each domain to its current decayed score contribution.
+ */
+export function computeDomainContributions(
+  events: AgentEvent[],
+  now: number,
+): Record<string, number> {
+  const contributions: Record<string, number> = {};
+
+  for (const evt of events) {
+    const evtTime = new Date(evt.timestamp).getTime();
+    const age = now - evtTime;
+    if (age < 0) continue;
+
+    const decayedImpact = evt.scoreImpact * Math.exp(-LAMBDA * age);
+    const domain = evt.primaryDomain;
+    contributions[domain] = (contributions[domain] || 0) + decayedImpact;
+  }
+
+  // Round to 1 decimal
+  for (const key of Object.keys(contributions)) {
+    contributions[key] = Math.round(contributions[key] * 10) / 10;
+  }
+
+  return contributions;
+}
+
+/**
  * Format a threat state transition for the agent log.
  */
 export function formatStateTransition(from: ThreatState, to: ThreatState): string {
