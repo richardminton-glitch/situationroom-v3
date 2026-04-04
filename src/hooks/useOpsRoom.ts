@@ -145,15 +145,15 @@ export function useOpsRoom() {
       if (snap.btcMarket) {
         assets.push({ name: 'BTC', key: 'btc', price: snap.btcMarket.price, delta: snap.btcMarket.change24h });
       }
-      if (snap.commodities?.GOLD) {
-        assets.push({ name: 'GOLD', key: 'gold', price: snap.commodities.GOLD.price, delta: snap.commodities.GOLD.changePct });
+      if (snap.commodities?.gold) {
+        assets.push({ name: 'GOLD', key: 'gold', price: snap.commodities.gold.price, delta: snap.commodities.gold.changePct });
       }
-      if (snap.commodities?.OIL || snap.commodities?.['CRUDE OIL']) {
-        const oil = snap.commodities?.OIL || snap.commodities?.['CRUDE OIL'];
+      if (snap.commodities?.['crude-oil']) {
+        const oil = snap.commodities['crude-oil'];
         assets.push({ name: 'OIL', key: 'oil', price: oil.price, delta: oil.changePct });
       }
-      if (snap.fx?.DXY) {
-        assets.push({ name: 'DXY', key: 'dxy', price: snap.fx.DXY.price, delta: snap.fx.DXY.changePct });
+      if (snap.commodities?.dxy) {
+        assets.push({ name: 'DXY', key: 'dxy', price: snap.commodities.dxy.price, delta: snap.commodities.dxy.changePct });
       }
 
       const network: NetworkHealth | null = snap.btcNetwork ? {
