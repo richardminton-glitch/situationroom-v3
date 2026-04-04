@@ -3,9 +3,17 @@
  * Ported from V2 data-aggregator.js trackChange()/rollover logic.
  *
  * In-memory during runtime, persisted to DataCache (PostgreSQL) at midnight rollover.
+ *
+ * Bootstrap strategy (on startup when no baselines exist):
+ *   1. Try DataCache DB (prev_day_prices key)
+ *   2. Try daily_* snapshot tables (yesterday or last trading day)
+ *   3. Try file caches (market-cache.json, api-ninjas-snapshot.json)
+ *   4. Seed from first incoming prices (changes will be 0 until next fetch cycle)
  */
 
 import { prisma } from '@/lib/db';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const PRICE_CATEGORIES = ['indices', 'commodities', 'fx'] as const;
 type PriceCategory = (typeof PRICE_CATEGORIES)[number];
@@ -24,30 +32,25 @@ const todayPrices: Record<PriceCategory, Record<string, number>> = {
 
 let priceDate: string | null = null;
 let loaded = false;
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-/**
- * Load previous day prices from DataCache on first call.
- */
-async function ensureLoaded() {
-  if (loaded) return;
-  loaded = true;
-  try {
-    const row = await prisma.dataCache.findUnique({ where: { key: 'prev_day_prices' } });
-    if (row) {
-      const saved = JSON.parse(row.data);
-      for (const cat of PRICE_CATEGORIES) {
-        if (saved[cat]) Object.assign(prevDayPrices[cat], saved[cat]);
-      }
-      console.log('[PriceTracker] Loaded previous day prices from DB');
-    }
-  } catch (e) {
-    console.warn('[PriceTracker] Could not load prev prices:', e);
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function countBaselines(): number {
+  return PRICE_CATEGORIES.reduce((s, c) => s + Object.keys(prevDayPrices[c]).length, 0);
 }
 
-/**
- * Save previous day prices to DataCache.
- */
+/** Debounced save — batches multiple new baselines into one DB write */
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(async () => {
+    saveTimer = null;
+    await savePrevPrices();
+  }, 5_000);
+}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+
 async function savePrevPrices() {
   try {
     const data = JSON.stringify(prevDayPrices);
@@ -61,6 +64,163 @@ async function savePrevPrices() {
     console.warn('[PriceTracker] Could not save prev prices:', e);
   }
 }
+
+// ── Bootstrap: load from DataCache ────────────────────────────────────────────
+
+async function loadFromDB(): Promise<boolean> {
+  try {
+    const row = await prisma.dataCache.findUnique({ where: { key: 'prev_day_prices' } });
+    if (row) {
+      const saved = JSON.parse(row.data);
+      let count = 0;
+      for (const cat of PRICE_CATEGORIES) {
+        if (saved[cat] && typeof saved[cat] === 'object') {
+          Object.assign(prevDayPrices[cat], saved[cat]);
+          count += Object.keys(saved[cat]).length;
+        }
+      }
+      if (count > 0) {
+        console.log(`[PriceTracker] Loaded ${count} baselines from DB`);
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('[PriceTracker] DB load failed:', e);
+  }
+  return false;
+}
+
+// ── Bootstrap: seed from daily_* tables ───────────────────────────────────────
+
+async function seedFromDailyTables(): Promise<boolean> {
+  try {
+    // Look back up to 4 days to find the most recent daily record (covers weekends)
+    for (let daysBack = 1; daysBack <= 4; daysBack++) {
+      const date = new Date(Date.now() - daysBack * 86_400_000);
+      date.setUTCHours(0, 0, 0, 0);
+
+      const [idx, comm, fxResult] = await Promise.allSettled([
+        prisma.dailyIndices.findUnique({ where: { date } }),
+        prisma.dailyCommodities.findUnique({ where: { date } }),
+        prisma.dailyFx.findUnique({ where: { date } }),
+      ]);
+
+      let seeded = 0;
+
+      if (idx.status === 'fulfilled' && idx.value) {
+        const d = idx.value;
+        const map: Record<string, number | null> = {
+          sp500: d.sp500, nasdaq: d.nasdaq, dji: d.dow, ftse: d.ftse,
+          dax: d.dax, nikkei: d.nikkei, hsi: d.hangSeng, vix: d.vix,
+        };
+        for (const [key, val] of Object.entries(map)) {
+          if (val != null) { prevDayPrices.indices[key] = val; seeded++; }
+        }
+        // DXY, US 10Y, US 2Y stored in daily_indices
+        if (d.dxy != null) { prevDayPrices.commodities.dxy = d.dxy; seeded++; }
+        if (d.us10y != null) { prevDayPrices.commodities.us10y = d.us10y; seeded++; }
+        if (d.us2y != null) { prevDayPrices.commodities.us2y = d.us2y; seeded++; }
+      }
+
+      if (comm.status === 'fulfilled' && comm.value) {
+        const d = comm.value;
+        const map: Record<string, number | null> = {
+          gold: d.gold, silver: d.silver, 'crude-oil': d.crudeOil,
+          'natural-gas': d.naturalGas, copper: d.copper,
+        };
+        for (const [key, val] of Object.entries(map)) {
+          if (val != null) { prevDayPrices.commodities[key] = val; seeded++; }
+        }
+      }
+
+      if (fxResult.status === 'fulfilled' && fxResult.value) {
+        const d = fxResult.value;
+        const map: Record<string, number | null> = {
+          eur: d.eurUsd, gbp: d.gbpUsd, jpy: d.usdJpy, cny: d.usdCny,
+        };
+        for (const [key, val] of Object.entries(map)) {
+          if (val != null) { prevDayPrices.fx[key] = val; seeded++; }
+        }
+      }
+
+      if (seeded > 0) {
+        console.log(`[PriceTracker] Seeded ${seeded} baselines from daily tables (${daysBack}d back)`);
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('[PriceTracker] Daily table seed failed:', e);
+  }
+  return false;
+}
+
+// ── Bootstrap: seed from file caches ──────────────────────────────────────────
+
+function seedFromFileCaches(): boolean {
+  const files = [
+    path.join(process.cwd(), 'data', 'market-cache.json'),
+    path.join(process.cwd(), 'data', 'api-ninjas-snapshot.json'),
+  ];
+
+  let totalSeeded = 0;
+
+  for (const file of files) {
+    try {
+      const raw = fs.readFileSync(file, 'utf-8');
+      const cache = JSON.parse(raw);
+
+      for (const cat of PRICE_CATEGORIES) {
+        const section = cache[cat];
+        if (!section || typeof section !== 'object') continue;
+        for (const [key, val] of Object.entries(section)) {
+          if (
+            val && typeof val === 'object' && 'price' in (val as Record<string, unknown>) &&
+            typeof (val as Record<string, unknown>).price === 'number' &&
+            (val as Record<string, unknown>).price! > 0 &&
+            !prevDayPrices[cat][key]
+          ) {
+            prevDayPrices[cat][key] = (val as Record<string, unknown>).price as number;
+            totalSeeded++;
+          }
+        }
+      }
+    } catch {
+      // File doesn't exist or is corrupt — try next
+    }
+  }
+
+  if (totalSeeded > 0) {
+    console.log(`[PriceTracker] Seeded ${totalSeeded} baselines from file caches`);
+    return true;
+  }
+  return false;
+}
+
+// ── Main load ─────────────────────────────────────────────────────────────────
+
+async function ensureLoaded() {
+  if (loaded) return;
+  loaded = true;
+
+  // Strategy 1: DataCache DB (prev_day_prices)
+  if (await loadFromDB()) return;
+
+  // Strategy 2: Daily snapshot tables (yesterday / last trading day)
+  if (await seedFromDailyTables()) {
+    await savePrevPrices(); // persist so Strategy 1 works next restart
+    return;
+  }
+
+  // Strategy 3: File caches (market-cache.json / api-ninjas-snapshot.json)
+  if (seedFromFileCaches()) {
+    await savePrevPrices();
+    return;
+  }
+
+  console.warn('[PriceTracker] No baselines found — will seed from first incoming prices');
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Track a price and return the % change vs the last known baseline.
@@ -107,11 +267,18 @@ export async function trackChange(
     todayPrices[category][id] = currentPrice;
   }
 
-  // Calculate % change vs last known baseline (could be Friday close on a weekend)
+  // Calculate % change vs last known baseline
   const prev = prevDayPrices[category][id];
-  if (prev && currentPrice != null && prev !== 0) {
+  if (prev != null && prev !== 0 && currentPrice != null) {
     return ((currentPrice - prev) / prev) * 100;
   }
+
+  // No baseline yet for this ticker — seed it (covers new tickers added later)
+  if (currentPrice != null && prev == null) {
+    prevDayPrices[category][id] = currentPrice;
+    scheduleSave();
+  }
+
   return null;
 }
 
