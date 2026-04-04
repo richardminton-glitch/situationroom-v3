@@ -188,7 +188,7 @@ export function CohortAnalysisPanel() {
         borderTop: '1px solid var(--border-subtle)',
         paddingTop: '6px',
       }}>
-        Claude Haiku · 6hr Cache
+        Grok · 6hr Cache
       </div>
     </div>
   );

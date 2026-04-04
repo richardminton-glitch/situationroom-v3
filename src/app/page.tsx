@@ -23,7 +23,7 @@ const LOCKED_VIEWS: Record<string, { requiredTier: Exclude<Tier, 'free'>; name: 
   'full-data':        { requiredTier: 'general', name: 'Full Data',         description: 'Complete Bitcoin market data, network metrics, Lightning stats, mining economics, on-chain sentiment, and all charts in one view.' },
   'macro-focus':      { requiredTier: 'general', name: 'Macro Focus',       description: 'Central bank balance sheet composition, 10-year policy rate history, inflation monitor across G7 nations, and macro context behind every number.' },
   'onchain-deep-dive':{ requiredTier: 'members', name: 'On-Chain Deep Dive',description: 'UTXO age distribution, long-term vs short-term holder supply, value of coin days destroyed, and supply at cost basis — the complete holder behaviour picture.' },
-  'ai':               { requiredTier: 'members', name: 'AI Analysis',       description: 'Claude-powered signal synthesis, cohort analysis, and structured market argument — deep AI reasoning applied to on-chain and macro data.' },
+  'ai':               { requiredTier: 'members', name: 'AI Analysis',       description: 'AI-powered signal synthesis, cohort analysis, and structured market argument — deep AI reasoning applied to on-chain and macro data.' },
 };
 
 export default function DashboardPage() {
