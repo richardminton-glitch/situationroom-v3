@@ -161,6 +161,11 @@ export default function MembersRoom() {
               dxyDelta={dxyAsset?.delta || 0}
               fearGreed={data.conviction?.signals?.find(s => s.key === 'sentiment')?.rawValue ?? null}
               convictionScore={data.conviction?.composite ?? null}
+              convictionBand={data.conviction?.band ?? null}
+              convictionSignals={data.conviction?.signals?.map(s => ({
+                key: s.key, score: s.score, weight: s.weight,
+                direction: s.direction, name: s.name, interpretation: s.interpretation,
+              })) ?? []}
             />
 
             {/* Scan-line texture over the entire centre area */}

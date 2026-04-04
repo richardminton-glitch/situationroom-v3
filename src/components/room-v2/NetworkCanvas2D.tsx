@@ -12,7 +12,7 @@
  * Particles use a pre-allocated pool of 60. No ambient cascades.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import type { AgentEvent } from '@/lib/room/agentDomains';
 import type { ThreatState } from '@/lib/room/threatEngine';
 
@@ -125,29 +125,6 @@ class CNode {
       ctx.beginPath(); ctx.arc(x, y, dr * 2.5 + act * 4, 0, Math.PI * 2);
       ctx.strokeStyle = col + ha((0.08 + act * 0.16) * 255);
       ctx.lineWidth = 0.5; ctx.stroke();
-    }
-
-    // Sub-agent threat arc — segmented arc representing threat level
-    if (type === 'sub') {
-      const arcR = dr * 3.2 + act * 5;
-      const segments = 8;
-      const segAngle = (Math.PI * 2) / segments;
-      const filled = Math.round((threatScore / 100) * segments);
-      const arcCol = threatScore < 36 ? '#00e5c8' : threatScore < 56 ? '#f0a500' : '#e03030';
-      const rotOffset = -Math.PI / 2 + phase * 0.5; // slight per-node rotation
-
-      for (let i = 0; i < segments; i++) {
-        const startA = rotOffset + i * segAngle + 0.06;
-        const endA = rotOffset + (i + 1) * segAngle - 0.06;
-        ctx.beginPath();
-        ctx.arc(x, y, arcR, startA, endA);
-        if (i < filled) {
-          ctx.strokeStyle = arcCol + ha((0.5 + act * 0.3) * 255);
-        } else {
-          ctx.strokeStyle = '#ffffff' + ha(0.06 * 255);
-        }
-        ctx.lineWidth = 1.5; ctx.stroke();
-      }
     }
 
     // Core rendering
@@ -283,11 +260,22 @@ interface SceneState {
   dust: Dust[];
 }
 
+interface ConvictionSignalData {
+  key: string;
+  score: number;
+  weight: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  name: string;
+  interpretation: string;
+}
+
 interface LiveData {
   btcPrice: number; btcDelta: number;
   dxyPrice: number; dxyDelta: number;
   fearGreed: number | null;
   convictionScore: number | null;
+  convictionBand: string | null;
+  convictionSignals: ConvictionSignalData[];
 }
 
 function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): SceneState {
@@ -445,6 +433,48 @@ function drawDataOverlays(
     ctx.fillStyle = riskAgent.col + 'cc';
     ctx.fillText('THREAT: ' + threatState, riskAgent.x, ry);
   }
+
+  // -- AGENT conviction arcs — segmented arcs showing signal contribution --
+  // Map: MACRO(0)→macro, PRICE(1)→momentum, SENTIMENT(2)→sentiment, RISK(3)→threatScore
+  const AGENT_SIGNAL_KEYS = ['macro', 'momentum', 'sentiment', null];
+  s.agents.forEach((ag, ai) => {
+    const segments = 10;
+    const segAngle = (Math.PI * 2) / segments;
+    const arcR = ag.r * 4.8;
+    let score: number;
+    if (ai === 3) {
+      // RISK agent uses threat score directly
+      score = threatScore;
+    } else {
+      const sigKey = AGENT_SIGNAL_KEYS[ai];
+      const sig = sigKey ? data.convictionSignals.find(s => s.key === sigKey) : null;
+      score = sig ? sig.score : 0;
+    }
+    if (score === 0 && ai !== 3) return; // no data yet
+
+    const filled = Math.round((score / 100) * segments);
+    const arcCol = score > 65 ? '#00e5c8' : score >= 40 ? '#f0a500' : '#e03030';
+
+    for (let i = 0; i < segments; i++) {
+      const startA = -Math.PI / 2 + i * segAngle + 0.04;
+      const endA = -Math.PI / 2 + (i + 1) * segAngle - 0.04;
+      ctx.beginPath();
+      ctx.arc(ag.x, ag.y, arcR, startA, endA);
+      if (i < filled) {
+        ctx.strokeStyle = arcCol + ha((0.55 + ag.act * 0.25) * 255);
+      } else {
+        ctx.strokeStyle = '#ffffff' + ha(0.06 * 255);
+      }
+      ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // Score label below the data text
+    const labelY = ag.y + ag.r * 3.6 + (ai === 3 ? 32 : 32);
+    ctx.font = '700 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = arcCol + ha(0.6 * 255);
+    ctx.fillText(score.toFixed(0) + '/100', ag.x, labelY);
+  });
 
   // -- COORDINATOR conviction arc --
   if (data.convictionScore != null) {
@@ -634,11 +664,14 @@ interface NetworkCanvas2DProps {
   dxyDelta: number;
   fearGreed: number | null;
   convictionScore: number | null;
+  convictionBand?: string | null;
+  convictionSignals?: ConvictionSignalData[];
 }
 
 export default function NetworkCanvas2D({
   threatState, threatScore, events,
   btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore,
+  convictionBand, convictionSignals,
 }: NetworkCanvas2DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<SceneState | null>(null);
@@ -653,6 +686,7 @@ export default function NetworkCanvas2D({
   const dataRef = useRef<LiveData>({
     btcPrice: 0, btcDelta: 0, dxyPrice: 0, dxyDelta: 0,
     fearGreed: null, convictionScore: null,
+    convictionBand: null, convictionSignals: [],
   });
 
   // Keep threat state current for the render loop
@@ -661,8 +695,12 @@ export default function NetworkCanvas2D({
 
   // Update data ref when props change
   useEffect(() => {
-    dataRef.current = { btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore };
-  }, [btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore]);
+    dataRef.current = {
+      btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore,
+      convictionBand: convictionBand ?? null,
+      convictionSignals: convictionSignals ?? [],
+    };
+  }, [btcPrice, btcDelta, dxyPrice, dxyDelta, fearGreed, convictionScore, convictionBand, convictionSignals]);
 
   // BTC price trigger — fire particles on significant moves
   useEffect(() => {
@@ -836,16 +874,140 @@ export default function NetworkCanvas2D({
     };
   }, []);
 
+  // ── Coordinator hover detection ──
+  const [coordHover, setCoordHover] = useState(false);
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const s = sceneRef.current;
+    if (!s) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const dx = mx - s.coord.x;
+    const dy = my - s.coord.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const hitRadius = s.coord.r * 5.5; // generous hit area
+    if (dist < hitRadius) {
+      if (!coordHover) setCoordHover(true);
+      setHoverPos({ x: s.coord.x, y: s.coord.y });
+    } else {
+      if (coordHover) setCoordHover(false);
+    }
+  }, [coordHover]);
+
+  const handleMouseLeave = useCallback(() => {
+    setCoordHover(false);
+  }, []);
+
+  // Build hover overlay data
+  const hoverData = dataRef.current;
+  const SIGNAL_LABELS: Record<string, string> = {
+    sentiment: 'SENTIMENT',
+    momentum: 'MOMENTUM',
+    onchain: 'ON-CHAIN',
+    macro: 'MACRO',
+    network: 'NETWORK',
+  };
+  const DIR_COLORS: Record<string, string> = {
+    bullish: '#00e5c8',
+    bearish: '#e03030',
+    neutral: '#f0a500',
+  };
+
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: 'block',
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-        inset: 0,
-      }}
-    />
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <canvas
+        ref={canvasRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          cursor: coordHover ? 'pointer' : 'default',
+        }}
+      />
+
+      {/* Coordinator hover overlay */}
+      {coordHover && hoverData.convictionScore != null && (
+        <div
+          style={{
+            position: 'absolute',
+            left: hoverPos.x + 30,
+            top: hoverPos.y - 80,
+            background: 'rgba(9, 13, 18, 0.92)',
+            border: '1px solid rgba(0, 229, 200, 0.25)',
+            padding: '10px 14px',
+            fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
+            pointerEvents: 'none',
+            zIndex: 20,
+            minWidth: 200,
+          }}
+        >
+          {/* Title */}
+          <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', marginBottom: 6 }}>
+            CONVICTION BREAKDOWN
+          </div>
+
+          {/* Composite score */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+            <span style={{
+              fontSize: 22, fontWeight: 700, color: '#e8edf2',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {hoverData.convictionScore.toFixed(0)}
+            </span>
+            <span style={{ fontSize: 9, color: '#6b7a8d' }}>/100</span>
+            {hoverData.convictionBand && (
+              <span style={{
+                fontSize: 8, letterSpacing: '0.08em',
+                color: hoverData.convictionScore > 65 ? '#0aa89e' : hoverData.convictionScore >= 40 ? '#c4885a' : '#d06050',
+                background: (hoverData.convictionScore > 65 ? '#0aa89e' : hoverData.convictionScore >= 40 ? '#c4885a' : '#d06050') + '26',
+                padding: '1px 5px',
+              }}>
+                {hoverData.convictionBand.toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          {/* Signal bars */}
+          {hoverData.convictionSignals.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {hoverData.convictionSignals.map((sig) => {
+                const pct = sig.score;
+                const barW = 100;
+                const filledW = (pct / 100) * barW;
+                const dirCol = DIR_COLORS[sig.direction] || '#6b7a8d';
+                return (
+                  <div key={sig.key}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
+                      <span style={{ fontSize: 8, letterSpacing: '0.1em', color: '#6b7a8d' }}>
+                        {SIGNAL_LABELS[sig.key] || sig.key.toUpperCase()}
+                        <span style={{ color: '#4a5a6d', marginLeft: 4 }}>
+                          {(sig.weight * 100).toFixed(0)}%
+                        </span>
+                      </span>
+                      <span style={{ fontSize: 9, color: dirCol, fontWeight: 600 }}>
+                        {pct.toFixed(0)}
+                      </span>
+                    </div>
+                    <div style={{ width: barW, height: 3, background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
+                      <div style={{
+                        width: filledW, height: '100%',
+                        background: dirCol,
+                        opacity: 0.7,
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ fontSize: 9, color: '#4a5a6d' }}>AWAITING SIGNAL DATA...</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
