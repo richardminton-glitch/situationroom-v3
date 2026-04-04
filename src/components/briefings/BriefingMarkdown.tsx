@@ -4,13 +4,30 @@ import React from 'react';
 type InlineNode =
   | { type: 'text';     content: string }
   | { type: 'bold';     content: string }
-  | { type: 'citation'; n: string; url: string };
+  | { type: 'citation'; n: string; url: string }
+  | { type: 'link';     label: string; url: string };
 
-// Strip "(198 words)" suffix the model sometimes appends
-function stripWordCount(text: string): string {
-  return text.replace(/\s*\(\d+\s+words?\)\s*$/i, '').trim();
+/**
+ * Clean model artifacts from section text:
+ *  - Strip "(198 words)" word counts (anywhere in text)
+ *  - Strip trailing "Sources integrated: [Name](url), ..." blocks
+ *  - Strip trailing "Sources: [Name](url), ..." blocks
+ */
+function cleanModelArtifacts(text: string): string {
+  let cleaned = text;
+  // Remove word count parenthetical anywhere
+  cleaned = cleaned.replace(/\s*\(\d+\s+words?\)/gi, '');
+  // Remove trailing "Sources integrated:" / "Sources:" / "Source:" block
+  cleaned = cleaned.replace(/\s*Sources?\s*(?:integrated|cited|used)?:\s*\[.+$/is, '');
+  return cleaned.trim();
 }
 
+/**
+ * Parse inline markdown:
+ *  - **bold**
+ *  - [[n]](url) — numbered citation → superscript link
+ *  - [label](url) — standard markdown link → inline link
+ */
 function parseInline(text: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   let remaining = text;
@@ -18,23 +35,32 @@ function parseInline(text: string): InlineNode[] {
   while (remaining.length > 0) {
     const boldMatch  = /\*\*([^*]+?)\*\*/.exec(remaining);
     const citeMatch  = /\[\[(\d+)\]\]\(([^)]+)\)/.exec(remaining);
+    const linkMatch  = /\[([^\]]+?)\]\(([^)]+)\)/.exec(remaining);
 
+    // Avoid double-matching: if linkMatch overlaps with citeMatch at same index, prefer citeMatch
     const boldIdx = boldMatch ? boldMatch.index : Infinity;
     const citeIdx = citeMatch ? citeMatch.index : Infinity;
+    const linkIdx = (linkMatch && (citeIdx === Infinity || linkMatch.index !== citeIdx)) ? linkMatch.index : Infinity;
 
-    if (boldIdx === Infinity && citeIdx === Infinity) {
+    const minIdx = Math.min(boldIdx, citeIdx, linkIdx);
+
+    if (minIdx === Infinity) {
       nodes.push({ type: 'text', content: remaining });
       break;
     }
 
-    if (boldIdx <= citeIdx) {
+    if (minIdx === citeIdx) {
+      if (citeIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, citeIdx) });
+      nodes.push({ type: 'citation', n: citeMatch![1], url: citeMatch![2] });
+      remaining = remaining.slice(citeIdx + citeMatch![0].length);
+    } else if (minIdx === boldIdx) {
       if (boldIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, boldIdx) });
       nodes.push({ type: 'bold', content: boldMatch![1] });
       remaining = remaining.slice(boldIdx + boldMatch![0].length);
     } else {
-      if (citeIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, citeIdx) });
-      nodes.push({ type: 'citation', n: citeMatch![1], url: citeMatch![2] });
-      remaining = remaining.slice(citeIdx + citeMatch![0].length);
+      if (linkIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, linkIdx) });
+      nodes.push({ type: 'link', label: linkMatch![1], url: linkMatch![2] });
+      remaining = remaining.slice(linkIdx + linkMatch![0].length);
     }
   }
 
@@ -60,6 +86,19 @@ function renderNodes(nodes: InlineNode[], baseKey: number): React.ReactNode[] {
         </sup>
       );
     }
+    if (node.type === 'link') {
+      return (
+        <a
+          key={key}
+          href={node.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--accent-primary)', textDecoration: 'none', borderBottom: '1px solid var(--border-subtle)' }}
+        >
+          {node.label}
+        </a>
+      );
+    }
     return null;
   });
 }
@@ -67,7 +106,7 @@ function renderNodes(nodes: InlineNode[], baseKey: number): React.ReactNode[] {
 interface Props { content: string }
 
 export function BriefingMarkdown({ content }: Props) {
-  const cleaned    = stripWordCount(content);
+  const cleaned    = cleanModelArtifacts(content);
   const paragraphs = cleaned.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 
   const paraStyle: React.CSSProperties = {
