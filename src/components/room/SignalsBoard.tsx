@@ -118,7 +118,7 @@ export default function SignalsBoard({ articles, flashArticleId }: SignalsBoardP
 
       <aside
         style={{
-          width: 320,
+          width: '100%',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
@@ -126,7 +126,6 @@ export default function SignalsBoard({ articles, flashArticleId }: SignalsBoardP
           borderLeft: '1px solid #1a2e2e',
           fontFamily: font,
           overflow: 'hidden',
-          flexShrink: 0,
         }}
       >
         {/* Header */}

@@ -410,8 +410,8 @@ export default function OperationsPanel({
   return (
     <aside
       style={{
-        width: 280,
-        flexShrink: 0,
+        width: '100%',
+        height: '100%',
         background: '#0d1414',
         borderRight: '1px solid #1a2e2e',
         overflowY: 'auto',

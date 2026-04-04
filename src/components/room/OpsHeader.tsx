@@ -6,6 +6,10 @@ import Link from 'next/link';
 interface OpsHeaderProps {
   threatLevel: string;
   operatorCount: number;
+  isAdmin?: boolean;
+  editMode?: boolean;
+  onToggleEdit?: () => void;
+  onResetLayout?: () => void;
 }
 
 const THREAT_COLORS: Record<string, string> = {
@@ -25,7 +29,7 @@ function formatUTCClock(): string {
   return `${h}:${m}:${s}`;
 }
 
-export default function OpsHeader({ threatLevel, operatorCount }: OpsHeaderProps) {
+export default function OpsHeader({ threatLevel, operatorCount, isAdmin, editMode, onToggleEdit, onResetLayout }: OpsHeaderProps) {
   const [clock, setClock] = useState(formatUTCClock);
 
   useEffect(() => {
@@ -104,7 +108,7 @@ export default function OpsHeader({ threatLevel, operatorCount }: OpsHeaderProps
           </span>
         </div>
 
-        {/* Right — operators + UTC clock */}
+        {/* Right — admin edit + operators + UTC clock */}
         <div
           className="flex items-center"
           style={{
@@ -114,6 +118,47 @@ export default function OpsHeader({ threatLevel, operatorCount }: OpsHeaderProps
             gap: 6,
           }}
         >
+          {/* Admin layout controls */}
+          {isAdmin && onToggleEdit && (
+            <>
+              {editMode && onResetLayout && (
+                <button
+                  onClick={onResetLayout}
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 9,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    padding: '2px 8px',
+                    border: '1px solid #1a2e2e',
+                    background: 'transparent',
+                    color: '#4a6060',
+                    cursor: 'pointer',
+                  }}
+                >
+                  RESET
+                </button>
+              )}
+              <button
+                onClick={onToggleEdit}
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  padding: '2px 8px',
+                  border: editMode ? '1px solid #00d4aa' : '1px solid #1a2e2e',
+                  background: editMode ? '#00d4aa' : 'transparent',
+                  color: editMode ? '#080d0d' : '#4a6060',
+                  cursor: 'pointer',
+                }}
+              >
+                {editMode ? '✓ DONE' : '⚙ EDIT LAYOUT'}
+              </button>
+              <span style={{ color: '#1a2e2e', margin: '0 2px' }}>|</span>
+            </>
+          )}
+
           <span
             style={{
               display: 'inline-block',

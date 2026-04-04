@@ -74,9 +74,7 @@ export default function OperatorChannel({
     <div
       style={{
         width: '100%',
-        height: 80,
-        minHeight: 80,
-        maxHeight: 80,
+        height: '100%',
         background: '#0d1414',
         borderTop: '1px solid #1a2e2e',
         display: 'flex',
