@@ -27,11 +27,24 @@ export interface NetworkHealth {
   nextBlockMin: number;
 }
 
+export interface ConvictionSignal {
+  name: string;
+  key: string;
+  score: number;
+  weight: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  interpretation: string;
+  rawValue: number;
+  rawLabel: string;
+}
+
 export interface ConvictionData {
   composite: number;
   band: string;
   bandColor: string;
-  signals: { name: string; score: number; direction: string }[];
+  signals: ConvictionSignal[];
+  signalsAvailable?: number;
+  signalsTotal?: number;
 }
 
 export interface PoolData {
@@ -175,7 +188,18 @@ export function useOpsRoom() {
           composite: c.composite,
           band: c.band,
           bandColor: c.bandColor,
-          signals: c.signals ?? [],
+          signals: (c.signals ?? []).map((s: Record<string, unknown>) => ({
+            name: s.name as string || '',
+            key: s.key as string || '',
+            score: s.score as number || 0,
+            weight: s.weight as number || 0.2,
+            direction: (s.direction as string) || 'neutral',
+            interpretation: s.interpretation as string || '',
+            rawValue: s.rawValue as number || 0,
+            rawLabel: s.rawLabel as string || '',
+          })),
+          signalsAvailable: c.signalsAvailable ?? (c.signals?.length ?? 0),
+          signalsTotal: c.signalsTotal ?? 5,
         };
       }
 

@@ -58,7 +58,7 @@ function SectionHeader({ label }: { label: string }) {
 
 function AssetStatusSection({ assets }: { assets: AssetStatus[] }) {
   return (
-    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a2e2e' }}>
+    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a2e2e', flexShrink: 0 }}>
       <SectionHeader label="Asset Status" />
       {assets.map((a) => (
         <div
@@ -154,7 +154,7 @@ function NetworkHealthSection({ network }: { network: NetworkHealth }) {
   ];
 
   return (
-    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a2e2e' }}>
+    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a2e2e', flexShrink: 0 }}>
       <SectionHeader label="Network Health" />
       {rows.map((r) => (
         <div
@@ -195,205 +195,405 @@ function NetworkHealthSection({ network }: { network: NetworkHealth }) {
   );
 }
 
-// ── Section C: Conviction Signal ─────────────────────────────────────────────
+// ── Section C: Conviction Signal (expanded — fills remaining space) ─────────
 
-function ConvictionGauge({
+const SHORT_NAMES: Record<string, string> = {
+  sentiment: 'SENTIMENT',
+  momentum: 'MOMENTUM',
+  onchain: 'ON-CHAIN',
+  macro: 'MACRO',
+  network: 'NETWORK',
+};
+
+const DIRECTION_STYLE: Record<string, { symbol: string; color: string }> = {
+  bullish: { symbol: '\u25B2', color: '#00d4aa' },
+  bearish: { symbol: '\u25BC', color: '#cc4444' },
+  neutral: { symbol: '\u25C6', color: '#d4a017' },
+};
+
+function ConvictionDisplay({
   conviction,
   outlookText,
+  pool,
 }: {
   conviction: ConvictionData;
   outlookText: string;
+  pool: PoolData | null;
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const size = 120;
-  const strokeWidth = 8;
+  const size = 150;
+  const strokeWidth = 10;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  // Score 0-100 mapped to arc fraction (start at top-left, sweep 270 degrees max)
   const maxArc = 0.75;
   const score = Math.max(0, Math.min(100, conviction.composite));
   const arcLength = (score / 100) * maxArc * circumference;
-  const dashOffset = circumference - arcLength;
-  // Rotate so the arc starts from the bottom-left (~135 degrees)
   const rotation = 135;
 
   const truncated =
-    outlookText.length > 80 ? outlookText.slice(0, 80) + '...' : outlookText;
+    outlookText.length > 120 ? outlookText.slice(0, 120) + '...' : outlookText;
 
-  return (
-    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a2e2e' }}>
-      <SectionHeader label="Conviction Signal" />
-
-      {/* Gauge */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          marginBottom: 10,
-        }}
-      >
-        <div style={{ position: 'relative', width: size, height: size }}>
-          <svg width={size} height={size}>
-            {/* Background track */}
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="#1a2e2e"
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${maxArc * circumference} ${circumference}`}
-              strokeLinecap="round"
-              transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-            />
-            {/* Active arc */}
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={conviction.bandColor || '#00d4aa'}
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${arcLength} ${circumference}`}
-              strokeDashoffset={0}
-              strokeLinecap="round"
-              transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-              style={{ transition: 'stroke-dasharray 0.6s ease' }}
-            />
-          </svg>
-          {/* Centered score */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: size,
-              height: size,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: FONT,
-            }}
-          >
-            <span style={{ fontSize: 36, color: '#00d4aa', fontWeight: 600, lineHeight: 1 }}>
-              {score}
-            </span>
-          </div>
-        </div>
-
-        {/* Band label */}
-        <div
-          style={{
-            fontSize: 11,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: conviction.bandColor || '#00d4aa',
-            fontFamily: FONT,
-            marginTop: 4,
-          }}
-        >
-          {conviction.band}
-        </div>
-      </div>
-
-      {/* AI Rationale */}
-      {outlookText && (
-        <div
-          onClick={() => setExpanded((prev) => !prev)}
-          style={{
-            fontSize: 10,
-            color: '#4a6060',
-            fontStyle: 'italic',
-            fontFamily: FONT,
-            lineHeight: 1.5,
-            cursor: 'pointer',
-            userSelect: 'none',
-          }}
-        >
-          {expanded ? outlookText : truncated}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Section D: Pool Status ───────────────────────────────────────────────────
-
-function PoolStatusSection({ pool }: { pool: PoolData }) {
   const posColor =
-    pool.position === 'LONG'
+    pool?.position === 'LONG'
       ? '#00d4aa'
-      : pool.position === 'SHORT'
+      : pool?.position === 'SHORT'
         ? '#cc4444'
         : '#e0f0f0';
 
-  const plColor = pool.unrealisedPlSats >= 0 ? '#00d4aa' : '#cc4444';
-
-  const rows: { label: string; value: React.ReactNode }[] = [
-    {
-      label: 'POOL',
-      value: (
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {pool.balanceSats.toLocaleString('en-US')} sats
-        </span>
-      ),
-    },
-    {
-      label: 'POS',
-      value: (
-        <span
-          style={{
-            color: posColor,
-            textShadow:
-              pool.position === 'LONG'
-                ? '0 0 6px #00d4aa'
-                : pool.position === 'SHORT'
-                  ? '0 0 6px #cc4444'
-                  : 'none',
-          }}
-        >
-          {pool.position}
-        </span>
-      ),
-    },
-    {
-      label: 'LAST',
-      value: pool.lastTradeDesc,
-    },
-    {
-      label: 'P&L',
-      value: (
-        <span style={{ color: plColor, fontVariantNumeric: 'tabular-nums' }}>
-          {pool.unrealisedPlSats >= 0 ? '+' : ''}
-          {pool.unrealisedPlSats.toLocaleString('en-US')} sats
-        </span>
-      ),
-    },
-  ];
-
   return (
-    <div style={{ padding: '12px 14px' }}>
-      <SectionHeader label="Pool Status" />
-      {rows.map((r) => (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        className="ops-conviction-scroll"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '14px 14px',
+        }}
+      >
+        {/* ── Header ── */}
+        <SectionHeader label="Conviction Signal" />
+
+        {/* ── Gauge ── */}
         <div
-          key={r.label}
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 6,
-            fontFamily: FONT,
-            fontSize: 11,
-            color: '#e0f0f0',
+            marginBottom: 14,
           }}
         >
-          <span style={{ width: 45, flexShrink: 0, color: '#4a6060' }}>{r.label}</span>
-          <span style={{ flex: 1, textAlign: 'right' }}>{r.value}</span>
+          <div style={{ position: 'relative', width: size, height: size }}>
+            <svg width={size} height={size}>
+              {/* Background track */}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="#1a2e2e"
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${maxArc * circumference} ${circumference}`}
+                strokeLinecap="round"
+                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
+              />
+              {/* Active arc */}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={conviction.bandColor || '#00d4aa'}
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${arcLength} ${circumference}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
+                style={{ transition: 'stroke-dasharray 0.6s ease' }}
+              />
+            </svg>
+            {/* Centered score */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: size,
+                height: size,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: FONT,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 42,
+                  color: conviction.bandColor || '#00d4aa',
+                  fontWeight: 600,
+                  lineHeight: 1,
+                }}
+              >
+                {score}
+              </span>
+            </div>
+          </div>
+
+          {/* Band label */}
+          <div
+            style={{
+              fontSize: 11,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: conviction.bandColor || '#00d4aa',
+              fontFamily: FONT,
+              fontWeight: 600,
+              marginTop: 6,
+            }}
+          >
+            {conviction.band}
+          </div>
+
+          {/* Signals active count */}
+          <div
+            style={{
+              fontSize: 8,
+              color: '#4a6060',
+              letterSpacing: '0.08em',
+              marginTop: 4,
+            }}
+          >
+            {conviction.signalsAvailable ?? conviction.signals.length}/
+            {conviction.signalsTotal ?? 5} SIGNALS ACTIVE
+          </div>
         </div>
-      ))}
+
+        {/* ── Separator ── */}
+        <div style={{ height: 1, background: '#1a2e2e', marginBottom: 14 }} />
+
+        {/* ── Signal breakdown ── */}
+        <div
+          style={{
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            color: '#4a6060',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+            fontFamily: FONT,
+          }}
+        >
+          SIGNAL BREAKDOWN
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {conviction.signals.map((sig) => {
+            const shortName = SHORT_NAMES[sig.key] || sig.name.toUpperCase();
+            const dir = DIRECTION_STYLE[sig.direction] || DIRECTION_STYLE.neutral;
+            const barColor = dir.color;
+            const weight = sig.weight ? `${Math.round(sig.weight * 100)}%` : '';
+
+            return (
+              <div key={sig.key || sig.name}>
+                {/* Name + weight */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: '0.06em',
+                      color: '#e0f0f0',
+                      fontFamily: FONT,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {shortName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 8,
+                      color: '#4a6060',
+                      fontFamily: FONT,
+                    }}
+                  >
+                    {weight}
+                  </span>
+                </div>
+
+                {/* Bar + score + direction */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 4,
+                      background: '#1a2e2e',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${sig.score}%`,
+                        height: '100%',
+                        background: barColor,
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: '#e0f0f0',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontFamily: FONT,
+                      width: 22,
+                      textAlign: 'right',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {sig.score}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 8,
+                      color: dir.color,
+                      flexShrink: 0,
+                      width: 10,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {dir.symbol}
+                  </span>
+                </div>
+
+                {/* Raw data label */}
+                <div
+                  style={{
+                    fontSize: 8,
+                    color: '#4a6060',
+                    marginTop: 3,
+                    fontFamily: FONT,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {sig.rawLabel || sig.interpretation}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── AI Outlook ── */}
+        {outlookText && (
+          <>
+            <div style={{ height: 1, background: '#1a2e2e', margin: '14px 0' }} />
+            <div
+              style={{
+                fontSize: 9,
+                letterSpacing: '0.12em',
+                color: '#4a6060',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+                fontFamily: FONT,
+              }}
+            >
+              AI OUTLOOK
+            </div>
+            <div
+              onClick={() => setExpanded((prev) => !prev)}
+              style={{
+                fontSize: 10,
+                color: '#4a6060',
+                fontStyle: 'italic',
+                fontFamily: FONT,
+                lineHeight: 1.5,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              &ldquo;{expanded ? outlookText : truncated}&rdquo;
+            </div>
+          </>
+        )}
+
+        {/* ── Pool Status (compact) ── */}
+        {pool && (
+          <>
+            <div style={{ height: 1, background: '#1a2e2e', margin: '14px 0' }} />
+            <div
+              style={{
+                fontSize: 9,
+                letterSpacing: '0.12em',
+                color: '#4a6060',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+                fontFamily: FONT,
+              }}
+            >
+              POOL STATUS
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 11,
+                  fontFamily: FONT,
+                  color: '#e0f0f0',
+                }}
+              >
+                <span style={{ color: '#4a6060' }}>BAL</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {pool.balanceSats.toLocaleString('en-US')} sats
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 11,
+                  fontFamily: FONT,
+                  color: '#e0f0f0',
+                }}
+              >
+                <span style={{ color: '#4a6060' }}>POS</span>
+                <span
+                  style={{
+                    color: posColor,
+                    textShadow:
+                      pool.position === 'LONG'
+                        ? '0 0 6px #00d4aa'
+                        : pool.position === 'SHORT'
+                          ? '0 0 6px #cc4444'
+                          : 'none',
+                  }}
+                >
+                  {pool.position}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 11,
+                  fontFamily: FONT,
+                  color: '#e0f0f0',
+                }}
+              >
+                <span style={{ color: '#4a6060' }}>P&amp;L</span>
+                <span
+                  style={{
+                    color: pool.unrealisedPlSats >= 0 ? '#00d4aa' : '#cc4444',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {pool.unrealisedPlSats >= 0 ? '+' : ''}
+                  {pool.unrealisedPlSats.toLocaleString('en-US')} sats
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -408,29 +608,44 @@ export default function OperationsPanel({
   pool,
 }: OperationsPanelProps) {
   return (
-    <aside
-      style={{
-        width: '100%',
-        height: '100%',
-        background: '#0d1414',
-        borderRight: '1px solid #1a2e2e',
-        overflowY: 'auto',
-        fontFamily: FONT,
-      }}
-    >
-      {/* A — Asset Status */}
-      <AssetStatusSection assets={assets} />
+    <>
+      <style>{`
+        .ops-conviction-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .ops-conviction-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .ops-conviction-scroll::-webkit-scrollbar-thumb {
+          background: #1a2e2e;
+        }
+      `}</style>
 
-      {/* B — Network Health */}
-      {network && <NetworkHealthSection network={network} />}
+      <aside
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#0d1414',
+          borderRight: '1px solid #1a2e2e',
+          fontFamily: FONT,
+          overflow: 'hidden',
+        }}
+      >
+        {/* A — Asset Status */}
+        <AssetStatusSection assets={assets} />
 
-      {/* C — Conviction Signal */}
-      {conviction && (
-        <ConvictionGauge conviction={conviction} outlookText={outlookText} />
-      )}
+        {/* B — Network Health */}
+        {network && <NetworkHealthSection network={network} />}
 
-      {/* D — Pool Status */}
-      {pool && <PoolStatusSection pool={pool} />}
-    </aside>
+        {/* C — Conviction Signal (fills remaining space to channel) */}
+        {conviction ? (
+          <ConvictionDisplay conviction={conviction} outlookText={outlookText} pool={pool} />
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
+      </aside>
+    </>
   );
 }
