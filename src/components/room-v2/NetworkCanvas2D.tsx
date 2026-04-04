@@ -18,15 +18,41 @@ import type { ThreatState } from '@/lib/room/threatEngine';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const COLS = ['#f0a500', '#00e5c8', '#9b7fdd', '#e03030'];
-const LABS = ['MACRO', 'PRICE', 'SENTIMENT', 'RISK'];
+// 5 agents named after conviction signals
+const AGENT_KEYS = ['sentiment', 'momentum', 'onchain', 'macro', 'network'];
+const LABS = ['SENTIMENT', 'MOMENTUM', 'ON-CHAIN', 'MACRO', 'NETWORK'];
 const APOS = [
-  { fx: 0.20, fy: 0.70 }, // MACRO  — bottom-left
-  { fx: 0.76, fy: 0.30 }, // PRICE  — upper-right
-  { fx: 0.72, fy: 0.74 }, // SENT   — lower-right
-  { fx: 0.22, fy: 0.26 }, // RISK   — upper-left
+  { fx: 0.18, fy: 0.68 }, // SENTIMENT  — lower-left
+  { fx: 0.78, fy: 0.28 }, // MOMENTUM   — upper-right
+  { fx: 0.80, fy: 0.72 }, // ON-CHAIN   — lower-right
+  { fx: 0.20, fy: 0.28 }, // MACRO      — upper-left
+  { fx: 0.50, fy: 0.82 }, // NETWORK    — bottom-centre
 ];
-const DOMAIN_IDX: Record<string, number> = { MACRO: 0, PRICE: 1, SENTIMENT: 2, RISK: 3 };
+// Map event domains to agent indices
+const DOMAIN_IDX: Record<string, number> = {
+  MACRO: 3, PRICE: 1, SENTIMENT: 0, RISK: 2,
+};
+const COORD_COLOR = '#f0a500'; // orange coordinator
+
+/** Score-to-colour (hex): 0→dark red, 50→amber, 100→teal */
+function scoreToColor(score: number): string {
+  const s = Math.max(0, Math.min(100, score));
+  let r: number, g: number, b: number;
+  if (s <= 50) {
+    // Dark red (#8b2020) → amber (#f0a500)
+    const t = s / 50;
+    r = Math.round(139 + (240 - 139) * t);
+    g = Math.round(32 + (165 - 32) * t);
+    b = Math.round(32 + (0 - 32) * t);
+  } else {
+    // Amber (#f0a500) → teal (#00e5c8)
+    const t = (s - 50) / 50;
+    r = Math.round(240 + (0 - 240) * t);
+    g = Math.round(165 + (229 - 165) * t);
+    b = Math.round(0 + (200 - 0) * t);
+  }
+  return '#' + ha(r) + ha(g) + ha(b);
+}
 
 // Threat-driven parameters computed each frame
 const THREAT_SCORE_MAP = {
@@ -36,13 +62,7 @@ const THREAT_SCORE_MAP = {
   coordPulseHz:   (score: number) => 0.5 + (score / 100) * 2.5,        // 0.5 -> 3.0 Hz
 };
 
-const THREAT_RING_COLORS: Record<ThreatState, string> = {
-  QUIET: '#00e5c8', MONITORING: '#00e5c8',
-  ELEVATED: '#f0a500', ALERT: '#f0a500',
-  CRITICAL: '#e03030',
-};
-
-const FLOW_LABELS = ['RATE SIGNAL', 'BTC \u0394', '', 'RISK Tier '];
+const FLOW_LABELS = ['F&G', 'BTC \u0394', 'MVRV', 'DXY', 'HASH'];
 
 // ── Hex-alpha helper ─────────────────────────────────────────────────────────
 
@@ -109,7 +129,7 @@ class CNode {
 
     // Rings
     if (type === 'coord') {
-      const ringCol = THREAT_RING_COLORS[threatState];
+      const ringCol = COORD_COLOR;
       [5.5, 3.6, 2.2].forEach((m, i) => {
         ctx.beginPath(); ctx.arc(x, y, dr * m + act * 10 * (2 - i), 0, Math.PI * 2);
         ctx.strokeStyle = ringCol + ha((0.03 + act * 0.1 - i * 0.005) * 255);
@@ -286,25 +306,27 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const coord = new CNode({
-    bx: W * 0.5, by: H * 0.48, r: 20, col: '#00e5c8',
+    bx: W * 0.5, by: H * 0.44, r: 20, col: COORD_COLOR,
     type: 'coord', label: 'COORDINATOR', dR: 9, dSpd: 0.00016,
   });
 
+  // Default colour — will be overridden per-frame by signal scores
+  const defaultAgentCol = '#6b7a8d';
   const agents = APOS.map((p, i) => new CNode({
-    bx: p.fx * W, by: p.fy * H, r: 12, col: COLS[i],
+    bx: p.fx * W, by: p.fy * H, r: 12, col: defaultAgentCol,
     type: 'agent', label: LABS[i], dR: 22,
-    dSpd: 0.00022 + i * 0.00004, phase: i * 1.57,
+    dSpd: 0.00022 + i * 0.00003, phase: i * 1.26,
   }));
 
   const subs: CNode[] = [];
   agents.forEach((ag, ai) => {
-    for (let j = 0; j < 4; j++) {
-      const sr = 50 + j * 14 + Math.random() * 26;
+    for (let j = 0; j < 3; j++) {
+      const sr = 50 + j * 18 + Math.random() * 22;
       const s = new CNode({
-        r: 5.5 + Math.random() * 2.5, col: COLS[ai], type: 'sub', parent: ag,
+        r: 5.5 + Math.random() * 2.5, col: defaultAgentCol, type: 'sub', parent: ag,
         oR: sr, oRY: sr * 0.58,
         oSpd: (0.009 + Math.random() * 0.009) * (j % 2 ? 1 : -1),
-        oA: (j / 4) * Math.PI * 2 + ai * 0.78,
+        oA: (j / 3) * Math.PI * 2 + ai * 0.63,
       });
       ag._subs.push(s); subs.push(s);
     }
@@ -377,112 +399,62 @@ function drawDataOverlays(
 ) {
   const coord = s.coord;
 
-  // -- PRICE agent (index 1) --
-  const priceAgent = s.agents[1];
-  if (priceAgent && data.btcPrice > 0) {
-    const py = priceAgent.y + priceAgent.r * 3.6 + 22;
+  // -- Update agent + sub colours from signal scores --
+  s.agents.forEach((ag, ai) => {
+    const sigKey = AGENT_KEYS[ai];
+    const sig = data.convictionSignals.find(s => s.key === sigKey);
+    const score = sig ? sig.score : 50;
+    const newCol = scoreToColor(score);
+    ag.col = newCol;
+    ag._subs.forEach(sub => { sub.col = newCol; });
+  });
+
+  // -- Agent data overlays: score beneath each agent --
+  s.agents.forEach((ag, ai) => {
+    const sigKey = AGENT_KEYS[ai];
+    const sig = data.convictionSignals.find(s => s.key === sigKey);
+    const score = sig ? sig.score : 0;
+    if (score === 0) return;
+
+    const labelY = ag.y + ag.r * 3.6 + 22;
     ctx.font = '700 8px monospace';
     ctx.textAlign = 'center';
-    ctx.fillStyle = priceAgent.col + 'cc';
-    ctx.fillText('$' + data.btcPrice.toLocaleString('en-US', { maximumFractionDigits: 0 }), priceAgent.x, py);
+    ctx.fillStyle = ag.col + 'cc';
+    ctx.fillText(score.toFixed(0) + '/100', ag.x, labelY);
 
-    ctx.font = '700 7px monospace';
-    const dCol = data.btcDelta >= 0 ? '#00e5c8' : '#e03030';
-    ctx.fillStyle = dCol + 'cc';
-    const sign = data.btcDelta >= 0 ? '+' : '';
-    ctx.fillText(sign + data.btcDelta.toFixed(2) + '%', priceAgent.x, py + 10);
+    // Direction indicator
+    if (sig) {
+      const dirLabel = sig.direction === 'bullish' ? '\u25B2' : sig.direction === 'bearish' ? '\u25BC' : '\u25C6';
+      ctx.font = '700 7px monospace';
+      ctx.fillStyle = ag.col + '99';
+      ctx.fillText(dirLabel + ' ' + (sig.weight * 100).toFixed(0) + '%', ag.x, labelY + 11);
+    }
 
-    // Volatility arc
-    const absD = Math.abs(data.btcDelta);
-    const arcR = priceAgent.r * 4;
-    const arcLen = Math.min(360, absD * 40) * (Math.PI / 180);
-    const arcCol = absD < 2 ? '#00e5c8' : absD < 5 ? '#f0a500' : '#e03030';
-    ctx.beginPath();
-    ctx.arc(priceAgent.x, priceAgent.y, arcR, -Math.PI / 2, -Math.PI / 2 + arcLen);
-    ctx.strokeStyle = arcCol + ha(0.6 * 255); ctx.lineWidth = 2; ctx.stroke();
-  }
-
-  // -- MACRO agent (index 0) --
-  const macroAgent = s.agents[0];
-  if (macroAgent && data.dxyPrice > 0) {
-    const my = macroAgent.y + macroAgent.r * 3.6 + 22;
-    ctx.font = '700 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = macroAgent.col + ha(0.7 * 255);
-    ctx.fillText('DXY ' + data.dxyPrice.toFixed(1), macroAgent.x, my);
-  }
-
-  // -- SENTIMENT agent (index 2) --
-  const sentAgent = s.agents[2];
-  if (sentAgent && data.fearGreed != null) {
-    const sy = sentAgent.y + sentAgent.r * 3.6 + 22;
-    const fg = data.fearGreed;
-    const fgLabel = fg < 25 ? 'FEAR' : fg > 50 ? 'GREED' : 'NEUTRAL';
-    ctx.font = '700 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = sentAgent.col + 'cc';
-    ctx.fillText('F&G ' + fg.toFixed(0) + ' ' + fgLabel, sentAgent.x, sy);
-  }
-
-  // -- RISK agent (index 3) --
-  const riskAgent = s.agents[3];
-  if (riskAgent) {
-    const ry = riskAgent.y + riskAgent.r * 3.6 + 22;
-    ctx.font = '700 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = riskAgent.col + 'cc';
-    ctx.fillText('THREAT: ' + threatState, riskAgent.x, ry);
-  }
-
-  // -- AGENT conviction arcs — segmented arcs showing signal contribution --
-  // Map: MACRO(0)→macro, PRICE(1)→momentum, SENTIMENT(2)→sentiment, RISK(3)→threatScore
-  const AGENT_SIGNAL_KEYS = ['macro', 'momentum', 'sentiment', null];
-  s.agents.forEach((ag, ai) => {
+    // Agent conviction arc — 10 segments
     const segments = 10;
     const segAngle = (Math.PI * 2) / segments;
     const arcR = ag.r * 4.8;
-    let score: number;
-    if (ai === 3) {
-      // RISK agent uses threat score directly
-      score = threatScore;
-    } else {
-      const sigKey = AGENT_SIGNAL_KEYS[ai];
-      const sig = sigKey ? data.convictionSignals.find(s => s.key === sigKey) : null;
-      score = sig ? sig.score : 0;
-    }
-    if (score === 0 && ai !== 3) return; // no data yet
-
     const filled = Math.round((score / 100) * segments);
-    const arcCol = score > 65 ? '#00e5c8' : score >= 40 ? '#f0a500' : '#e03030';
-
     for (let i = 0; i < segments; i++) {
       const startA = -Math.PI / 2 + i * segAngle + 0.04;
       const endA = -Math.PI / 2 + (i + 1) * segAngle - 0.04;
       ctx.beginPath();
       ctx.arc(ag.x, ag.y, arcR, startA, endA);
       if (i < filled) {
-        ctx.strokeStyle = arcCol + ha((0.55 + ag.act * 0.25) * 255);
+        ctx.strokeStyle = ag.col + ha((0.55 + ag.act * 0.25) * 255);
       } else {
         ctx.strokeStyle = '#ffffff' + ha(0.06 * 255);
       }
       ctx.lineWidth = 2; ctx.stroke();
     }
-
-    // Score label below the data text
-    const labelY = ag.y + ag.r * 3.6 + (ai === 3 ? 32 : 32);
-    ctx.font = '700 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = arcCol + ha(0.6 * 255);
-    ctx.fillText(score.toFixed(0) + '/100', ag.x, labelY);
   });
 
-  // -- COORDINATOR conviction arc --
+  // -- COORDINATOR conviction arc (orange) --
   if (data.convictionScore != null) {
     const cScore = data.convictionScore;
     const arcR = coord.r * 4.2;
     const segAngle = (Math.PI * 2) / 10;
     const filled = Math.round(cScore / 10);
-    const segCol = cScore > 70 ? '#00e5c8' : cScore >= 40 ? '#f0a500' : '#e03030';
 
     for (let i = 0; i < 10; i++) {
       const startA = -Math.PI / 2 + i * segAngle + 0.03;
@@ -490,7 +462,7 @@ function drawDataOverlays(
       ctx.beginPath();
       ctx.arc(coord.x, coord.y, arcR, startA, endA);
       if (i < filled) {
-        ctx.strokeStyle = segCol + ha(0.7 * 255);
+        ctx.strokeStyle = COORD_COLOR + ha(0.7 * 255);
       } else {
         ctx.strokeStyle = '#ffffff' + ha(0.08 * 255);
       }
@@ -499,7 +471,7 @@ function drawDataOverlays(
 
     ctx.font = '700 7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillStyle = segCol + 'cc';
+    ctx.fillStyle = COORD_COLOR + 'cc';
     ctx.fillText('CONVICTION ' + cScore.toFixed(0), coord.x, coord.y - arcR - 6);
   }
 
@@ -508,13 +480,7 @@ function drawDataOverlays(
   s.agents.forEach((ag, i) => {
     const mx = (ag.x + coord.x) / 2 + (ag.y - coord.y) * 0.16;
     const my = (ag.y + coord.y) / 2 + (coord.x - ag.x) * 0.16;
-    let lbl = FLOW_LABELS[i];
-    if (i === 2 && data.fearGreed != null) {
-      lbl = 'F&G ' + data.fearGreed.toFixed(0);
-    } else if (i === 3) {
-      const tierNum = threatState === 'QUIET' ? 1 : threatState === 'MONITORING' ? 2 : threatState === 'ELEVATED' ? 3 : threatState === 'ALERT' ? 4 : 5;
-      lbl = 'RISK Tier ' + tierNum;
-    }
+    const lbl = FLOW_LABELS[i] || '';
     ctx.font = '700 7px monospace';
     ctx.textAlign = 'center';
     ctx.fillStyle = ag.col + ha(0.4 * flowAlpha * 255);
@@ -755,7 +721,7 @@ export default function NetworkCanvas2D({
     for (const evt of events) {
       if (processedRef.current.has(evt.id)) continue;
       processedRef.current.add(evt.id);
-      const idx = DOMAIN_IDX[evt.primaryDomain] ?? Math.floor(Math.random() * 4);
+      const idx = DOMAIN_IDX[evt.primaryDomain] ?? Math.floor(Math.random() * 5);
       fireEventCascade(scene, idx, pool);
     }
 
@@ -909,12 +875,6 @@ export default function NetworkCanvas2D({
     macro: 'MACRO',
     network: 'NETWORK',
   };
-  const DIR_COLORS: Record<string, string> = {
-    bullish: '#00e5c8',
-    bearish: '#e03030',
-    neutral: '#f0a500',
-  };
-
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <canvas
@@ -937,7 +897,7 @@ export default function NetworkCanvas2D({
             left: hoverPos.x + 30,
             top: hoverPos.y - 80,
             background: 'rgba(9, 13, 18, 0.92)',
-            border: '1px solid rgba(0, 229, 200, 0.25)',
+            border: '1px solid rgba(240, 165, 0, 0.3)',
             padding: '10px 14px',
             fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
             pointerEvents: 'none',
@@ -953,7 +913,7 @@ export default function NetworkCanvas2D({
           {/* Composite score */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
             <span style={{
-              fontSize: 22, fontWeight: 700, color: '#e8edf2',
+              fontSize: 22, fontWeight: 700, color: COORD_COLOR,
               fontVariantNumeric: 'tabular-nums',
             }}>
               {hoverData.convictionScore.toFixed(0)}
@@ -962,8 +922,8 @@ export default function NetworkCanvas2D({
             {hoverData.convictionBand && (
               <span style={{
                 fontSize: 8, letterSpacing: '0.08em',
-                color: hoverData.convictionScore > 65 ? '#0aa89e' : hoverData.convictionScore >= 40 ? '#c4885a' : '#d06050',
-                background: (hoverData.convictionScore > 65 ? '#0aa89e' : hoverData.convictionScore >= 40 ? '#c4885a' : '#d06050') + '26',
+                color: COORD_COLOR,
+                background: COORD_COLOR + '26',
                 padding: '1px 5px',
               }}>
                 {hoverData.convictionBand.toUpperCase()}
@@ -978,7 +938,7 @@ export default function NetworkCanvas2D({
                 const pct = sig.score;
                 const barW = 100;
                 const filledW = (pct / 100) * barW;
-                const dirCol = DIR_COLORS[sig.direction] || '#6b7a8d';
+                const sigCol = scoreToColor(pct);
                 return (
                   <div key={sig.key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
@@ -988,14 +948,14 @@ export default function NetworkCanvas2D({
                           {(sig.weight * 100).toFixed(0)}%
                         </span>
                       </span>
-                      <span style={{ fontSize: 9, color: dirCol, fontWeight: 600 }}>
+                      <span style={{ fontSize: 9, color: sigCol, fontWeight: 600 }}>
                         {pct.toFixed(0)}
                       </span>
                     </div>
                     <div style={{ width: barW, height: 3, background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
                       <div style={{
                         width: filledW, height: '100%',
-                        background: dirCol,
+                        background: sigCol,
                         opacity: 0.7,
                       }} />
                     </div>
