@@ -16,6 +16,7 @@ import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
 import { useSavedLayouts } from '@/hooks/useSavedLayouts';
 import { hasAccess } from '@/lib/auth/tier';
+import { useUnreadChat } from '@/hooks/useUnreadChat';
 import type { Theme, Tier } from '@/types';
 
 // Tier requirements + locked view descriptions
@@ -54,6 +55,7 @@ export default function DashboardPage() {
 
   const isVip = canAccess('vip');
   const { layouts: savedLayouts, saveLayout, deleteLayout } = useSavedLayouts(isVip);
+  const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
 
   // Persist active preset to localStorage
   useEffect(() => {
@@ -159,6 +161,7 @@ export default function DashboardPage() {
         <DashboardHeader
           opsRoomOpen={opsRoomOpen}
           onToggleOpsRoom={() => setOpsRoomOpen((o) => !o)}
+          chatUnread={chatUnread}
         />
 
         {/* Edit mode toolbar — only shows Add Panel button when editing */}

@@ -80,9 +80,10 @@ const THREAT_COLORS_DARK: Record<string, string> = {
 interface DashboardHeaderProps {
   opsRoomOpen?: boolean;
   onToggleOpsRoom?: () => void;
+  chatUnread?: number;
 }
 
-export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom }: DashboardHeaderProps) {
+export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }: DashboardHeaderProps) {
   const { data, loading } = useData();
   const { theme } = useTheme();
   const [utcTime, setUtcTime] = useState('--:--:-- UTC');
@@ -265,9 +266,32 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom }: DashboardHeade
                 padding: '2px 10px',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
+                position: 'relative',
+                animation: chatUnread > 0 && !opsRoomOpen ? 'ops-pulse 2s ease-in-out infinite' : 'none',
               }}
             >
-              OPS {opsRoomOpen ? '▸' : '◊'}
+              OPS {opsRoomOpen ? '\u25B8' : '\u25CA'}
+              {chatUnread > 0 && !opsRoomOpen && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  right: '-5px',
+                  backgroundColor: '#b84040',
+                  color: '#fff',
+                  fontSize: '8px',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  minWidth: '14px',
+                  height: '14px',
+                  borderRadius: '7px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                }}>
+                  {chatUnread > 9 ? '9+' : chatUnread}
+                </span>
+              )}
             </button>
           )}
 
