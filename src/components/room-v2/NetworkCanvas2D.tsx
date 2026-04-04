@@ -21,7 +21,8 @@ import type { ThreatState } from '@/lib/room/threatEngine';
 // 5 threat-domain agents feeding the Threat Assessment Module
 const AGENT_KEYS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
 const LABS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
-const AGENT_COLORS = ['#e03030', '#f0a500', '#00e5c8', '#9b7fdd', '#4a9eff'];
+// Default dim colour when domain has no threat contribution
+const DEFAULT_AGENT_COL = '#2a5a5a';
 const APOS = [
   { fx: 0.18, fy: 0.68 }, // GEOPOLITICAL — lower-left
   { fx: 0.78, fy: 0.28 }, // ECONOMIC     — upper-right
@@ -51,6 +52,56 @@ function ha(n: number): string {
   return Math.floor(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
 }
 
+/** Threat-to-colour (hex): 0→teal, ~20→amber, 40+→red */
+function threatToColor(impact: number): string {
+  // Normalise to 0–1 range (40 = max single-domain contribution for full red)
+  const s = Math.max(0, Math.min(1, impact / 40));
+  let r: number, g: number, b: number;
+  if (s <= 0.5) {
+    // Teal (#00e5c8) → amber (#f0a500)
+    const t = s / 0.5;
+    r = Math.round(0 + (240 - 0) * t);
+    g = Math.round(229 + (165 - 229) * t);
+    b = Math.round(200 + (0 - 200) * t);
+  } else {
+    // Amber (#f0a500) → red (#e03030)
+    const t = (s - 0.5) / 0.5;
+    r = Math.round(240 + (224 - 240) * t);
+    g = Math.round(165 + (48 - 165) * t);
+    b = Math.round(0 + (48 - 0) * t);
+  }
+  return '#' + ha(r) + ha(g) + ha(b);
+}
+
+// ── Recon probe state ────────────────────────────────────────────────────────
+
+interface ReconProbe {
+  sub: CNode;                // the travelling sub-agent
+  homeAgent: CNode;          // original parent
+  targetAgent: CNode;        // agent being visited
+  phase: 'outbound' | 'orbit' | 'return';
+  progress: number;          // 0→1 within current phase
+  orbitAngle: number;        // for orbiting the target
+  startX: number; startY: number;  // launch position
+  returnX: number; returnY: number; // return target
+  originalParent: CNode;     // restore after mission
+  originalOA: number;        // restore orbital angle
+  originalOR: number;        // restore orbital radius
+  originalORY: number;
+  originalOSpd: number;
+}
+
+// ── Cross-domain data bridge state ───────────────────────────────────────────
+
+interface DataBridge {
+  subA: CNode;
+  subB: CNode;
+  life: number;    // 1→0
+  colA: string;
+  colB: string;
+  particlePhases: number[];  // individual particle progress values
+}
+
 // ── Node ─────────────────────────────────────────────────────────────────────
 
 type NodeType = 'coord' | 'agent' | 'sub';
@@ -68,6 +119,7 @@ class CNode {
   parent: CNode | null;
   _subs: CNode[] = []; _agents: CNode[] = [];
   phase: number; act: number;
+  _onRecon = false; // true when this sub is on a reconnaissance mission
   oA: number; oR: number; oRY: number; oSpd: number;
   dR: number; dSpd: number;
 
@@ -259,6 +311,8 @@ interface SceneState {
   coord: CNode;
   ripples: Ripple[];
   dust: Dust[];
+  reconProbes: ReconProbe[];
+  dataBridges: DataBridge[];
 }
 
 /** Per-domain threat contribution (decaying sum per domain) */
@@ -286,9 +340,9 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
     type: 'coord', label: 'THREAT ASSESSOR', dR: 9, dSpd: 0.00016,
   });
 
-  // Each agent gets its own fixed colour
+  // Agents start dim — colour updated each frame from domain contribution
   const agents = APOS.map((p, i) => new CNode({
-    bx: p.fx * W, by: p.fy * H, r: 12, col: AGENT_COLORS[i],
+    bx: p.fx * W, by: p.fy * H, r: 12, col: DEFAULT_AGENT_COL,
     type: 'agent', label: LABS[i], dR: 22,
     dSpd: 0.00022 + i * 0.00003, phase: i * 1.26,
   }));
@@ -298,7 +352,7 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
     for (let j = 0; j < 3; j++) {
       const sr = 50 + j * 18 + Math.random() * 22;
       const s = new CNode({
-        r: 5.5 + Math.random() * 2.5, col: AGENT_COLORS[ai], type: 'sub', parent: ag,
+        r: 5.5 + Math.random() * 2.5, col: DEFAULT_AGENT_COL, type: 'sub', parent: ag,
         oR: sr, oRY: sr * 0.58,
         oSpd: (0.009 + Math.random() * 0.009) * (j % 2 ? 1 : -1),
         oA: (j / 3) * Math.PI * 2 + ai * 0.63,
@@ -317,7 +371,7 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
     tc: Math.random() > 0.65,
   }));
 
-  return { W, H, allNodes, agents, coord, ripples: [], dust };
+  return { W, H, allNodes, agents, coord, ripples: [], dust, reconProbes: [], dataBridges: [] };
 }
 
 // ── Event cascade ────────────────────────────────────────────────────────────
@@ -374,8 +428,20 @@ function drawDataOverlays(
 ) {
   const coord = s.coord;
 
+  // -- Update agent + sub colours from domain threat contribution --
+  s.agents.forEach((ag, ai) => {
+    const domainKey = AGENT_KEYS[ai];
+    const contrib = data.domainContributions.find(d => d.domain === domainKey);
+    const domainScore = contrib ? contrib.score : 0;
+    const newCol = domainScore > 0.1 ? threatToColor(domainScore) : DEFAULT_AGENT_COL;
+    ag.col = newCol;
+    // Only update subs that are not on a recon probe (those keep target colour)
+    ag._subs.forEach(sub => {
+      if (!sub._onRecon) sub.col = newCol;
+    });
+  });
+
   // -- Agent threat contribution arcs --
-  // Each agent's arc shows how much of the total threat score its domain contributes
   const totalThreat = threatScore;
   s.agents.forEach((ag, ai) => {
     const domainKey = AGENT_KEYS[ai];
@@ -519,17 +585,21 @@ function renderFrame(
   }
 
   // Update nodes — sub-agents only every other frame for performance
+  // Subs on recon missions are positioned by the probe system, not orbital update
   s.allNodes.forEach(n => {
+    if (n._onRecon) {
+      n.act = Math.max(0, n.act - n.dc());
+      return;
+    }
     if (n.type === 'sub' && frameCount % 2 !== 0) {
-      // Odd frame: skip orbital position update, still decay activation
       n.act = Math.max(0, n.act - n.dc());
     } else {
       n.update(t, threatScore);
     }
   });
 
-  // Edges: sub -> agent
-  s.allNodes.filter(n => n.type === 'sub').forEach(n => {
+  // Edges: sub -> agent (skip subs on recon)
+  s.allNodes.filter(n => n.type === 'sub' && !n._onRecon).forEach(n => {
     if (n.parent) edge(ctx, n, n.parent, 0.085 + n.act * 0.25, 0.55, n.col);
   });
   // Edges: agent -> coordinator (threat-driven brightness)
@@ -569,6 +639,103 @@ function renderFrame(
     ctx.beginPath(); ctx.arc(p.fx * W, p.fy * H, p.r, 0, Math.PI * 2);
     ctx.fillStyle = p.tc ? `rgba(240,165,0,${a})` : `rgba(0,229,200,${a})`;
     ctx.fill();
+  });
+
+  // ── Recon probes: update + draw ──
+  s.reconProbes = s.reconProbes.filter(probe => {
+    const spd = 0.008;
+    probe.progress += spd;
+
+    if (probe.phase === 'outbound') {
+      // Fly from home to target agent
+      const p = Math.min(1, probe.progress);
+      const eased = p * p * (3 - 2 * p); // smoothstep
+      probe.sub.x = probe.startX + (probe.targetAgent.x - probe.startX) * eased;
+      probe.sub.y = probe.startY + (probe.targetAgent.y - probe.startY) * eased;
+      // Blend colour toward target agent's colour
+      probe.sub.col = probe.targetAgent.col;
+      if (p >= 1) { probe.phase = 'orbit'; probe.progress = 0; }
+    } else if (probe.phase === 'orbit') {
+      // Orbit the target agent briefly
+      probe.orbitAngle += 0.04;
+      const orbitR = 40;
+      probe.sub.x = probe.targetAgent.x + Math.cos(probe.orbitAngle) * orbitR;
+      probe.sub.y = probe.targetAgent.y + Math.sin(probe.orbitAngle) * orbitR * 0.6;
+      probe.sub.col = probe.targetAgent.col;
+      // Draw a faint connection line to target
+      ctx.beginPath();
+      ctx.moveTo(probe.sub.x, probe.sub.y);
+      ctx.lineTo(probe.targetAgent.x, probe.targetAgent.y);
+      ctx.strokeStyle = probe.targetAgent.col + ha(0.15 * 255);
+      ctx.lineWidth = 0.5; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+      if (probe.progress >= 1) {
+        probe.phase = 'return'; probe.progress = 0;
+        probe.returnX = probe.sub.x; probe.returnY = probe.sub.y;
+        // Fire 2 particles from probe back to home agent
+        for (let p = 0; p < 2; p++) {
+          const part = takeParticle(pool);
+          if (part) part.reset(probe.sub, probe.homeAgent, probe.targetAgent.col, 0.007);
+        }
+      }
+    } else {
+      // Return home
+      const p = Math.min(1, probe.progress);
+      const eased = p * p * (3 - 2 * p);
+      probe.sub.x = probe.returnX + (probe.homeAgent.x + Math.cos(probe.originalOA) * probe.originalOR - probe.returnX) * eased;
+      probe.sub.y = probe.returnY + (probe.homeAgent.y + Math.sin(probe.originalOA) * probe.originalORY - probe.returnY) * eased;
+      // Blend colour back
+      probe.sub.col = probe.homeAgent.col;
+      if (p >= 1) {
+        // Restore sub to original orbit
+        probe.sub.parent = probe.originalParent;
+        probe.sub.oA = probe.originalOA;
+        probe.sub.oR = probe.originalOR;
+        probe.sub.oRY = probe.originalORY;
+        probe.sub.oSpd = probe.originalOSpd;
+        probe.sub._onRecon = false;
+        probe.sub.act = 0.6;
+        return false; // remove probe
+      }
+    }
+    return true;
+  });
+
+  // ── Data bridges: update + draw ──
+  s.dataBridges = s.dataBridges.filter(bridge => {
+    bridge.life -= 0.005;
+    if (bridge.life <= 0) return false;
+
+    const ax = bridge.subA.x, ay = bridge.subA.y;
+    const bx = bridge.subB.x, by = bridge.subB.y;
+    const alpha = Math.min(1, bridge.life * 2) * 0.3;
+
+    // Connection line (thin, dashed)
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = '#ffffff' + ha(alpha * 255);
+    ctx.lineWidth = 0.4; ctx.setLineDash([1, 6]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Travelling data dots
+    bridge.particlePhases = bridge.particlePhases.map(ph => {
+      let np = ph + 0.012;
+      if (np > 2) np -= 2; // loop: 0→1 = A→B, 1→2 = B→A
+      const forward = np <= 1;
+      const p = forward ? np : np - 1;
+      const px = forward ? ax + (bx - ax) * p : bx + (ax - bx) * p;
+      const py = forward ? ay + (by - ay) * p : by + (ay - by) * p;
+      const col = forward ? bridge.colA : bridge.colB;
+      const dotAlpha = Math.sin(p * Math.PI) * alpha * 2;
+      ctx.beginPath(); ctx.arc(px, py, 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = col + ha(Math.max(0, dotAlpha) * 255); ctx.fill();
+      return np;
+    });
+
+    // Subtle glow at endpoints
+    [{ x: ax, y: ay, col: bridge.colA }, { x: bx, y: by, col: bridge.colB }].forEach(ep => {
+      ctx.beginPath(); ctx.arc(ep.x, ep.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = ep.col + ha(alpha * 0.3 * 255); ctx.fill();
+    });
+
+    return true;
   });
 
   // Draw nodes layered (back to front)
@@ -760,6 +927,87 @@ export default function NetworkCanvas2D({
     for (let i = 0; i < 2; i++) {
       setTimeout(() => scheduleAgentToCoord(), i * 1200);
     }
+
+    // ── Recon probes: every 12–25s, a sub-agent visits another agent's orbit
+    const scheduleRecon = () => {
+      const delay = 12000 + Math.random() * 13000;
+      const timer = setTimeout(() => {
+        const s = sceneRef.current;
+        if (s && s.reconProbes.length < 2) { // max 2 simultaneous probes
+          // Pick a random agent and one of its subs
+          const srcIdx = Math.floor(Math.random() * s.agents.length);
+          const srcAgent = s.agents[srcIdx];
+          // Only pick subs not already on recon
+          const availSubs = srcAgent._subs.filter(sub => !sub._onRecon);
+          if (availSubs.length > 0) {
+            const sub = availSubs[Math.floor(Math.random() * availSubs.length)];
+            // Pick a different target agent
+            let tgtIdx = srcIdx;
+            while (tgtIdx === srcIdx) tgtIdx = Math.floor(Math.random() * s.agents.length);
+            const tgtAgent = s.agents[tgtIdx];
+
+            // Detach sub from orbit and create probe
+            sub._onRecon = true;
+            s.reconProbes.push({
+              sub,
+              homeAgent: srcAgent,
+              targetAgent: tgtAgent,
+              phase: 'outbound',
+              progress: 0,
+              orbitAngle: Math.random() * Math.PI * 2,
+              startX: sub.x, startY: sub.y,
+              returnX: 0, returnY: 0,
+              originalParent: sub.parent!,
+              originalOA: sub.oA,
+              originalOR: sub.oR,
+              originalORY: sub.oRY,
+              originalOSpd: sub.oSpd,
+            });
+            sub.parent = null; // detach from orbit
+            sub.act = 0.8;
+            // Ripple at departure
+            s.ripples.push({ x: sub.x, y: sub.y, r: sub.r, col: srcAgent.col, life: 0.8 });
+          }
+        }
+        scheduleRecon();
+      }, delay);
+      ambientTimers.push(timer);
+    };
+    scheduleRecon();
+
+    // ── Data bridges: every 5–10s, two subs from different agents exchange data
+    const scheduleBridge = () => {
+      const delay = 5000 + Math.random() * 5000;
+      const timer = setTimeout(() => {
+        const s = sceneRef.current;
+        if (s && s.dataBridges.length < 3) { // max 3 simultaneous bridges
+          // Pick two random agents
+          const idxA = Math.floor(Math.random() * s.agents.length);
+          let idxB = idxA;
+          while (idxB === idxA) idxB = Math.floor(Math.random() * s.agents.length);
+          const agA = s.agents[idxA];
+          const agB = s.agents[idxB];
+          // Pick a sub from each (not on recon)
+          const subA = agA._subs.find(sub => !sub._onRecon);
+          const subB = agB._subs.find(sub => !sub._onRecon);
+          if (subA && subB) {
+            s.dataBridges.push({
+              subA, subB,
+              life: 1,
+              colA: agA.col,
+              colB: agB.col,
+              particlePhases: [0, 0.33, 0.66, 1.0, 1.33, 1.66], // 6 dots, staggered
+            });
+            // Brief activation flash on both subs
+            subA.act = Math.min(1, subA.act + 0.4);
+            subB.act = Math.min(1, subB.act + 0.4);
+          }
+        }
+        scheduleBridge();
+      }, delay);
+      ambientTimers.push(timer);
+    };
+    scheduleBridge();
 
     // ── Heartbeat cascade: every 8–15s, fire a full cascade on a random agent
     const scheduleHeartbeat = () => {
