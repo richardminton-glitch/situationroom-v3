@@ -152,20 +152,36 @@ const GEO_KEYWORDS: GeoKeyword[] = [
     cities: [{ lat: 51.51, lon: -0.13 }, { lat: 52.48, lon: -1.90 }, { lat: 53.48, lon: -2.24 }, { lat: 55.86, lon: -4.25 }],
   },
   {
-    key: 'us_dc', pattern: /\b(washington|congress|white house|pentagon|trump|biden)\b/i, lat: 38.9, lon: -77.04,
-    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 39.95, lon: -75.17 }, { lat: 39.29, lon: -76.61 }, { lat: 42.36, lon: -71.06 }],
+    key: 'us_dc', pattern: /\b(washington|congress|white house|pentagon|capitol hill)\b/i, lat: 38.9, lon: -77.04,
+    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 38.88, lon: -77.02 }, { lat: 38.87, lon: -77.06 }],
   },
   {
     key: 'us_ny', pattern: /\b(wall street|new york|nyse|nasdaq)\b/i, lat: 40.71, lon: -74.01,
-    cities: [{ lat: 40.71, lon: -74.01 }, { lat: 40.65, lon: -73.95 }, { lat: 40.73, lon: -74.17 }],
+    cities: [{ lat: 40.71, lon: -74.01 }, { lat: 40.76, lon: -73.98 }, { lat: 40.68, lon: -74.04 }],
   },
   {
-    key: 'us_west', pattern: /\b(silicon valley|california|san francisco|los angeles)\b/i, lat: 37.77, lon: -122.42,
-    cities: [{ lat: 37.77, lon: -122.42 }, { lat: 34.05, lon: -118.24 }, { lat: 37.34, lon: -121.89 }, { lat: 47.61, lon: -122.33 }],
+    key: 'us_west', pattern: /\b(silicon valley|california|san francisco|los angeles|hollywood)\b/i, lat: 37.77, lon: -122.42,
+    cities: [{ lat: 37.77, lon: -122.42 }, { lat: 34.05, lon: -118.24 }, { lat: 47.61, lon: -122.33 }],
   },
   {
     key: 'us_fed', pattern: /\b(\bfed\b|federal reserve)\b/i, lat: 38.9, lon: -77.04,
-    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 40.71, lon: -74.01 }, { lat: 41.88, lon: -87.63 }, { lat: 37.79, lon: -122.40 }, { lat: 33.75, lon: -84.39 }],
+    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 40.71, lon: -74.01 }, { lat: 41.88, lon: -87.63 }],
+  },
+  {
+    // General US catch-all — matches after specific US patterns above.
+    // Cities spread coast-to-coast so markers don't cluster.
+    key: 'us', pattern: /\b(united states|trump|biden|u\.?s\.?\b|america(?:n)?)\b/i, lat: 38.9, lon: -77.04,
+    cities: [
+      { lat: 38.90, lon: -77.04 },   // Washington DC
+      { lat: 40.71, lon: -74.01 },   // New York
+      { lat: 41.88, lon: -87.63 },   // Chicago
+      { lat: 29.76, lon: -95.37 },   // Houston
+      { lat: 33.75, lon: -84.39 },   // Atlanta
+      { lat: 34.05, lon: -118.24 },  // Los Angeles
+      { lat: 47.61, lon: -122.33 },  // Seattle
+      { lat: 25.76, lon: -80.19 },   // Miami
+      { lat: 39.74, lon: -104.99 },  // Denver
+    ],
   },
   {
     key: 'canada', pattern: /\b(canada|ottawa|toronto)\b/i, lat: 45.42, lon: -75.70,
