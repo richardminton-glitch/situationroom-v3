@@ -41,14 +41,14 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ error: 'No briefing data available' }, { status: 503 });
   }
 
-  const prompt = `You are a thoughtful Bitcoin analyst writing for intelligent skeptics. Based on today's data:
+  const prompt = `You are a thoughtful Bitcoin analyst writing for intelligent skeptics. Today's date is ${today}. Based on today's LIVE data:
 
 Macro context: ${briefing.macroSection}
 Network health: ${briefing.networkSection}
 Threat level: ${briefing.threatLevel}
 Conviction score: ${briefing.convictionScore}/100
 
-Construct a 3-point case FOR holding Bitcoin right now, grounded in the actual data above. Each point should be 1-2 sentences. Then provide a 1-sentence honest counterpoint — what could prove this wrong.
+Construct a 3-point case FOR holding Bitcoin right now, grounded in the actual data above. Each point should be 1-2 sentences. Then provide a 1-sentence honest counterpoint — what could prove this wrong. All references must be current as of ${today}.
 
 Output ONLY valid JSON:
 { "points": [{"title": "...", "body": "..."}, ...], "counterpoint": "..." }`;

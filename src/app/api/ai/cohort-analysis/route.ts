@@ -48,7 +48,9 @@ function buildPrompt(latestBands: number[], totalBtc: number): string {
     return `  ${label}: ${pct}% (${btc.toLocaleString()} BTC)`;
   }).join('\n');
 
-  return `You are a Bitcoin UTXO cohort analyst. Below is today's UTXO age band distribution (percentage of supply in each band):
+  const today = new Date().toISOString().slice(0, 10);
+
+  return `You are a Bitcoin UTXO cohort analyst. Today's date is ${today}. Below is today's LIVE UTXO age band distribution (percentage of supply in each band):
 
 ${formatted}
 

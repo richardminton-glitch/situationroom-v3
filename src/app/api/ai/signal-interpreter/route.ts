@@ -28,7 +28,9 @@ function buildPrompt(signals: Signal[]): string {
     .map((s) => `${s.panel}: ${s.metric} = ${s.value} (${s.signal})`)
     .join('\n');
 
-  return `You are a seasoned Bitcoin on-chain analyst. Below are the current readings of multiple Bitcoin on-chain and macro signals.
+  const today = new Date().toISOString().slice(0, 10);
+
+  return `You are a seasoned Bitcoin on-chain analyst. Today's date is ${today}. Below are LIVE current readings of multiple Bitcoin on-chain and macro signals as of today.
 
 ${formatted}
 
@@ -38,7 +40,7 @@ Provide a 3-4 paragraph synthesised interpretation:
 3. Key risks and what would invalidate the current thesis
 4. A direct, actionable bottom line
 
-Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total. Do not include a word count.`;
+Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total. Do not include a word count. All price targets and timeframes must reference ${today} onwards — never reference past dates as future.`;
 }
 
 export async function POST(request: NextRequest) {
