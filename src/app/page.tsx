@@ -30,9 +30,18 @@ export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { userTier, canAccess } = useTier();
   const { error: dataError } = useData();
-  // theme is now correct on first render (ThemeProvider reads localStorage)
-  const [layout, setLayout] = useState<LayoutPanelItem[]>(() => getDefaultForTheme(theme).panels);
-  const [activePreset, setActivePreset] = useState('default');
+  // Restore last active preset from localStorage (or default)
+  const [activePreset, setActivePreset] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'default';
+    return localStorage.getItem('sr-active-preset') || 'default';
+  });
+  const [layout, setLayout] = useState<LayoutPanelItem[]>(() => {
+    const presetId = typeof window !== 'undefined'
+      ? localStorage.getItem('sr-active-preset') || 'default'
+      : 'default';
+    const preset = getPresetByIdForTheme(presetId, theme) ?? getDefaultForTheme(theme);
+    return preset.panels;
+  });
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -44,6 +53,11 @@ export default function DashboardPage() {
 
   const isVip = canAccess('vip');
   const { layouts: savedLayouts, saveLayout, deleteLayout } = useSavedLayouts(isVip);
+
+  // Persist active preset to localStorage
+  useEffect(() => {
+    localStorage.setItem('sr-active-preset', activePreset);
+  }, [activePreset]);
 
   useEffect(() => {
     if (user?.themePref && user.themePref !== theme) {
