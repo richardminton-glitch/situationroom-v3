@@ -130,8 +130,8 @@ const ONCHAIN_PRESET: DashboardLayout = {
     // Row 3 — Miners
     { panelId: 'hash-ribbon',     x: 0,   y: 792, w: 748, h: 396, collapsed: false, resizable: true },
     { panelId: 'puell-multiple',  x: 748, y: 792, w: 704, h: 396, collapsed: false, resizable: true },
-    // Row 4 — Network
-    { panelId: 'network-signals', x: 0,   y: 1188, w: 748, h: 528, collapsed: false, resizable: true },
+    // Row 4 — Network (full width)
+    { panelId: 'network-signals', x: 0,   y: 1188, w: 1452, h: 528, collapsed: false, resizable: true },
   ],
 };
 
