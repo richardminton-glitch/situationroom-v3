@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { FundingBar } from '@/components/widgets/FundingBar';
 import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
 import { DonationModal } from '@/components/auth/DonationModal';
@@ -12,19 +11,10 @@ export default function SupportPage() {
 
   return (
     <div style={{ fontFamily: 'var(--font-mono)', padding: '32px 24px', maxWidth: '640px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+      <div style={{ marginBottom: '4px' }}>
         <span style={{ fontSize: '10px', letterSpacing: '0.16em', color: 'var(--text-muted)' }}>
           SITUATION ROOM
         </span>
-        <Link
-          href="/"
-          style={{
-            fontSize: '11px', letterSpacing: '0.08em', color: 'var(--accent-primary)',
-            textDecoration: 'none', fontFamily: 'var(--font-mono)',
-          }}
-        >
-          ← Dashboard
-        </Link>
       </div>
       <h1 style={{ fontSize: '18px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '0.08em' }}>
         SUPPORT THE PROJECT

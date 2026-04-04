@@ -76,7 +76,6 @@ export default function PoolPage() {
   if (!canAccess('members')) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: '8px' }}>SITUATION ROOM · POOL</p>
         <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '26px', color: 'var(--text-primary)', marginBottom: '12px', fontWeight: 'normal' }}>Trading Pool</h1>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.6 }}>
           The pool trades Bitcoin futures using a multi-factor AI signal engine.<br />
@@ -91,7 +90,6 @@ export default function PoolPage() {
     <div className="max-w-5xl mx-auto px-6 py-10">
       {/* Masthead */}
       <header className="mb-8">
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: '4px' }}>SITUATION ROOM</p>
         <div style={{ borderTop: '3px double var(--border-primary)', paddingTop: '8px', marginBottom: '4px' }} />
         <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '26px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '2px' }}>Trading Pool</h1>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>

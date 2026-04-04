@@ -83,7 +83,7 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)', minHeight: '400px' }}>
         <div className="text-center">
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
             Sign in to access account settings.
@@ -253,23 +253,14 @@ export default function AccountPage() {
   });
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12" style={{ minHeight: '100vh' }}>
+    <div className="max-w-2xl mx-auto px-6 py-12">
 
       {/* Header */}
       <header style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+        <div style={{ marginBottom: '6px' }}>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
             Situation Room
           </p>
-          <Link
-            href="/"
-            style={{
-              fontSize: '11px', letterSpacing: '0.08em', color: 'var(--accent-primary)',
-              textDecoration: 'none', fontFamily: 'var(--font-mono)',
-            }}
-          >
-            ← Dashboard
-          </Link>
         </div>
         <div style={{ borderTop: '3px double var(--border-primary)', paddingTop: '10px', marginBottom: '6px' }} />
         <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '28px', fontWeight: 'normal', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-primary)', marginBottom: '4px' }}>

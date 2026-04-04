@@ -20,7 +20,7 @@ export default function RoomPage() {
     return (
       <div
         style={{
-          minHeight: '100vh',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -37,7 +37,7 @@ export default function RoomPage() {
     return (
       <div
         style={{
-          minHeight: '100vh',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

@@ -79,11 +79,11 @@ export default function MembersRoom() {
   const btcDelta = btcAsset?.delta || 0;
 
   return (
-    <>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       {/* Transition overlay */}
       <div
         style={{
-          position: 'fixed',
+          position: 'absolute',
           inset: 0,
           background: '#090d12',
           zIndex: 9999,
@@ -96,8 +96,8 @@ export default function MembersRoom() {
       {/* Full viewport layout */}
       <div
         style={{
-          position: 'fixed',
-          inset: 0,
+          width: '100%',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           background: '#090d12',
@@ -232,6 +232,6 @@ export default function MembersRoom() {
           100% { opacity: 0; }
         }
       `}</style>
-    </>
+    </div>
   );
 }
