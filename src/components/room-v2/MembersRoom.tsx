@@ -92,13 +92,18 @@ export default function MembersRoom() {
       >
         {/* ── Top bar ── */}
         <TopBar
-          btcPrice={btcPrice}
-          btcDelta={btcDelta}
           threatState={threat.state}
           threatScore={threat.score}
           connected={connected}
           operatorCount={data.operatorCount}
           eventCount={events.length}
+          goldPrice={goldAsset?.price || 0}
+          goldDelta={goldAsset?.delta || 0}
+          dxyPrice={dxyAsset?.price || 0}
+          dxyDelta={dxyAsset?.delta || 0}
+          fearGreed={data.conviction?.signals?.find(s => s.key === 'sentiment')?.rawValue ?? null}
+          convictionScore={data.conviction?.composite ?? null}
+          convictionBand={data.conviction?.band ?? null}
         />
 
         {/* ── Main content ── */}
