@@ -176,6 +176,7 @@ export const PARCHMENT_DEFAULT_LAYOUT: DashboardLayout = {
     { panelId: 'v-separator-1775215862655',   x:  242, y:   0, w:  44, h: 704, collapsed: false, resizable: true  },
     { panelId: 'v-separator-1775215874353',   x: 1166, y:   0, w:  44, h: 704, collapsed: false, resizable: true  },
     { panelId: 'h-separator-1775215892113',   x:  264, y: 330, w: 924, h:  44, collapsed: false, resizable: true  },
+    { panelId: 'v-separator-1775262436521',   x:  770, y: 352, w:  44, h: 352, collapsed: false, resizable: true  },
   ],
 };
 
