@@ -417,8 +417,21 @@ function geolocate(title: string): GeoResult | null {
  */
 type RSSEventWithGeo = RSSEvent & Partial<GeoResult>;
 
-/** Max markers per geo key — keeps the globe readable when one region dominates the news */
-const MAX_PER_GEO = 3;
+/**
+ * Per-geo-key marker limits.  Large countries with wide city spreads get
+ * a higher cap so their markers look distributed; small nations stay tight.
+ * Default for unlisted keys is 3.
+ */
+const LARGE_GEO_KEYS = new Set([
+  'us', 'us_dc', 'us_ny', 'us_west', 'us_fed',
+  'russia', 'china', 'canada', 'australia', 'india', 'brazil',
+]);
+const MAX_PER_GEO_DEFAULT = 3;
+const MAX_PER_GEO_LARGE = 5;
+
+function geoLimit(key: string): number {
+  return LARGE_GEO_KEYS.has(key) ? MAX_PER_GEO_LARGE : MAX_PER_GEO_DEFAULT;
+}
 
 function distributeEventCoords(events: RSSEventWithGeo[]): void {
   // Sort by time desc so we keep the most recent headlines per geo key
@@ -430,8 +443,8 @@ function distributeEventCoords(events: RSSEventWithGeo[]): void {
     const key = ev._geoKey ?? `${ev._baseLat ?? ev.lat},${ev._baseLon ?? ev.lon}`;
     const idx = countByKey[key] ?? 0;
 
-    // Cap markers per region — drop excess
-    if (idx >= MAX_PER_GEO) continue;
+    // Cap markers per region — large countries get a higher limit
+    if (idx >= geoLimit(key)) continue;
     countByKey[key] = idx + 1;
     keep.add(ev);
 
