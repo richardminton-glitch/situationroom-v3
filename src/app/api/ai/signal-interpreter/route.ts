@@ -38,7 +38,7 @@ Provide a 3-4 paragraph synthesised interpretation:
 3. Key risks and what would invalidate the current thesis
 4. A direct, actionable bottom line
 
-Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total.`;
+Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total. Do not include a word count.`;
 }
 
 export async function POST(request: NextRequest) {
