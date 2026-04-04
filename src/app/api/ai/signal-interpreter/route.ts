@@ -40,7 +40,7 @@ Provide a 3-4 paragraph synthesised interpretation:
 3. Key risks and what would invalidate the current thesis
 4. A direct, actionable bottom line
 
-Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 150-200 words total. Do not include a word count. All price targets and timeframes must reference ${today} onwards — never reference past dates as future.`;
+Write in a clipped, intelligence-briefing style — precise, no hedging waffle. 350-450 words total. Do not include a word count. All price targets and timeframes must reference ${today} onwards — never reference past dates as future.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
   // Generate via Grok
   const prompt = buildPrompt(signals);
-  const text = await callGrokAnalysis(prompt, { maxTokens: 512, timeoutMs: 30_000 });
+  const text = await callGrokAnalysis(prompt, { maxTokens: 800, timeoutMs: 30_000 });
 
   if (!text) {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
