@@ -222,14 +222,7 @@ function ConvictionDisplay({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const size = 150;
-  const strokeWidth = 10;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const maxArc = 0.75;
   const score = Math.max(0, Math.min(100, conviction.composite));
-  const arcLength = (score / 100) * maxArc * circumference;
-  const rotation = 135;
 
   const truncated =
     outlookText.length > 120 ? outlookText.slice(0, 120) + '...' : outlookText;
@@ -259,101 +252,49 @@ function ConvictionDisplay({
           padding: '14px 14px',
         }}
       >
-        {/* ── Header ── */}
-        <SectionHeader label="Conviction Signal" />
-
-        {/* ── Gauge ── */}
+        {/* ── Header + score ── */}
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            marginBottom: 14,
+            justifyContent: 'space-between',
+            marginBottom: 10,
           }}
         >
-          <div style={{ position: 'relative', width: size, height: size }}>
-            <svg width={size} height={size}>
-              {/* Background track */}
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke="#1a2e2e"
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${maxArc * circumference} ${circumference}`}
-                strokeLinecap="round"
-                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-              />
-              {/* Active arc */}
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={conviction.bandColor || '#00d4aa'}
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${arcLength} ${circumference}`}
-                strokeDashoffset={0}
-                strokeLinecap="round"
-                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-                style={{ transition: 'stroke-dasharray 0.6s ease' }}
-              />
-            </svg>
-            {/* Centered score */}
-            <div
+          <SectionHeader label="Conviction Signal" />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 10,
+            }}
+          >
+            <span
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: size,
-                height: size,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontSize: 18,
+                fontWeight: 600,
+                color: conviction.bandColor || '#00d4aa',
                 fontFamily: FONT,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: 1,
               }}
             >
-              <span
-                style={{
-                  fontSize: 42,
-                  color: conviction.bandColor || '#00d4aa',
-                  fontWeight: 600,
-                  lineHeight: 1,
-                }}
-              >
-                {score}
-              </span>
-            </div>
-          </div>
-
-          {/* Band label */}
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: conviction.bandColor || '#00d4aa',
-              fontFamily: FONT,
-              fontWeight: 600,
-              marginTop: 6,
-            }}
-          >
-            {conviction.band}
-          </div>
-
-          {/* Signals active count */}
-          <div
-            style={{
-              fontSize: 8,
-              color: '#4a6060',
-              letterSpacing: '0.08em',
-              marginTop: 4,
-            }}
-          >
-            {conviction.signalsAvailable ?? conviction.signals.length}/
-            {conviction.signalsTotal ?? 5} SIGNALS ACTIVE
+              {score}
+            </span>
+            <span
+              style={{
+                fontSize: 9,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: conviction.bandColor || '#00d4aa',
+                fontFamily: FONT,
+                fontWeight: 600,
+                lineHeight: 1.2,
+              }}
+            >
+              {conviction.band}
+            </span>
           </div>
         </div>
 
