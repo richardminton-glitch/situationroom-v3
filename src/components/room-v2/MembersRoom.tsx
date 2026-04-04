@@ -114,8 +114,8 @@ export default function MembersRoom() {
               minHeight: 0,
             }}
           >
-            {/* BTC data — 50% */}
-            <div style={{ flex: 5, minHeight: 0 }}>
+            {/* BTC data — 60% */}
+            <div style={{ flex: 6, minHeight: 0 }}>
               <BtcInfoPanel
                 btcPrice={btcPrice}
                 btcDelta={btcDelta}
@@ -136,8 +136,8 @@ export default function MembersRoom() {
               />
             </div>
 
-            {/* Threat analysis — 50% */}
-            <div style={{ flex: 5, minHeight: 0 }}>
+            {/* Threat analysis — 40% */}
+            <div style={{ flex: 4, minHeight: 0 }}>
               <ThreatAnalysisPanel
                 threatState={threat.state}
                 threatScore={threat.score}

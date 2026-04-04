@@ -17,6 +17,16 @@ const COLORS = {
   dimBorder: 'rgba(255,255,255,0.06)',
 };
 
+// Dark-mode overrides for conviction band colours
+// (engine returns parchment-themed colours that are invisible on dark bg)
+const DARK_BAND_COLORS: Record<string, string> = {
+  'Maximum Conviction': '#2dd4bf',
+  'Strong Conviction':  '#0aa89e',
+  'Moderate':           '#c4885a',
+  'Weak Signal':        '#d06050',
+  'Contra-Conviction':  '#c04040',
+};
+
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
 /* ------------------------------------------------------------------ */
@@ -250,6 +260,8 @@ function ConvictionBar({
   band: string;
   bandColor: string;
 }) {
+  // Always use dark-mode colours (Members Room is always dark)
+  const displayColor = DARK_BAND_COLORS[band] ?? bandColor;
   const totalBlocks = 20;
   const filled = Math.round((score / 100) * totalBlocks);
   const bar =
@@ -276,14 +288,14 @@ function ConvictionBar({
         >
           {score}
         </span>
-        <StatusBadge label={band} color={bandColor} />
+        <StatusBadge label={band} color={displayColor} />
       </div>
       <div
         style={{
           fontFamily: FONT,
           fontSize: 10,
           letterSpacing: '0.04em',
-          color: bandColor,
+          color: displayColor,
           lineHeight: 1,
         }}
       >
