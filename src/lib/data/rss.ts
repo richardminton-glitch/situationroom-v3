@@ -61,8 +61,10 @@ interface GeoResult {
 }
 
 // ── Keyword-based geolocation ─────────────────────────────────────────────────
-// Cities are listed in descending population order so the most prominent city
-// gets the first headline, then subsequent headlines spread to other cities.
+// Priority: Country/region patterns first, then topic fallbacks (bitcoin, crypto, opec).
+// geolocate() returns the FIRST match, so ordering matters.
+// Cities listed in descending population order — first headline gets the capital,
+// subsequent headlines spread to other cities in the same country.
 
 const GEO_KEYWORDS: GeoKeyword[] = [
   {
@@ -163,7 +165,7 @@ const GEO_KEYWORDS: GeoKeyword[] = [
   },
   {
     key: 'us_fed', pattern: /\b(\bfed\b|federal reserve)\b/i, lat: 38.9, lon: -77.04,
-    cities: [{ lat: 38.90, lon: -77.04 }],
+    cities: [{ lat: 38.90, lon: -77.04 }, { lat: 40.71, lon: -74.01 }, { lat: 41.88, lon: -87.63 }, { lat: 37.79, lon: -122.40 }, { lat: 33.75, lon: -84.39 }],
   },
   {
     key: 'canada', pattern: /\b(canada|ottawa|toronto)\b/i, lat: 45.42, lon: -75.70,
@@ -206,16 +208,8 @@ const GEO_KEYWORDS: GeoKeyword[] = [
     cities: [{ lat: -33.87, lon: 151.21 }, { lat: -37.81, lon: 144.96 }, { lat: -35.28, lon: 149.13 }, { lat: -27.47, lon: 153.03 }],
   },
   {
-    key: 'bitcoin', pattern: /\b(bitcoin|btc|satoshi|el salvador)\b/i, lat: 13.69, lon: -89.19,
-    cities: [{ lat: 13.69, lon: -89.19 }, { lat: 14.07, lon: -87.21 }, { lat: 9.93, lon: -84.09 }],
-  },
-  {
-    key: 'crypto', pattern: /\b(crypto|blockchain|defi|stablecoin)\b/i, lat: 40.71, lon: -74.01,
-    cities: [{ lat: 40.71, lon: -74.01 }, { lat: 37.77, lon: -122.42 }, { lat: 1.35, lon: 103.82 }],
-  },
-  {
-    key: 'opec', pattern: /\b(opec|oil prices?|crude)\b/i, lat: 25.20, lon: 55.27,
-    cities: [{ lat: 25.20, lon: 55.27 }, { lat: 24.47, lon: 54.37 }, { lat: 23.61, lon: 58.59 }],
+    key: 'el_salvador', pattern: /\b(el salvador|bukele|nayib)\b/i, lat: 13.69, lon: -89.19,
+    cities: [{ lat: 13.69, lon: -89.19 }],
   },
   {
     key: 'nato_eu', pattern: /\b(nato|brussels|eu|european union|european)\b/i, lat: 50.85, lon: 4.35,
@@ -232,6 +226,44 @@ const GEO_KEYWORDS: GeoKeyword[] = [
   {
     key: 'hong_kong', pattern: /\b(hong kong)\b/i, lat: 22.32, lon: 114.17,
     cities: [{ lat: 22.32, lon: 114.17 }, { lat: 22.39, lon: 114.21 }],
+  },
+
+  // ── Topic-based fallbacks (lowest priority) ───────────────────────────────
+  // These only match if no country/region pattern matched first.
+  // Cities spread across global financial hubs so markers don't cluster.
+  {
+    key: 'opec', pattern: /\b(opec|oil prices?|crude)\b/i, lat: 25.20, lon: 55.27,
+    cities: [{ lat: 25.20, lon: 55.27 }, { lat: 24.47, lon: 54.37 }, { lat: 23.61, lon: 58.59 }, { lat: 29.38, lon: 47.99 }],
+  },
+  {
+    key: 'bitcoin', pattern: /\b(bitcoin|btc|satoshi)\b/i, lat: 40.71, lon: -74.01,
+    cities: [
+      { lat: 40.71, lon: -74.01 },   // New York
+      { lat: 51.51, lon: -0.13 },     // London
+      { lat: 35.68, lon: 139.69 },    // Tokyo
+      { lat: 1.35, lon: 103.82 },     // Singapore
+      { lat: 47.38, lon: 8.54 },      // Zurich
+      { lat: 22.32, lon: 114.17 },    // Hong Kong
+      { lat: 52.52, lon: 13.41 },     // Berlin
+      { lat: 37.77, lon: -122.42 },   // San Francisco
+      { lat: -33.87, lon: 151.21 },   // Sydney
+      { lat: 25.20, lon: 55.27 },     // Dubai
+      { lat: 43.65, lon: -79.38 },    // Toronto
+      { lat: -23.55, lon: -46.63 },   // Sao Paulo
+    ],
+  },
+  {
+    key: 'crypto', pattern: /\b(crypto|blockchain|defi|stablecoin)\b/i, lat: 37.77, lon: -122.42,
+    cities: [
+      { lat: 37.77, lon: -122.42 },   // San Francisco
+      { lat: 40.71, lon: -74.01 },     // New York
+      { lat: 1.35, lon: 103.82 },      // Singapore
+      { lat: 51.51, lon: -0.13 },      // London
+      { lat: 25.20, lon: 55.27 },      // Dubai
+      { lat: 22.32, lon: 114.17 },     // Hong Kong
+      { lat: 47.38, lon: 8.54 },       // Zurich
+      { lat: -37.81, lon: 144.96 },    // Melbourne
+    ],
   },
 ];
 
@@ -279,6 +311,29 @@ function distributeEventCoords(events: RSSEventWithGeo[]): void {
       const dist = idx * 1.5;
       ev.lat = (ev._baseLat ?? ev.lat) + Math.cos(angle) * dist;
       ev.lon = (ev._baseLon ?? ev.lon) + Math.sin(angle) * dist;
+    }
+  }
+
+  // Cross-key proximity nudge: if two events from DIFFERENT keys land
+  // within ~2 degrees, nudge the second one outward so they don't overlap.
+  const MIN_DIST = 2.0; // degrees
+  for (let i = 0; i < events.length; i++) {
+    for (let j = i + 1; j < events.length; j++) {
+      const a = events[i], b = events[j];
+      const dlat = b.lat - a.lat;
+      const dlon = b.lon - a.lon;
+      const dist = Math.sqrt(dlat * dlat + dlon * dlon);
+      if (dist < MIN_DIST && dist > 0) {
+        // Push apart along the line between them
+        const scale = (MIN_DIST - dist) / dist;
+        b.lat += dlat * scale;
+        b.lon += dlon * scale;
+      } else if (dist === 0) {
+        // Exact overlap — spiral outward
+        const angle = (j * 137.5) * (Math.PI / 180);
+        b.lat += Math.cos(angle) * MIN_DIST;
+        b.lon += Math.sin(angle) * MIN_DIST;
+      }
     }
   }
 }
