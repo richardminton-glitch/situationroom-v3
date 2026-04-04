@@ -8,13 +8,12 @@
  * │  TOP BAR: BTC ticker | Threat state      │                     │
  * ├──────────────────────────────────────────┤  NOSTR CHAT (60%)   │
  * │                                          │                     │
- * │   R3F NETWORK GRAPH                      ├─────────────────────┤
+ * │   2D NETWORK CANVAS                      ├─────────────────────┤
  * │   (full-bleed background)                │  AGENT LOG  (40%)   │
  * │                                          │                     │
  * └──────────────────────────────────────────┴─────────────────────┘
  */
 
-import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
@@ -25,7 +24,6 @@ import { useAgentLog } from '@/hooks/useAgentLog';
 import TopBar from './TopBar';
 import NostrChatSlot from './NostrChatSlot';
 import AgentLogPanel from './AgentLogPanel';
-import HeatmapOverlay from './HeatmapOverlay';
 
 // Lazy-load 2D canvas — client-only (uses requestAnimationFrame)
 const NetworkCanvas2D = dynamic(
@@ -35,6 +33,14 @@ const NetworkCanvas2D = dynamic(
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const RIGHT_COL_WIDTH = 320;
+
+const KEYFRAME_CSS = `
+@keyframes stateTransitionFade {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+`;
 
 export default function MembersRoom() {
   const { user } = useAuth();
@@ -46,9 +52,6 @@ export default function MembersRoom() {
   const threat = useThreatScore(events);
   const { entries: logEntries } = useAgentLog(events);
 
-  // Heatmap overlay
-  const [heatmapOpen, setHeatmapOpen] = useState(false);
-
   // Chat props
   const canPost = canAccess('members');
   const displayName = user?.chatDisplayName || 'anon';
@@ -59,8 +62,10 @@ export default function MembersRoom() {
   const btcPrice = btcAsset?.price || 0;
   const btcDelta = btcAsset?.delta || 0;
 
+  // DXY data from snapshot
+  const dxyAsset = data.assets.find((a) => a.key === 'dxy');
+
   return (
-    <>
     <div
         style={{
           width: '100%',
@@ -86,43 +91,19 @@ export default function MembersRoom() {
 
         {/* ── Main content ── */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          {/* ── Centre: 2D orbital graph + heatmap ── */}
+          {/* ── Centre: 2D orbital graph ── */}
           <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
             {/* Orbital network graph — full bleed background */}
             <NetworkCanvas2D
               threatState={threat.state}
+              threatScore={threat.score}
               events={events}
-            />
-
-            {/* Heatmap toggle button */}
-            <button
-              onClick={() => setHeatmapOpen((p) => !p)}
-              style={{
-                position: 'absolute',
-                bottom: 14,
-                left: 14,
-                zIndex: 15,
-                background: heatmapOpen
-                  ? 'rgba(0, 229, 200, 0.15)'
-                  : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${heatmapOpen ? 'rgba(0, 229, 200, 0.3)' : 'rgba(255,255,255,0.08)'}`,
-                color: heatmapOpen ? '#00e5c8' : '#6b7a8d',
-                fontSize: 9,
-                fontFamily: FONT,
-                letterSpacing: '0.1em',
-                padding: '6px 12px',
-                cursor: 'pointer',
-                borderRadius: 1,
-                backdropFilter: 'blur(4px)',
-              }}
-            >
-              {heatmapOpen ? 'CLOSE GLOBE' : 'GLOBE'}
-            </button>
-
-            {/* Heatmap overlay */}
-            <HeatmapOverlay
-              visible={heatmapOpen}
-              onClose={() => setHeatmapOpen(false)}
+              btcPrice={btcPrice}
+              btcDelta={btcDelta}
+              dxyPrice={dxyAsset?.price || 0}
+              dxyDelta={dxyAsset?.delta || 0}
+              fearGreed={data.conviction?.signals?.find(s => s.key === 'sentiment')?.rawValue ?? null}
+              convictionScore={data.conviction?.composite ?? null}
             />
 
             {/* Scan-line texture over the entire centre area */}
@@ -190,15 +171,8 @@ export default function MembersRoom() {
             </div>
           </div>
         </div>
-      </div>
 
-      <style>{`
-        @keyframes stateTransitionFade {
-          0% { opacity: 1; }
-          70% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
-    </>
+        <style dangerouslySetInnerHTML={{ __html: KEYFRAME_CSS }} />
+      </div>
   );
 }
