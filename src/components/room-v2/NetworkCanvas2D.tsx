@@ -127,6 +127,29 @@ class CNode {
       ctx.lineWidth = 0.5; ctx.stroke();
     }
 
+    // Sub-agent threat arc — segmented arc representing threat level
+    if (type === 'sub') {
+      const arcR = dr * 3.2 + act * 5;
+      const segments = 8;
+      const segAngle = (Math.PI * 2) / segments;
+      const filled = Math.round((threatScore / 100) * segments);
+      const arcCol = threatScore < 36 ? '#00e5c8' : threatScore < 56 ? '#f0a500' : '#e03030';
+      const rotOffset = -Math.PI / 2 + phase * 0.5; // slight per-node rotation
+
+      for (let i = 0; i < segments; i++) {
+        const startA = rotOffset + i * segAngle + 0.06;
+        const endA = rotOffset + (i + 1) * segAngle - 0.06;
+        ctx.beginPath();
+        ctx.arc(x, y, arcR, startA, endA);
+        if (i < filled) {
+          ctx.strokeStyle = arcCol + ha((0.5 + act * 0.3) * 255);
+        } else {
+          ctx.strokeStyle = '#ffffff' + ha(0.06 * 255);
+        }
+        ctx.lineWidth = 1.5; ctx.stroke();
+      }
+    }
+
     // Core rendering
     if (type === 'coord') {
       ctx.beginPath(); ctx.arc(x, y, dr, 0, Math.PI * 2);

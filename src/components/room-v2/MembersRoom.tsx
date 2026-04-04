@@ -4,16 +4,18 @@
  * MembersRoom — main layout orchestrator for the reactive intelligence room.
  *
  * Layout:
- * ┌──────────────────────────────────────────┬─────────────────────┐
- * │  TOP BAR: BTC ticker | Threat state      │                     │
- * ├──────────────────────────────────────────┤  NOSTR CHAT (60%)   │
- * │                                          │                     │
- * │   2D NETWORK CANVAS                      ├─────────────────────┤
- * │   (full-bleed background)                │  AGENT LOG  (40%)   │
- * │                                          │                     │
- * └──────────────────────────────────────────┴─────────────────────┘
+ * ┌─────────────────┬──────────────────────────┬─────────────────────┐
+ * │                 │  TOP BAR                 │                     │
+ * │  BTC DATA (50%) ├──────────────────────────┤  NOSTR CHAT (60%)   │
+ * │                 │                          │                     │
+ * ├─────────────────┤  2D NETWORK CANVAS       ├─────────────────────┤
+ * │                 │  (full-bleed background)  │  AGENT LOG  (40%)   │
+ * │  THREAT         │                          │                     │
+ * │  ANALYSIS (50%) │                          │                     │
+ * └─────────────────┴──────────────────────────┴─────────────────────┘
  */
 
+import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
@@ -24,6 +26,8 @@ import { useAgentLog } from '@/hooks/useAgentLog';
 import TopBar from './TopBar';
 import NostrChatSlot from './NostrChatSlot';
 import AgentLogPanel from './AgentLogPanel';
+import BtcInfoPanel from './BtcInfoPanel';
+import ThreatAnalysisPanel from './ThreatAnalysisPanel';
 
 // Lazy-load 2D canvas — client-only (uses requestAnimationFrame)
 const NetworkCanvas2D = dynamic(
@@ -32,6 +36,7 @@ const NetworkCanvas2D = dynamic(
 );
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
+const LEFT_COL_WIDTH = 280;
 const RIGHT_COL_WIDTH = 320;
 
 const KEYFRAME_CSS = `
@@ -57,13 +62,20 @@ export default function MembersRoom() {
   const displayName = user?.chatDisplayName || 'anon';
   const userIcon = (user?.chatIcon as string) || 'email';
 
-  // BTC data from snapshot
+  // Asset data from snapshot
   const btcAsset = data.assets.find((a) => a.key === 'btc');
   const btcPrice = btcAsset?.price || 0;
   const btcDelta = btcAsset?.delta || 0;
 
-  // DXY data from snapshot
   const dxyAsset = data.assets.find((a) => a.key === 'dxy');
+  const goldAsset = data.assets.find((a) => a.key === 'gold');
+  const oilAsset = data.assets.find((a) => a.key === 'oil');
+
+  // Recent headlines for threat analysis context
+  const recentHeadlines = useMemo(() =>
+    events.slice(-12).map((e) => e.headline).filter(Boolean),
+    [events],
+  );
 
   return (
     <div
@@ -91,6 +103,51 @@ export default function MembersRoom() {
 
         {/* ── Main content ── */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          {/* ── Left column ── */}
+          <div
+            style={{
+              width: LEFT_COL_WIDTH,
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              borderRight: '1px solid rgba(255,255,255,0.08)',
+              minHeight: 0,
+            }}
+          >
+            {/* BTC data — 50% */}
+            <div style={{ flex: 5, minHeight: 0 }}>
+              <BtcInfoPanel
+                btcPrice={btcPrice}
+                btcDelta={btcDelta}
+                network={data.network}
+                conviction={data.conviction ? {
+                  composite: data.conviction.composite,
+                  band: data.conviction.band,
+                  bandColor: data.conviction.bandColor,
+                } : null}
+                goldPrice={goldAsset?.price || 0}
+                goldDelta={goldAsset?.delta || 0}
+                oilPrice={oilAsset?.price || 0}
+                oilDelta={oilAsset?.delta || 0}
+                dxyPrice={dxyAsset?.price || 0}
+                dxyDelta={dxyAsset?.delta || 0}
+                threatScore={threat.score}
+                threatState={threat.state}
+              />
+            </div>
+
+            {/* Threat analysis — 50% */}
+            <div style={{ flex: 5, minHeight: 0 }}>
+              <ThreatAnalysisPanel
+                threatState={threat.state}
+                threatScore={threat.score}
+                stateChanged={threat.stateChanged}
+                prevState={threat.prevState}
+                recentHeadlines={recentHeadlines}
+              />
+            </div>
+          </div>
+
           {/* ── Centre: 2D orbital graph ── */}
           <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
             {/* Orbital network graph — full bleed background */}
