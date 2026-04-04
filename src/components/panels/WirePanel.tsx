@@ -1,6 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import {
+  CurrencyBtc,
+  Skull,
+  Warning,
+  TrendUp,
+  Scales,
+  Diamond,
+} from '@phosphor-icons/react';
 
 interface Headline {
   title: string;
@@ -9,13 +18,17 @@ interface Headline {
   link: string;
 }
 
-const CAT_ICONS: Record<string, string> = {
-  bitcoin: '₿',
-  conflict: '☠',
-  disaster: '⚠',
-  economy: '◈',
-  political: '🗳',
+const WIRE_ICON_SIZE = 12;
+
+const CAT_ICONS: Record<string, ReactNode> = {
+  bitcoin: <CurrencyBtc size={WIRE_ICON_SIZE} weight="bold" />,
+  conflict: <Skull size={WIRE_ICON_SIZE} weight="regular" />,
+  disaster: <Warning size={WIRE_ICON_SIZE} weight="fill" />,
+  economy: <TrendUp size={WIRE_ICON_SIZE} weight="regular" />,
+  political: <Scales size={WIRE_ICON_SIZE} weight="regular" />,
 };
+
+const DEFAULT_CAT_ICON = <Diamond size={WIRE_ICON_SIZE} weight="regular" />;
 
 export function WirePanel() {
   const [headlines, setHeadlines] = useState<Headline[]>([]);
@@ -66,7 +79,7 @@ export function WirePanel() {
           {items.map((h, i) => (
             <span key={i} className="inline-flex items-center gap-1.5" style={{ fontSize: '11px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
-                {CAT_ICONS[h.category] || '◇'}
+                {CAT_ICONS[h.category] || DEFAULT_CAT_ICON}
               </span>
               <a
                 href={h.link}

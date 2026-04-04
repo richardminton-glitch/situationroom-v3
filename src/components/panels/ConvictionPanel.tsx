@@ -1,11 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { PanelLoading } from './shared';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { BlurGate } from '@/components/auth/BlurGate';
 import { useTier } from '@/hooks/useTier';
 import type { ConvictionResult } from '@/lib/conviction/engine';
+import {
+  ChatCircleDots,
+  TrendUp,
+  LinkSimple,
+  Graph,
+  Globe,
+} from '@phosphor-icons/react';
 
 const DARK_BAND_COLORS: Record<string, string> = {
   'Maximum Conviction': '#2dd4bf',  // bright teal
@@ -15,12 +23,14 @@ const DARK_BAND_COLORS: Record<string, string> = {
   'Contra-Conviction':  '#c04040',  // red
 };
 
-const SIGNAL_ICONS: Record<string, string> = {
-  sentiment: '◈',
-  momentum: '△',
-  onchain: '◇',
-  network: '⬡',
-  macro: '⊕',
+const SIG_ICON_SIZE = 12;
+
+const SIGNAL_ICONS: Record<string, ReactNode> = {
+  sentiment: <ChatCircleDots size={SIG_ICON_SIZE} weight="regular" />,
+  momentum: <TrendUp size={SIG_ICON_SIZE} weight="regular" />,
+  onchain: <LinkSimple size={SIG_ICON_SIZE} weight="regular" />,
+  network: <Graph size={SIG_ICON_SIZE} weight="regular" />,
+  macro: <Globe size={SIG_ICON_SIZE} weight="regular" />,
 };
 
 function GaugeArc({ score, color }: { score: number; color: string }) {
@@ -105,8 +115,8 @@ export function ConvictionPanel() {
         <div className="flex-1">
           {data.signals.map((sig) => (
             <div key={sig.key} className="flex items-center justify-between py-0.5">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span className="inline-block w-4 text-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
+              <span className="text-xs inline-flex items-center" style={{ color: 'var(--text-muted)' }}>
+                <span className="inline-flex w-4 justify-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
                 {' '}
                 <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
                   {sig.name.split(' ')[0]}

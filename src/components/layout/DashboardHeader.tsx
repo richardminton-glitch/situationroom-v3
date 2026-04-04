@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useData } from './DataProvider';
 import { useTheme } from './ThemeProvider';
 import { computeThreatLevel } from '@/lib/grok/quality';
+import { CaretRight, Diamond } from '@phosphor-icons/react';
 
 // ── Tooltip system ──
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
@@ -270,7 +271,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
                 animation: chatUnread > 0 && !opsRoomOpen ? 'ops-pulse 2s ease-in-out infinite' : 'none',
               }}
             >
-              OPS {opsRoomOpen ? '\u25B8' : '\u25CA'}
+              OPS {opsRoomOpen ? <CaretRight size={10} weight="bold" style={{ display: 'inline', verticalAlign: 'middle' }} /> : <Diamond size={10} weight="regular" style={{ display: 'inline', verticalAlign: 'middle' }} />}
               {chatUnread > 0 && !opsRoomOpen && (
                 <span style={{
                   position: 'absolute',

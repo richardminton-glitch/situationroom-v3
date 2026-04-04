@@ -1,6 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import {
+  Bank,
+  ChartBar,
+  ShoppingCart,
+  Factory,
+  CurrencyBtc,
+  Hammer,
+  Coins,
+  Microphone,
+  Scales,
+  Diamond,
+} from '@phosphor-icons/react';
 
 interface EconomicEvent {
   date: string;
@@ -10,13 +23,32 @@ interface EconomicEvent {
   impact?: string;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  fomc: '🏦', cpi: '📊', ppi: '📊', pce: '📊', jobs: '📊',
-  retail: '🛒', pmi: '🏭', claims: '📊', gdp: '📊',
-  ecb: '🏦', boj: '🏦', boe: '🏦', pboc: '🏦',
-  btc_options: '₿', btc_difficulty: '⛏', btc_halving: '₿',
-  treasury: '💵', conference: '🎙', political: '🗳', other: '◇',
+const EV_ICON = 13;
+
+const CATEGORY_ICONS: Record<string, ReactNode> = {
+  fomc: <Bank size={EV_ICON} weight="regular" />,
+  cpi: <ChartBar size={EV_ICON} weight="regular" />,
+  ppi: <ChartBar size={EV_ICON} weight="regular" />,
+  pce: <ChartBar size={EV_ICON} weight="regular" />,
+  jobs: <ChartBar size={EV_ICON} weight="regular" />,
+  retail: <ShoppingCart size={EV_ICON} weight="regular" />,
+  pmi: <Factory size={EV_ICON} weight="regular" />,
+  claims: <ChartBar size={EV_ICON} weight="regular" />,
+  gdp: <ChartBar size={EV_ICON} weight="regular" />,
+  ecb: <Bank size={EV_ICON} weight="regular" />,
+  boj: <Bank size={EV_ICON} weight="regular" />,
+  boe: <Bank size={EV_ICON} weight="regular" />,
+  pboc: <Bank size={EV_ICON} weight="regular" />,
+  btc_options: <CurrencyBtc size={EV_ICON} weight="bold" />,
+  btc_difficulty: <Hammer size={EV_ICON} weight="regular" />,
+  btc_halving: <CurrencyBtc size={EV_ICON} weight="bold" />,
+  treasury: <Coins size={EV_ICON} weight="regular" />,
+  conference: <Microphone size={EV_ICON} weight="regular" />,
+  political: <Scales size={EV_ICON} weight="regular" />,
+  other: <Diamond size={EV_ICON} weight="regular" />,
 };
+
+const DEFAULT_EV_ICON = <Diamond size={EV_ICON} weight="regular" />;
 
 // Hardcoded upcoming events — in production these would come from an API
 // This gives the panel something to show immediately
@@ -101,7 +133,7 @@ export function EconomicEventsPanel() {
             }}
             title={`${ev.title}${ev.time ? ` — ${ev.time}` : ''}`}
           >
-            <span>{CATEGORY_ICONS[ev.category] || '◇'}</span>
+            <span className="inline-flex items-center">{CATEGORY_ICONS[ev.category] || DEFAULT_EV_ICON}</span>
             <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-data)' }}>
               {formatEventDate(ev.date)}
             </span>

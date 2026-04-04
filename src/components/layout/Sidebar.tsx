@@ -11,6 +11,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Tier } from '@/types';
 import type { LayoutPanelItem } from '@/lib/panels/layouts';
+import type { ReactNode } from 'react';
+import {
+  SquaresFour,
+  Newspaper,
+  Crosshair,
+  ChartLineUp,
+  UserCircle,
+  Heart,
+  GearSix,
+  Moon,
+  Sun,
+  CaretRight,
+  CaretLeft,
+  SignIn,
+  Lightning,
+} from '@phosphor-icons/react';
 
 // Tier requirements for each preset
 const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
@@ -25,20 +41,23 @@ const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: ReactNode;
   requiresAuth?: boolean;
   requiredTier?: Exclude<Tier, 'free'>;
 }
 
+const ICON_SIZE = 18;
+const ICON_WEIGHT = 'regular' as const;
+
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: '◉' },
-  { label: 'Briefings', href: '/briefings', icon: '◈' },
-  { label: 'Members Room', href: '/room', icon: '◊', requiresAuth: true },
-  { label: 'Trading Pool', href: '/pool', icon: '⬡', requiredTier: 'members' },
+  { label: 'Dashboard', href: '/', icon: <SquaresFour size={ICON_SIZE} weight={ICON_WEIGHT} /> },
+  { label: 'Briefings', href: '/briefings', icon: <Newspaper size={ICON_SIZE} weight={ICON_WEIGHT} /> },
+  { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
+  { label: 'Trading Pool', href: '/pool', icon: <ChartLineUp size={ICON_SIZE} weight={ICON_WEIGHT} />, requiredTier: 'members' },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [
-  { label: 'Account', href: '/account', icon: '⊕', requiresAuth: true },
+  { label: 'Account', href: '/account', icon: <UserCircle size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
 ];
 
 export interface DashboardControls {
@@ -128,7 +147,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
             style={{ color: 'var(--text-muted)' }}
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? '▸' : '◂'}
+            {collapsed ? <CaretRight size={16} /> : <CaretLeft size={16} />}
           </button>
         </div>
 
@@ -184,7 +203,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                             letterSpacing: '0.06em',
                           }}
                         >
-                          SUBSCRIBE ⚡
+                          SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
                         </button>
                       </div>
                     )}
@@ -265,7 +284,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                                     letterSpacing: '0.06em',
                                   }}
                                 >
-                                  SUBSCRIBE ⚡
+                                  SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
                                 </button>
                               </div>
                             )}
@@ -357,7 +376,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                                   onClick={() => openModal('vip')}
                                   style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
                                 >
-                                  SUBSCRIBE ⚡
+                                  SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
                                 </button>
                               </div>
                             )}
@@ -382,7 +401,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
             }}
             title={collapsed ? 'Support the project' : undefined}
           >
-            <span className="text-base shrink-0">◎</span>
+            <span className="text-base shrink-0"><Heart size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
             {!collapsed && <span>Support →</span>}
           </Link>
 
@@ -443,7 +462,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               style={{ color: 'var(--text-secondary)' }}
               title={collapsed ? 'Settings' : undefined}
             >
-              <span className="text-base shrink-0">⚙</span>
+              <span className="text-base shrink-0"><GearSix size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
               {!collapsed && <span>Settings</span>}
             </button>
 
@@ -503,7 +522,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   style={{ color: 'var(--text-secondary)', opacity: darkLocked ? 0.7 : 1 }}
                   title={collapsed ? (theme === 'parchment' ? 'Dark mode' : 'Parchment') : undefined}
                 >
-                  <span className="text-base shrink-0">{theme === 'parchment' ? '☽' : '☀'}</span>
+                  <span className="text-base shrink-0">{theme === 'parchment' ? <Moon size={ICON_SIZE} weight={ICON_WEIGHT} /> : <Sun size={ICON_SIZE} weight={ICON_WEIGHT} />}</span>
                   {!collapsed && (
                     <span className="flex-1 text-left">{theme === 'parchment' ? 'Dark mode' : 'Parchment'}</span>
                   )}
@@ -525,7 +544,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                       onClick={() => openModal('general')}
                       style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
                     >
-                      SUBSCRIBE ⚡
+                      SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
                     </button>
                   </div>
                 )}
@@ -566,7 +585,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               style={{ color: 'var(--accent-primary)' }}
               title={collapsed ? 'Sign in' : undefined}
             >
-              <span className="text-base shrink-0">→</span>
+              <span className="text-base shrink-0"><SignIn size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
               {!collapsed && <span>Sign in</span>}
             </Link>
           )}
