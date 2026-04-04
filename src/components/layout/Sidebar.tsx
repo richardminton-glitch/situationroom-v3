@@ -38,7 +38,6 @@ const NAV_ITEMS: NavItem[] = [
 
 const SYSTEM_ITEMS: NavItem[] = [
   { label: 'Account', href: '/account', icon: '⊕', requiresAuth: true },
-  { label: 'Settings', href: '/settings', icon: '⚙', requiresAuth: true },
 ];
 
 export interface DashboardControls {
