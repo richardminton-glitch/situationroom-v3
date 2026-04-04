@@ -228,6 +228,144 @@ const GEO_KEYWORDS: GeoKeyword[] = [
     cities: [{ lat: 22.32, lon: 114.17 }, { lat: 22.39, lon: 114.21 }],
   },
 
+  // ── Additional Asia-Pacific ──────────────────────────────────────────────
+  {
+    key: 'indonesia', pattern: /\b(indonesia|jakarta|java|sumatra|bali)\b/i, lat: -6.21, lon: 106.85,
+    cities: [{ lat: -6.21, lon: 106.85 }, { lat: -7.80, lon: 110.36 }, { lat: -8.65, lon: 115.22 }, { lat: 3.60, lon: 98.67 }],
+  },
+  {
+    key: 'philippines', pattern: /\b(philippines|manila|filipino)\b/i, lat: 14.60, lon: 120.98,
+    cities: [{ lat: 14.60, lon: 120.98 }, { lat: 10.32, lon: 123.89 }, { lat: 7.07, lon: 125.61 }],
+  },
+  {
+    key: 'myanmar', pattern: /\b(myanmar|burma|yangon|rangoon)\b/i, lat: 16.87, lon: 96.20,
+    cities: [{ lat: 16.87, lon: 96.20 }, { lat: 19.76, lon: 96.07 }, { lat: 21.97, lon: 96.08 }],
+  },
+  {
+    key: 'thailand', pattern: /\b(thailand|bangkok|thai)\b/i, lat: 13.76, lon: 100.50,
+    cities: [{ lat: 13.76, lon: 100.50 }, { lat: 18.79, lon: 98.98 }, { lat: 7.88, lon: 98.39 }],
+  },
+  {
+    key: 'vietnam', pattern: /\b(vietnam|hanoi|ho chi minh)\b/i, lat: 21.03, lon: 105.85,
+    cities: [{ lat: 21.03, lon: 105.85 }, { lat: 10.82, lon: 106.63 }, { lat: 16.07, lon: 108.22 }],
+  },
+  {
+    key: 'malaysia', pattern: /\b(malaysia|kuala lumpur)\b/i, lat: 3.14, lon: 101.69,
+    cities: [{ lat: 3.14, lon: 101.69 }, { lat: 5.41, lon: 100.34 }, { lat: 1.55, lon: 110.35 }],
+  },
+  {
+    key: 'bangladesh', pattern: /\b(bangladesh|dhaka)\b/i, lat: 23.81, lon: 90.41,
+    cities: [{ lat: 23.81, lon: 90.41 }, { lat: 22.34, lon: 91.83 }],
+  },
+  {
+    key: 'sri_lanka', pattern: /\b(sri lanka|colombo)\b/i, lat: 6.93, lon: 79.85,
+    cities: [{ lat: 6.93, lon: 79.85 }, { lat: 7.29, lon: 80.63 }],
+  },
+  {
+    key: 'nepal', pattern: /\b(nepal|kathmandu)\b/i, lat: 27.72, lon: 85.32,
+    cities: [{ lat: 27.72, lon: 85.32 }, { lat: 28.27, lon: 83.97 }],
+  },
+  {
+    key: 'new_zealand', pattern: /\b(new zealand|wellington|auckland)\b/i, lat: -41.29, lon: 174.78,
+    cities: [{ lat: -36.85, lon: 174.76 }, { lat: -41.29, lon: 174.78 }, { lat: -43.53, lon: 172.64 }],
+  },
+
+  // ── Additional Middle East / Central Asia ────────────────────────────────
+  {
+    key: 'afghanistan', pattern: /\b(afghanistan|kabul|afghan|taliban)\b/i, lat: 34.53, lon: 69.17,
+    cities: [{ lat: 34.53, lon: 69.17 }, { lat: 31.61, lon: 65.71 }, { lat: 36.73, lon: 66.90 }],
+  },
+  {
+    key: 'uae', pattern: /\b(uae|united arab emirates|dubai|abu dhabi|emirati)\b/i, lat: 25.20, lon: 55.27,
+    cities: [{ lat: 25.20, lon: 55.27 }, { lat: 24.45, lon: 54.65 }, { lat: 25.34, lon: 55.42 }],
+  },
+  {
+    key: 'qatar', pattern: /\b(qatar|doha)\b/i, lat: 25.29, lon: 51.53,
+    cities: [{ lat: 25.29, lon: 51.53 }],
+  },
+  {
+    key: 'jordan', pattern: /\b(jordan|amman)\b/i, lat: 31.95, lon: 35.93,
+    cities: [{ lat: 31.95, lon: 35.93 }, { lat: 29.53, lon: 35.01 }],
+  },
+
+  // ── Additional Europe ────────────────────────────────────────────────────
+  {
+    key: 'italy', pattern: /\b(italy|rome|italian|milan)\b/i, lat: 41.90, lon: 12.50,
+    cities: [{ lat: 41.90, lon: 12.50 }, { lat: 45.46, lon: 9.19 }, { lat: 40.85, lon: 14.27 }, { lat: 43.77, lon: 11.25 }],
+  },
+  {
+    key: 'spain', pattern: /\b(spain|madrid|spanish|barcelona)\b/i, lat: 40.42, lon: -3.70,
+    cities: [{ lat: 40.42, lon: -3.70 }, { lat: 41.39, lon: 2.17 }, { lat: 37.39, lon: -5.99 }],
+  },
+  {
+    key: 'poland', pattern: /\b(poland|warsaw|polish)\b/i, lat: 52.23, lon: 21.01,
+    cities: [{ lat: 52.23, lon: 21.01 }, { lat: 50.06, lon: 19.94 }, { lat: 51.76, lon: 19.46 }],
+  },
+  {
+    key: 'greece', pattern: /\b(greece|athens|greek)\b/i, lat: 37.98, lon: 23.73,
+    cities: [{ lat: 37.98, lon: 23.73 }, { lat: 40.64, lon: 22.94 }],
+  },
+  {
+    key: 'romania', pattern: /\b(romania|bucharest)\b/i, lat: 44.43, lon: 26.10,
+    cities: [{ lat: 44.43, lon: 26.10 }, { lat: 46.77, lon: 23.60 }],
+  },
+  {
+    key: 'norway', pattern: /\b(norway|oslo|norwegian)\b/i, lat: 59.91, lon: 10.75,
+    cities: [{ lat: 59.91, lon: 10.75 }, { lat: 60.39, lon: 5.32 }],
+  },
+  {
+    key: 'sweden', pattern: /\b(sweden|stockholm|swedish)\b/i, lat: 59.33, lon: 18.07,
+    cities: [{ lat: 59.33, lon: 18.07 }, { lat: 57.71, lon: 11.97 }],
+  },
+
+  // ── Additional Africa ────────────────────────────────────────────────────
+  {
+    key: 'libya', pattern: /\b(libya|tripoli|libyan)\b/i, lat: 32.90, lon: 13.18,
+    cities: [{ lat: 32.90, lon: 13.18 }, { lat: 32.08, lon: 20.07 }],
+  },
+  {
+    key: 'morocco', pattern: /\b(morocco|rabat|moroccan|sahara)\b/i, lat: 33.97, lon: -6.85,
+    cities: [{ lat: 33.97, lon: -6.85 }, { lat: 33.57, lon: -7.59 }, { lat: 31.63, lon: -8.00 }],
+  },
+  {
+    key: 'somalia', pattern: /\b(somalia|mogadishu|somali)\b/i, lat: 2.05, lon: 45.32,
+    cities: [{ lat: 2.05, lon: 45.32 }, { lat: 10.44, lon: 45.04 }],
+  },
+  {
+    key: 'kenya', pattern: /\b(kenya|nairobi)\b/i, lat: -1.29, lon: 36.82,
+    cities: [{ lat: -1.29, lon: 36.82 }, { lat: -4.04, lon: 39.67 }],
+  },
+  {
+    key: 'dr_congo', pattern: /\b(congo|kinshasa|congolese)\b/i, lat: -4.32, lon: 15.31,
+    cities: [{ lat: -4.32, lon: 15.31 }, { lat: -11.66, lon: 27.47 }],
+  },
+
+  // ── Additional Americas ──────────────────────────────────────────────────
+  {
+    key: 'peru', pattern: /\b(peru|lima|peruvian)\b/i, lat: -12.05, lon: -77.04,
+    cities: [{ lat: -12.05, lon: -77.04 }, { lat: -13.53, lon: -71.97 }, { lat: -16.41, lon: -71.54 }],
+  },
+  {
+    key: 'colombia', pattern: /\b(colombia|bogota|colombian)\b/i, lat: 4.71, lon: -74.07,
+    cities: [{ lat: 4.71, lon: -74.07 }, { lat: 6.25, lon: -75.56 }, { lat: 3.44, lon: -76.52 }],
+  },
+  {
+    key: 'venezuela', pattern: /\b(venezuela|caracas|maduro)\b/i, lat: 10.49, lon: -66.88,
+    cities: [{ lat: 10.49, lon: -66.88 }, { lat: 10.07, lon: -69.32 }],
+  },
+  {
+    key: 'chile', pattern: /\b(chile|santiago|chilean)\b/i, lat: -33.45, lon: -70.67,
+    cities: [{ lat: -33.45, lon: -70.67 }, { lat: -36.83, lon: -73.03 }],
+  },
+  {
+    key: 'cuba', pattern: /\b(cuba|havana|cuban)\b/i, lat: 23.11, lon: -82.37,
+    cities: [{ lat: 23.11, lon: -82.37 }, { lat: 20.02, lon: -75.83 }],
+  },
+  {
+    key: 'haiti', pattern: /\b(haiti|port-au-prince|haitian)\b/i, lat: 18.54, lon: -72.34,
+    cities: [{ lat: 18.54, lon: -72.34 }],
+  },
+
   // ── Topic-based fallbacks (lowest priority) ───────────────────────────────
   // Only topics with a clear geographic centre get markers.
   // Bitcoin/crypto are excluded — they scatter markers globally with no
