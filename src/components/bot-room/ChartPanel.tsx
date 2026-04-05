@@ -1,14 +1,39 @@
 'use client';
 
-import { C, FONT, MOCK_BOT_STATE, type BotState } from './constants';
+import { useState, useEffect, useCallback } from 'react';
+import { C, FONT } from './constants';
 
-export function ChartPanel({ state = MOCK_BOT_STATE }: { state?: BotState }) {
+export function ChartPanel() {
+  const [position, setPosition] = useState<'LONG' | 'SHORT' | 'FLAT'>('FLAT');
+  const [leverage, setLeverage] = useState(0);
+  const [entryPrice, setEntryPrice] = useState<number | null>(null);
+  const [poolBalance, setPoolBalance] = useState(0);
+
+  const fetchPool = useCallback(async () => {
+    try {
+      const res = await fetch('/api/pool/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.error) return;
+      setPosition(data.position ?? 'FLAT');
+      setLeverage(data.leverage ?? 0);
+      setEntryPrice(data.entryPrice ?? null);
+      setPoolBalance(data.poolBalanceBtc ?? 0);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    fetchPool();
+    const id = setInterval(fetchPool, 60_000);
+    return () => clearInterval(id);
+  }, [fetchPool]);
+
   const posLabel =
-    state.position === 'FLAT'
+    position === 'FLAT'
       ? 'FLAT'
-      : `NET ${state.position} ${(state.poolBalance * state.leverage * 100 / 100).toFixed(4)}%`;
+      : `NET ${position} ${(poolBalance * leverage * 100 / 100).toFixed(4)}%`;
   const posColor =
-    state.position === 'LONG' ? C.teal : state.position === 'SHORT' ? C.coral : C.textDim;
+    position === 'LONG' ? C.teal : position === 'SHORT' ? C.coral : C.textDim;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: C.bgPrimary }}>
@@ -23,18 +48,18 @@ export function ChartPanel({ state = MOCK_BOT_STATE }: { state?: BotState }) {
             background: `${posColor}11`, border: `1px solid ${posColor}33`,
             letterSpacing: '0.06em',
           }}>
-            ● {posLabel}
+            {'\u25CF'} {posLabel}
           </span>
           <span style={{ fontSize: '10px', color: C.textPrimary, letterSpacing: '0.04em' }}>
-            BTCUSD · 5M
+            BTCUSD {'\u00B7'} 5M
           </span>
         </div>
-        {state.entryPrice && (
+        {entryPrice && (
           <span style={{
             fontSize: '10px', color: C.textPrimary, padding: '2px 7px',
             background: C.bgElevated, border: `1px solid ${C.borderSoft}`,
           }}>
-            Entry ${state.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            Entry ${entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         )}
       </div>

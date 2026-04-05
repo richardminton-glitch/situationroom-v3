@@ -2,6 +2,8 @@
  * GET /api/pool/status
  * Returns pool balance, position, trade history, and bot signals.
  * Requires Members+ tier. Cached in DB for 60 seconds.
+ *
+ * Response shape matches the BotState interface used by StatsBar + ChartPanel.
  */
 
 import { NextResponse } from 'next/server';
@@ -13,8 +15,21 @@ import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-const CACHE_KEY = 'pool-status';
+const CACHE_KEY   = 'pool-status';
 const CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+// ── LNM v3 API side helpers (defensive: supports both 'b'/'s' and 'buy'/'sell') ──
+
+function isLong(side: unknown): boolean {
+  return side === 'buy' || side === 'b';
+}
+
+function calcTotalPl(trades: Record<string, unknown>[]): number {
+  return trades.reduce(
+    (sum, t) => sum + Math.round(((t.pl as number) ?? 0) * 1e8),
+    0,
+  );
+}
 
 export async function GET() {
   const session = await getSession();
@@ -34,60 +49,78 @@ export async function GET() {
   try {
     const bot = getBotClient();
 
-    // Fetch user account + recent futures (trade history)
-    const [userRaw, futuresRaw] = await Promise.all([
+    // Fetch account + open positions + recent closed trades in parallel
+    const [userRaw, openRaw, closedRaw] = await Promise.all([
       bot.userGet() as Promise<Record<string, unknown>>,
+      (bot as any).futuresGetAll?.({ status: 'running' }).catch(() => []) ?? Promise.resolve([]),
       (bot as any).futuresGetAllClosed?.({ limit: '20' }).catch(() => []) ?? Promise.resolve([]),
     ]);
 
     const user = userRaw as Record<string, unknown>;
+    const openPositions = (openRaw ?? []) as Record<string, unknown>[];
+    const closedTrades  = ((closedRaw ?? []) as Record<string, unknown>[]).slice(0, 20);
 
-    // Calculate win rate from closed futures
-    const trades = (futuresRaw as Record<string, unknown>[]).slice(0, 20);
-    const wins = trades.filter((t) => {
-      const pl = t.pl as number ?? 0;
-      return pl > 0;
-    }).length;
-    const losses = trades.length - wins;
-    const winRate = trades.length > 0 ? Math.round((wins / trades.length) * 100) : 0;
+    // ── Balance ──
+    const balanceSats    = Math.round(((user.balance as number) ?? 0) * 1e8);
+    const poolBalanceBtc = (user.balance as number) ?? 0;
 
-    // Last trade
-    const lastTrade = trades[0] as Record<string, unknown> | undefined;
-    const lastTradeDesc = lastTrade
-      ? `${lastTrade.side?.toString().toUpperCase() ?? 'TRADE'} ${
-          (lastTrade.pl as number ?? 0) >= 0 ? '+' : ''
-        }${((lastTrade.pl as number ?? 0) / 1e8 * 100).toFixed(1)}%`
-      : 'No recent trades';
+    // ── Position ──
+    const openPos = openPositions[0] as Record<string, unknown> | undefined;
+    const position: 'LONG' | 'SHORT' | 'FLAT' = openPos
+      ? (isLong(openPos.side) ? 'LONG' : 'SHORT')
+      : 'FLAT';
+    const leverage   = (openPos?.leverage as number) ?? 0;
+    const entryPrice = (openPos?.price as number) ?? null;
+    const takeProfit = (openPos?.takeprofit as number) ?? null;
+    const stopLoss   = (openPos?.stoploss as number) ?? null;
 
-    // Open positions
-    const openPositions = (await (bot as any).futuresGetAll?.({ status: 'open' }).catch(() => [])) ?? [];
-    const hasOpenLong = openPositions.some((p: Record<string, unknown>) => p.side === 'b');
-    const hasOpenShort = openPositions.some((p: Record<string, unknown>) => p.side === 's');
-    const position = hasOpenLong ? 'LONG' : hasOpenShort ? 'SHORT' : 'FLAT';
-
-    // Unrealised P&L
-    const unrealisedPl = openPositions.reduce(
-      (sum: number, p: Record<string, unknown>) => sum + ((p.pl as number) ?? 0),
-      0
+    // ── Unrealised P&L ──
+    const unrealisedPlSats = openPositions.reduce(
+      (sum: number, p: Record<string, unknown>) => sum + Math.round(((p.pl as number) ?? 0) * 1e8),
+      0,
     );
 
+    // ── Win/loss stats ──
+    const wins       = closedTrades.filter((t) => ((t.pl as number) ?? 0) > 0).length;
+    const losses     = closedTrades.length - wins;
+    const tradeCount = closedTrades.length;
+    const winRate    = tradeCount > 0 ? wins / tradeCount : 0;
+    const totalPlSats = calcTotalPl(closedTrades);
+
+    // ── Last trade P&L ──
+    const lastTrade     = closedTrades[0] as Record<string, unknown> | undefined;
+    const lastTradePlSats = lastTrade ? Math.round(((lastTrade.pl as number) ?? 0) * 1e8) : 0;
+    const lastTradeDesc = lastTrade
+      ? `${isLong(lastTrade.side) ? 'LONG' : 'SHORT'} ${lastTradePlSats >= 0 ? '+' : ''}${lastTradePlSats} sats`
+      : 'No recent trades';
+
     const result = {
-      balanceSats: Math.round(((user.balance as number) ?? 0) * 1e8),
+      // BotState-compatible fields
+      poolBalanceBtc,
       position,
-      unrealisedPlSats: Math.round(unrealisedPl * 1e8),
+      leverage,
+      entryPrice,
+      takeProfit,
+      stopLoss,
+      unrealisedPlSats,
+      tradeCount,
+      winRate,
+      totalPlSats,
+      lastTradePlSats,
+
+      // Extended fields for pool page
+      balanceSats,
       wins,
       losses,
-      winRate,
       lastTradeDesc,
       openCount: openPositions.length,
-      recentTrades: trades.slice(0, 10).map((t) => ({
-        side: t.side === 'b' ? 'LONG' : 'SHORT',
-        entryPrice: t.price as number ?? 0,
-        exitPrice: t.exit_price as number ?? 0,
+      recentTrades: closedTrades.slice(0, 10).map((t) => ({
+        side: isLong(t.side) ? 'LONG' : 'SHORT',
+        entryPrice: (t.price as number) ?? 0,
+        exitPrice: (t.exit_price as number) ?? 0,
         plSats: Math.round(((t.pl as number) ?? 0) * 1e8),
-        duration: t.duration as string ?? '—',
-        closedAt: t.closed_ts as number ?? 0,
-        rationale: t.rationale as string ?? '',
+        duration: (t.duration as string) ?? '\u2014',
+        closedAt: (t.closed_ts as number) ?? 0,
       })),
     };
 

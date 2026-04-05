@@ -465,6 +465,59 @@ model SignalAnnotation {
 // TTL = 7 days. Populated by the classifier pipeline; cleaned up by daily cron.
 // Run: npx prisma migrate dev --name add_classification_cache
 
+// ── Trading Bot ──────────────────────────────────────────────────────────────
+// AI trading decisions and executed trades (LN Markets integration).
+
+model TradingDecision {
+  id              String    @id @default(cuid())
+  snapshotJson    String    @map("snapshot_json") @db.Text
+  aiResponseRaw   String    @map("ai_response_raw") @db.Text
+  decision        String    // OPEN_LONG | OPEN_SHORT | CLOSE | HOLD | FLAT | ADJUST
+  conviction      Int
+  reasoningJson   String    @map("reasoning_json") @db.Text
+  tradeJson       String?   @map("trade_json") @db.Text
+  guardrailPass   Boolean   @map("guardrail_pass")
+  guardrailReason String?   @map("guardrail_reason")
+  approvalStatus  String    @default("pending") @map("approval_status") // pending | approved | rejected | blocked
+  approvedAt      DateTime? @map("approved_at")
+  executed        Boolean   @default(false)
+  executionJson   String?   @map("execution_json") @db.Text
+  chatMessage     String?   @map("chat_message") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  trade           Trade?
+
+  @@index([createdAt])
+  @@map("trading_decisions")
+}
+
+model Trade {
+  id          String    @id @default(cuid())
+  decisionId  String    @unique @map("decision_id")
+  lnmTradeId  String?   @map("lnm_trade_id")
+  side        String    // 'long' | 'short'
+  entryPrice  Float     @map("entry_price")
+  exitPrice   Float?    @map("exit_price")
+  marginSats  Int       @map("margin_sats")
+  leverage    Float
+  takeProfit  Float?    @map("take_profit")
+  stopLoss    Float?    @map("stop_loss")
+  pnlSats     Int?      @map("pnl_sats")
+  pnlPct      Float?    @map("pnl_pct")
+  status      String    @default("running") // 'running' | 'closed'
+  closeReason String?   @map("close_reason") // 'tp_hit' | 'sl_hit' | 'manual' | 'ai_decision' | 'liquidation'
+  openedAt    DateTime  @default(now()) @map("opened_at")
+  closedAt    DateTime? @map("closed_at")
+
+  decision    TradingDecision @relation(fields: [decisionId], references: [id])
+
+  @@index([status])
+  @@index([lnmTradeId])
+  @@map("trades")
+}
+
+// ── RSS Classification Cache ──────────────────────────────────────────────────
+
 model ClassificationCache {
   contentHash         String   @id @map("content_hash")
   primaryCategory     String   @map("primary_category")

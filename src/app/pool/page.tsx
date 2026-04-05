@@ -122,7 +122,7 @@ export default function PoolPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 {[
                   { label: 'TRADES', value: `${pool.wins}W/${pool.losses}L` },
-                  { label: 'WIN RATE', value: `${pool.winRate}%`, color: pool.winRate >= 55 ? 'var(--accent-success)' : 'var(--accent-danger)' },
+                  { label: 'WIN RATE', value: `${Math.round(pool.winRate * 100)}%`, color: pool.winRate >= 0.55 ? 'var(--accent-success)' : 'var(--accent-danger)' },
                   { label: 'LAST TRADE', value: pool.lastTradeDesc },
                 ].map(({ label, value, color }) => (
                   <div key={label}>

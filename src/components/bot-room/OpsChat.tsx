@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { C, FONT, MOCK_MESSAGES, type BotMessage } from './constants';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { C, FONT, type BotMessage } from './constants';
 
+const POLL_INTERVAL = 30_000; // 30s — bot messages arrive every few hours, so this is fine
 
 function fmtTime(ts: number): string {
   return new Date(ts).toISOString().slice(11, 16);
@@ -10,19 +11,20 @@ function fmtTime(ts: number): string {
 
 /** Simple coloriser — highlights key terms in bot messages */
 function colorise(text: string): ReactNode {
-  // Split into segments around known keywords
   const parts: ReactNode[] = [];
   let remaining = text;
   let key = 0;
 
   const patterns: { re: RegExp; color: string; bold?: boolean }[] = [
     { re: /\b(LONG|OPENED|HOLDING|SCANNING)\b/, color: C.teal, bold: true },
-    { re: /\b(SHORT|CLOSED|ALERT)\b/, color: C.coral, bold: true },
+    { re: /\b(SHORT|CLOSED|BLOCKED|ALERT|LIQUIDATED)\b/, color: C.coral, bold: true },
     { re: /\b(FLAT)\b/, color: C.textDim, bold: true },
-    { re: /P&L:\s*[\+\-]?\d+\s*sats/, color: C.teal },
+    { re: /P&L:\s*[\+\-]?\d[\d,]*\s*sats/, color: C.teal },
     { re: /Conv\.\s*\d+\/10/, color: C.textPrimary },
     { re: /TP:\s*\$[\d,\.]+/, color: C.teal },
     { re: /SL:\s*\$[\d,\.]+/, color: C.coral },
+    { re: /Take-profit hit/, color: C.teal, bold: true },
+    { re: /Stop-loss hit/, color: C.coral, bold: true },
   ];
 
   while (remaining.length > 0) {
@@ -57,12 +59,40 @@ function colorise(text: string): ReactNode {
 }
 
 export function OpsChat() {
-  const [messages] = useState<BotMessage[]>(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<BotMessage[]>([]);
+  const [loading, setLoading]   = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bot/messages?limit=100');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.messages) {
+        setMessages(data.messages);
+      }
+    } catch {
+      // silent — will retry on next poll
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch + polling
   useEffect(() => {
-    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [messages]);
+    fetchMessages();
+    const id = setInterval(fetchMessages, POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, [fetchMessages]);
+
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    if (messages.length > prevCountRef.current && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+    prevCountRef.current = messages.length;
+  }, [messages.length]);
 
   return (
     <div style={{
@@ -88,6 +118,26 @@ export function OpsChat() {
         flex: 1, overflowY: 'auto', padding: '8px',
         display: 'flex', flexDirection: 'column', gap: '6px',
       }}>
+        {loading && messages.length === 0 && (
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: '9px', color: C.textDim, letterSpacing: '0.14em' }}>
+              LOADING...
+            </span>
+          </div>
+        )}
+
+        {!loading && messages.length === 0 && (
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: '9px', color: C.textDim, letterSpacing: '0.14em' }}>
+              NO MESSAGES YET
+            </span>
+          </div>
+        )}
+
         {messages.map(msg => (
           <div key={msg.id}>
             <div style={{ fontSize: '9px', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
@@ -104,7 +154,6 @@ export function OpsChat() {
           </div>
         ))}
       </div>
-
     </div>
   );
 }

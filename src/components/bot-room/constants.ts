@@ -93,7 +93,7 @@ export interface BotState {
   unrealisedPnl: number;    // sats
   tradeCount: number;
   winRate: number;           // 0–1
-  streak: number;            // positive = wins, negative = losses
+  totalPnl: number;         // sats — all-time realised P&L
   lastTradePnl: number;     // sats
 }
 
@@ -105,7 +105,7 @@ export const MOCK_BOT_STATE: BotState = {
   unrealisedPnl: 34,
   tradeCount: 12,
   winRate: 0.667,
-  streak: 3,
+  totalPnl: 142,
   lastTradePnl: 12,
 };
 
