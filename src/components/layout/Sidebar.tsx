@@ -26,6 +26,7 @@ import {
   SignIn,
   Lightning,
   ShieldStar,
+  Heartbeat,
 } from '@phosphor-icons/react';
 
 // Tier requirements for each preset
@@ -52,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: <SquaresFour size={ICON_SIZE} weight={ICON_WEIGHT} /> },
   { label: 'Briefings', href: '/briefings', icon: <Newspaper size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
   { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
-  { label: 'Trading Pool', href: '/pool', icon: <ChartLineUp size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
+  { label: 'Bot Room', href: '/bot-room', icon: <Heartbeat size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [
