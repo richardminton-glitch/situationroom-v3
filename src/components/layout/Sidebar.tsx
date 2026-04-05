@@ -93,7 +93,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
   const [tooltip, setTooltip] = useState<{ id: string; requiredTier: Exclude<Tier, 'free'> } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const { canAccess, userTier } = useTier();
   const pathname = usePathname();
@@ -525,7 +525,17 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     if (darkLocked) {
                       showLockedTooltip('__dark', 'general');
                     } else {
-                      setTheme(theme === 'parchment' ? 'dark' : 'parchment');
+                      const newTheme = theme === 'parchment' ? 'dark' : 'parchment';
+                      setTheme(newTheme);
+                      // Persist to server and update auth context
+                      if (user) {
+                        updateUser({ themePref: newTheme });
+                        fetch('/api/user/preferences', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ themePref: newTheme }),
+                        }).catch(() => {});
+                      }
                     }
                   }}
                   className="flex items-center gap-3 w-full px-3 py-2 rounded text-sm transition-colors"

@@ -140,20 +140,14 @@ export default function OpsRoomPage() {
     saveLayout(layout);
   }, [layout]);
 
-  // Theme forcing
+  // Theme forcing — room layout handles the actual dark/restore lifecycle,
+  // but ensure dark is applied if this component mounts independently
   const [transitionPhase, setTransitionPhase] = useState<'entering' | 'visible' | 'leaving'>('entering');
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('sr-theme') || 'parchment';
-    sessionStorage.setItem('sr-ops-room-prev-theme', storedTheme);
     if (theme !== 'dark') setTheme('dark');
     const timer = setTimeout(() => setTransitionPhase('visible'), 300);
-    return () => {
-      clearTimeout(timer);
-      const prev = sessionStorage.getItem('sr-ops-room-prev-theme');
-      sessionStorage.removeItem('sr-ops-room-prev-theme');
-      if (prev && prev !== 'dark') setTheme(prev as 'dark' | 'parchment');
-    };
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -3,15 +3,18 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useTheme } from '@/components/layout/ThemeProvider';
+import { useAuth } from '@/components/layout/AuthProvider';
 
 export default function RoomLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
   const [transitionPhase, setTransitionPhase] = useState<'entering' | 'visible'>('entering');
 
-  // Force dark mode on mount, revert on unmount
+  // Force dark mode on mount, revert to user preference on unmount
   useEffect(() => {
-    const storedTheme = localStorage.getItem('sr-theme') || 'parchment';
-    sessionStorage.setItem('sr-ops-room-prev-theme', storedTheme);
+    // Save user's actual preference so we can restore it
+    const userPref = user?.themePref || localStorage.getItem('sr-theme') || 'parchment';
+    sessionStorage.setItem('sr-ops-room-prev-theme', userPref);
     if (theme !== 'dark') setTheme('dark');
     const timer = setTimeout(() => setTransitionPhase('visible'), 300);
     return () => {
