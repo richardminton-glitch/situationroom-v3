@@ -790,8 +790,24 @@ export default function AccountPage() {
       </div>
 
       {/* ── Nostr Identity ── */}
-      <div style={sectionStyle}>
+      <div style={{
+        ...sectionStyle,
+        opacity: hasAccess(userTier, 'members') ? 1 : 0.45,
+        position: 'relative',
+      }}>
         <span style={labelStyle}>Nostr Identity</span>
+
+        {!hasAccess(userTier, 'members') && (
+          <div style={{
+            position: 'absolute', top: 20, right: 24,
+            padding: '3px 10px',
+            fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em',
+            color: '#4a6fa5', border: '1px solid #4a6fa5', backgroundColor: 'rgba(74, 111, 165, 0.08)',
+          }}>
+            MEMBERS ONLY
+          </div>
+        )}
+
         {nostrLinked || user.nostrNpub ? (
           <div>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent-success)', marginBottom: '4px' }}>
@@ -807,7 +823,11 @@ export default function AccountPage() {
               Link your Nostr key to get the ⚡ icon in Ops Chat and enable NIP-07 sign-in.
               Requires a browser extension like Alby or nos2x.
             </p>
-            <button onClick={linkNostr} disabled={nostrLinking} style={{ ...btnStyle('primary'), opacity: nostrLinking ? 0.5 : 1 }}>
+            <button
+              onClick={linkNostr}
+              disabled={nostrLinking || !hasAccess(userTier, 'members')}
+              style={{ ...btnStyle('primary'), opacity: nostrLinking || !hasAccess(userTier, 'members') ? 0.5 : 1 }}
+            >
               {nostrLinking ? 'LINKING...' : 'LINK NOSTR KEY'}
             </button>
             {nostrError && (
