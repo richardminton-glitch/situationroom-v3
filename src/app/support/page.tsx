@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { FundingBar } from '@/components/widgets/FundingBar';
 import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
 import { DonationModal } from '@/components/auth/DonationModal';
@@ -8,6 +9,7 @@ import { DonationModal } from '@/components/auth/DonationModal';
 export default function SupportPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
+  const router = useRouter();
 
   return (
     <div style={{ fontFamily: 'var(--font-mono)', padding: '32px 24px', maxWidth: '640px', margin: '0 auto' }}>
@@ -86,7 +88,7 @@ export default function SupportPage() {
               ))}
             </ul>
             <button
-              onClick={() => tier === 'Free' ? setShowModal(true) : setShowModal(true)}
+              onClick={() => tier === 'Free' ? router.push('/login') : setShowModal(true)}
               style={{
                 marginTop: '12px', padding: '6px 16px',
                 background: 'transparent', border: `1px solid ${color}`,
@@ -94,7 +96,7 @@ export default function SupportPage() {
                 fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em',
               }}
             >
-              {cta} ⚡
+              {cta} {tier === 'Free' ? '→' : '⚡'}
             </button>
           </div>
         ))}
