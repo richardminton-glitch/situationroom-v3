@@ -50,10 +50,11 @@ export async function GET() {
     const bot = getBotClient();
 
     // Fetch account + open positions + recent closed trades in parallel
+    // NOTE: SDK method is futuresGetTrades (NOT futuresGetAll/futuresGetAllClosed)
     const [userRaw, openRaw, closedRaw] = await Promise.all([
       bot.userGet() as Promise<Record<string, unknown>>,
-      (bot as any).futuresGetAll?.({ status: 'running' }).catch(() => []) ?? Promise.resolve([]),
-      (bot as any).futuresGetAllClosed?.({ limit: '20' }).catch(() => []) ?? Promise.resolve([]),
+      (bot as any).futuresGetTrades({ type: 'running' }).catch(() => []),
+      (bot as any).futuresGetTrades({ type: 'closed', limit: 20 }).catch(() => []),
     ]);
 
     const user = userRaw as Record<string, unknown>;
