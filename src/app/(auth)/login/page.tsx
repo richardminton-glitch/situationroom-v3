@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useRouter } from 'next/navigation';
 
-type Method = 'email' | 'nostr';
-type EmailStep = 'email' | 'pin';
+type Tab = 'signin' | 'signup' | 'nostr';
+type SignUpStep = 'email' | 'pin';
 
 export default function LoginPage() {
-  const [method, setMethod] = useState<Method>('email');
-  const [emailStep, setEmailStep] = useState<EmailStep>('email');
+  const [tab, setTab] = useState<Tab>('signin');
+  const [signUpStep, setSignUpStep] = useState<SignUpStep>('email');
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -35,7 +35,7 @@ export default function LoginPage() {
         setError(data.error || 'Failed to send PIN');
         return;
       }
-      setEmailStep('pin');
+      setSignUpStep('pin');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -213,21 +213,27 @@ export default function LoginPage() {
             Sign In
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-            Create an account or sign in to access your dashboard
+            Sign in or create an account to access your dashboard
           </p>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)' }}>
           <button
-            onClick={() => { setMethod('email'); setError(''); }}
-            style={tabStyle(method === 'email')}
+            onClick={() => { setTab('signin'); setError(''); }}
+            style={tabStyle(tab === 'signin')}
           >
-            EMAIL
+            SIGN IN
           </button>
           <button
-            onClick={() => { setMethod('nostr'); setError(''); }}
-            style={tabStyle(method === 'nostr')}
+            onClick={() => { setTab('signup'); setError(''); }}
+            style={tabStyle(tab === 'signup')}
+          >
+            SIGN UP
+          </button>
+          <button
+            onClick={() => { setTab('nostr'); setError(''); }}
+            style={tabStyle(tab === 'nostr')}
           >
             NOSTR
           </button>
@@ -259,23 +265,80 @@ export default function LoginPage() {
             </div>
           )}
 
-          {method === 'email' ? (
+          {tab === 'signin' ? (
+            /* ── Sign In tab: email + PIN together ── */
+            <form onSubmit={handleVerifyPin}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.6 }}>
+                Enter your email and the PIN sent to your inbox.
+              </p>
+              <label style={{
+                display: 'block', fontSize: '10px', letterSpacing: '0.12em',
+                color: 'var(--text-muted)', fontFamily: SERIF, marginBottom: '6px',
+              }}>
+                EMAIL
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                style={{ ...inputStyle, marginBottom: '14px' }}
+                placeholder="you@email.com"
+              />
+              <label style={{
+                display: 'block', fontSize: '10px', letterSpacing: '0.12em',
+                color: 'var(--text-muted)', fontFamily: SERIF, marginBottom: '6px',
+              }}>
+                4-DIGIT PIN
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                required
+                style={{
+                  ...inputStyle, textAlign: 'center', fontSize: '24px',
+                  letterSpacing: '0.5em', fontFamily: SERIF, marginBottom: '16px',
+                }}
+                placeholder="0000"
+              />
+              <button
+                type="submit"
+                disabled={loading || pin.length !== 4}
+                style={buttonStyle(loading || pin.length !== 4)}
+              >
+                {loading ? 'VERIFYING...' : 'SIGN IN'}
+              </button>
+              <div style={{ textAlign: 'center', marginTop: '14px' }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    setPin('');
+                    setError('');
+                    handleSendPin(e as unknown as React.FormEvent);
+                  }}
+                  style={linkStyle}
+                >
+                  Resend PIN
+                </button>
+              </div>
+            </form>
+          ) : tab === 'signup' ? (
+            /* ── Sign Up tab: send PIN → enter PIN ── */
             <>
-              {emailStep === 'email' ? (
+              {signUpStep === 'email' ? (
                 <form onSubmit={handleSendPin}>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.6 }}>
                     Enter your email to receive a 4-digit PIN. New users are registered automatically.
                   </p>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '10px',
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                      fontFamily: SERIF,
-                      marginBottom: '6px',
-                    }}
-                  >
+                  <label style={{
+                    display: 'block', fontSize: '10px', letterSpacing: '0.12em',
+                    color: 'var(--text-muted)', fontFamily: SERIF, marginBottom: '6px',
+                  }}>
                     EMAIL
                   </label>
                   <input
@@ -297,16 +360,10 @@ export default function LoginPage() {
                     PIN sent to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
                     Check your inbox and enter it below.
                   </p>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '10px',
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                      fontFamily: SERIF,
-                      marginBottom: '6px',
-                    }}
-                  >
+                  <label style={{
+                    display: 'block', fontSize: '10px', letterSpacing: '0.12em',
+                    color: 'var(--text-muted)', fontFamily: SERIF, marginBottom: '6px',
+                  }}>
                     4-DIGIT PIN
                   </label>
                   <input
@@ -319,12 +376,8 @@ export default function LoginPage() {
                     required
                     autoFocus
                     style={{
-                      ...inputStyle,
-                      textAlign: 'center',
-                      fontSize: '24px',
-                      letterSpacing: '0.5em',
-                      fontFamily: SERIF,
-                      marginBottom: '16px',
+                      ...inputStyle, textAlign: 'center', fontSize: '24px',
+                      letterSpacing: '0.5em', fontFamily: SERIF, marginBottom: '16px',
                     }}
                     placeholder="0000"
                   />
@@ -338,7 +391,7 @@ export default function LoginPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '14px' }}>
                     <button
                       type="button"
-                      onClick={() => { setEmailStep('email'); setPin(''); setError(''); }}
+                      onClick={() => { setSignUpStep('email'); setPin(''); setError(''); }}
                       style={linkStyle}
                     >
                       Different email
@@ -359,7 +412,7 @@ export default function LoginPage() {
               )}
             </>
           ) : (
-            /* Nostr tab */
+            /* ── Nostr tab ── */
             <div>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
                 Sign in with your Nostr identity using a NIP-07 browser extension
