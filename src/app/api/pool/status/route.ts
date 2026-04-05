@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
-import { getBotClient } from '@/lib/lnm/client';
+import { getBotClient, LnmV3Client } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
 
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const CACHE_KEY   = 'pool-status';
 const CACHE_TTL_MS = 60 * 1000; // 1 minute
 
-// ── LNM v3 API side helpers (defensive: supports both 'b'/'s' and 'buy'/'sell') ──
+// ── Side helpers ──
 
 function isLong(side: unknown): boolean {
   return side === 'buy' || side === 'b';
@@ -26,7 +26,7 @@ function isLong(side: unknown): boolean {
 
 function calcTotalPl(trades: Record<string, unknown>[]): number {
   return trades.reduce(
-    (sum, t) => sum + Math.round(((t.pl as number) ?? 0) * 1e8),
+    (sum, t) => sum + Math.round((t.pl as number) ?? 0),
     0,
   );
 }
@@ -50,20 +50,15 @@ export async function GET() {
     const bot = getBotClient();
 
     // Fetch account + open positions + recent closed trades in parallel
-    // NOTE: SDK method is futuresGetTrades (NOT futuresGetAll/futuresGetAllClosed)
-    const [userRaw, openRaw, closedRaw] = await Promise.all([
-      bot.userGet() as Promise<Record<string, unknown>>,
-      (bot as any).futuresGetTrades({ type: 'running' }).catch(() => []),
-      (bot as any).futuresGetTrades({ type: 'closed', limit: 20 }).catch(() => []),
+    const [account, openPositions, closedTrades] = await Promise.all([
+      bot.getAccount(),
+      bot.getRunningTrades().catch(() => []),
+      bot.getClosedTrades(20).catch(() => []),
     ]);
 
-    const user = userRaw as Record<string, unknown>;
-    const openPositions = (openRaw ?? []) as Record<string, unknown>[];
-    const closedTrades  = ((closedRaw ?? []) as Record<string, unknown>[]).slice(0, 20);
-
-    // ── Balance ──
-    const balanceSats    = Math.round(((user.balance as number) ?? 0) * 1e8);
-    const poolBalanceBtc = (user.balance as number) ?? 0;
+    // ── Balance (v3 returns sats natively) ──
+    const balanceSats    = (account.balance as number) ?? 0;
+    const poolBalanceBtc = balanceSats / 1e8;
 
     // ── Position ──
     const openPos = openPositions[0] as Record<string, unknown> | undefined;
@@ -75,9 +70,9 @@ export async function GET() {
     const takeProfit = (openPos?.takeprofit as number) ?? null;
     const stopLoss   = (openPos?.stoploss as number) ?? null;
 
-    // ── Unrealised P&L ──
+    // ── Unrealised P&L (v3 returns sats) ──
     const unrealisedPlSats = openPositions.reduce(
-      (sum: number, p: Record<string, unknown>) => sum + Math.round(((p.pl as number) ?? 0) * 1e8),
+      (sum: number, p: Record<string, unknown>) => sum + Math.round((p.pl as number) ?? 0),
       0,
     );
 
@@ -88,9 +83,9 @@ export async function GET() {
     const winRate    = tradeCount > 0 ? wins / tradeCount : 0;
     const totalPlSats = calcTotalPl(closedTrades);
 
-    // ── Last trade P&L ──
+    // ── Last trade P&L (v3 returns sats) ──
     const lastTrade     = closedTrades[0] as Record<string, unknown> | undefined;
-    const lastTradePlSats = lastTrade ? Math.round(((lastTrade.pl as number) ?? 0) * 1e8) : 0;
+    const lastTradePlSats = lastTrade ? Math.round((lastTrade.pl as number) ?? 0) : 0;
     const lastTradeDesc = lastTrade
       ? `${isLong(lastTrade.side) ? 'LONG' : 'SHORT'} ${lastTradePlSats >= 0 ? '+' : ''}${lastTradePlSats} sats`
       : 'No recent trades';
@@ -117,11 +112,11 @@ export async function GET() {
       openCount: openPositions.length,
       recentTrades: closedTrades.slice(0, 10).map((t) => ({
         side: isLong(t.side) ? 'LONG' : 'SHORT',
-        entryPrice: (t.price as number) ?? 0,
-        exitPrice: (t.exit_price as number) ?? 0,
-        plSats: Math.round(((t.pl as number) ?? 0) * 1e8),
+        entryPrice: (t.price as number) ?? (t.entryPrice as number) ?? 0,
+        exitPrice: (t.exit_price as number) ?? (t.exitPrice as number) ?? 0,
+        plSats: Math.round((t.pl as number) ?? 0),
         duration: (t.duration as string) ?? '\u2014',
-        closedAt: (t.closed_ts as number) ?? 0,
+        closedAt: (t.closedAt as string) ?? (t.closed_ts as number) ?? 0,
       })),
     };
 

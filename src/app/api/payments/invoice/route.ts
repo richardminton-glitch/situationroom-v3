@@ -43,11 +43,8 @@ export async function POST(request: NextRequest) {
       : buildDonationMemo();
 
     const lnm = getOpsClient();
-    const deposit = await lnm.userDeposit({
-      amount: sats,
-      unit:   'sat',
-      memo,
-    }) as { id: string; paymentRequest: string };
+    // v3 API: amount in sats, uses 'comment' instead of 'memo'
+    const deposit = await lnm.createDeposit(sats, memo);
 
     const invoiceExpiresAt = new Date(Date.now() + INVOICE_EXPIRY_MINUTES * 60 * 1000);
 
@@ -57,7 +54,7 @@ export async function POST(request: NextRequest) {
         tier:           isDonation ? 'donation' : tier,
         amountSats:     sats,
         memo,
-        lnmDepositId:   deposit.id,
+        lnmDepositId:   deposit.depositId,
         paymentRequest: deposit.paymentRequest,
         status:         'pending',
       },
@@ -65,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       paymentRequest: deposit.paymentRequest,
-      depositId:      deposit.id,
+      depositId:      deposit.depositId,
       paymentId:      payment.id,
       amountSats:     sats,
       expiresAt:      invoiceExpiresAt.toISOString(),

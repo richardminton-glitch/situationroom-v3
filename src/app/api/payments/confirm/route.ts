@@ -38,17 +38,13 @@ export async function POST(request: NextRequest) {
     const lnm = getOpsClient();
     const depositIds = pending.map((p) => p.lnmDepositId).filter(Boolean) as string[];
 
-    // Fetch recent deposit history from LNM
-    const history = await lnm.userDepositHistory({ limit: '100' }) as {
-      id: string;
-      status: string;
-      amount: number;
-      memo?: string;
-    }[];
+    // Fetch recent deposit history from LNM (v3 API)
+    const history = await lnm.getDepositHistory(100);
 
+    // v3: settled deposits have a non-null settledAt field
     const confirmedById = new Map(
       history
-        .filter((d) => d.status === 'confirmed')
+        .filter((d) => d.settledAt != null)
         .map((d) => [d.id, d]),
     );
 
@@ -72,8 +68,8 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Confirmed — route by memo
-      const parsed = parseMemo(deposit.memo ?? payment.memo);
+      // Confirmed — route by memo (v3 uses 'comment' field)
+      const parsed = parseMemo(deposit.comment ?? payment.memo);
 
       if (parsed.type === 'subscription' && parsed.tier && parsed.userId) {
         await activateTier(parsed.userId, parsed.tier, payment.id);

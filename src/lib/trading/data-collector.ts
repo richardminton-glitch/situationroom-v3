@@ -19,7 +19,7 @@ import {
   fetchWhaleTransactions,
   fetchBtcEquities,
 } from '@/lib/data/sources';
-import { getBotClient } from '@/lib/lnm/client';
+import { getBotClient, LnmV3Client } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import type { TradingSnapshot, PoolState } from './types';
 
@@ -52,13 +52,14 @@ function isLong(side: unknown): boolean {
 export async function fetchPoolState(): Promise<PoolState> {
   try {
     const bot = getBotClient();
-    const [user, trades] = await Promise.all([
-      (bot as any).userGet() as Promise<Record<string, unknown>>,
-      (bot as any).futuresGetTrades({ type: 'running' }).catch(() => []) as Promise<Record<string, unknown>[]>,
+    const [account, trades] = await Promise.all([
+      bot.getAccount(),
+      bot.getRunningTrades().catch(() => []),
     ]);
 
-    const balanceBtc = safe<number>(user.balance, 0);
-    const balanceSats = Math.round(balanceBtc * 1e8);
+    // v3 returns balance in sats natively
+    const balanceSats = safe<number>(account.balance, 0);
+    const balanceBtc = balanceSats / 1e8;
     const openPositions = Array.isArray(trades) ? trades : [];
     const pos = openPositions[0] as Record<string, unknown> | undefined;
 
@@ -97,8 +98,7 @@ export async function fetchPoolState(): Promise<PoolState> {
 
 async function fetchLnmTicker(): Promise<{ index: number; fundingRate: number | null }> {
   try {
-    const bot = getBotClient();
-    const ticker = await (bot as any).futuresGetTicker() as Record<string, unknown>;
+    const ticker = await LnmV3Client.getTicker();
     return {
       index: safe<number>(ticker.index, 0),
       fundingRate: ticker.fundingRate != null ? Number(ticker.fundingRate) : null,

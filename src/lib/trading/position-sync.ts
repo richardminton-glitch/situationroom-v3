@@ -30,12 +30,11 @@ export async function syncPositions(): Promise<{
       return { synced: 0, errors: [] };
     }
 
-    // 2. Fetch recent closed trades from LNM
+    // 2. Fetch recent closed trades from LNM (v3 API)
     const bot = getBotClient();
     let closedTrades: Record<string, unknown>[] = [];
     try {
-      const raw = await (bot as any).futuresGetTrades({ type: 'closed', limit: 20 });
-      closedTrades = Array.isArray(raw) ? raw : [];
+      closedTrades = await bot.getClosedTrades(20);
     } catch (err) {
       errors.push(`Failed to fetch closed trades: ${err}`);
       return { synced: 0, errors };
@@ -59,9 +58,9 @@ export async function syncPositions(): Promise<{
       }
 
       // Trade was closed externally!
-      const exitPrice = Number(closed.exit_price ?? closed.price ?? 0);
-      const pnlBtc = Number(closed.pl ?? 0);
-      const pnlSats = Math.round(pnlBtc * 1e8);
+      const exitPrice = Number(closed.exitPrice ?? closed.exit_price ?? closed.price ?? 0);
+      // v3 returns P&L in sats
+      const pnlSats = Math.round(Number(closed.pl ?? 0));
 
       // Determine close reason
       const closeReason = detectCloseReason(closed, local);

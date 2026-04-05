@@ -80,9 +80,9 @@ async function getAlertsForMember(since: Date): Promise<string[]> {
 async function getPoolStatus(): Promise<GeneralBriefingEmailProps['poolStatus'] | null> {
   try {
     const bot = getBotClient();
-    const user = await bot.getUser();
+    const account = await bot.getAccount();
     return {
-      balanceSats: Math.round((user.balance ?? 0) * 1e8), // convert BTC to sats if needed
+      balanceSats: account.balance ?? 0, // v3 returns sats natively
       position: 'FLAT', // TODO Phase 5: pull from open positions
       lastTradeDesc: 'No recent trades',
       winRatePct: 0,

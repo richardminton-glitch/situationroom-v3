@@ -1,33 +1,7 @@
+// @ln-markets/api SDK is no longer used.
+// LNM v3 API calls are handled by src/lib/lnm/client.ts (custom HMAC client).
+// This file is kept empty to prevent TS errors if the package is still installed.
+
 declare module '@ln-markets/api' {
-  export interface RestClient {
-    getUser(): Promise<{ balance?: number; [key: string]: unknown }>;
-    userGet(): Promise<unknown>;
-    userDeposit(data: { amount: number; unit: string; memo?: string }): Promise<{
-      id: string;
-      paymentRequest: string;
-      status: string;
-      amount: number;
-      memo?: string;
-    }>;
-    userDepositHistory(data?: { limit?: string; from?: string; to?: string }): Promise<{
-      id: string;
-      status: string;
-      amount: number;
-      memo?: string;
-      createdAt?: number;
-    }[]>;
-    userWithdraw(data: { amount: number; unit: string; invoice: string }): Promise<unknown>;
-    userWithdrawHistory(data?: Record<string, string>): Promise<unknown[]>;
-    [key: string]: (...args: unknown[]) => Promise<unknown>;
-  }
-
-  export function createRestClient(options?: {
-    key?: string;
-    secret?: string;
-    passphrase?: string;
-    network?: 'mainnet' | 'testnet';
-    headers?: Record<string, unknown>;
-  }): RestClient;
-
-  export function createWebsocketClient(options?: Record<string, unknown>): unknown;
+  export function createRestClient(options?: Record<string, unknown>): unknown;
 }

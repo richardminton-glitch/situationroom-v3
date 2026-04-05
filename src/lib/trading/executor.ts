@@ -68,16 +68,14 @@ async function executeOpen(
 
   console.log(`[executor] Opening ${t.side} — qty=$${quantityUsd} lev=${t.leverage}x margin=${marginSats}sats TP=$${t.take_profit} SL=$${t.stop_loss}`);
 
-  const params: Record<string, unknown> = {
+  const result = await bot.openTrade({
     side: t.side === 'long' ? 'buy' : 'sell',
     quantity: quantityUsd,
     leverage: t.leverage,
     type: 'market',
     takeprofit: t.take_profit,
     stoploss: t.stop_loss,
-  };
-
-  const result = await (bot as any).futuresNewTrade(params) as Record<string, unknown>;
+  });
   const lnmTradeId = String(result.id ?? '');
   const entryPrice = Number(result.price ?? btcPrice);
 
@@ -138,10 +136,9 @@ async function executeClose(
 
   console.log(`[executor] Closing trade ${pool.openTradeLnmId}`);
 
-  const result = await (bot as any).futuresCloseTrade(pool.openTradeLnmId) as Record<string, unknown>;
-  const exitPrice = Number(result.exit_price ?? result.price ?? 0);
-  const pnlBtc = Number(result.pl ?? 0);
-  const pnlSats = Math.round(pnlBtc * 1e8);
+  const result = await bot.closeTrade(pool.openTradeLnmId);
+  const exitPrice = Number(result.exitPrice ?? result.exit_price ?? result.price ?? 0);
+  const pnlSats = Math.round(Number(result.pl ?? 0));
 
   // Update local trade record
   const localTrade = await prisma.trade.findFirst({
@@ -203,13 +200,16 @@ async function executeAdjust(
   }
 
   const bot = getBotClient();
-  const updates: Record<string, unknown> = { id: pool.openTradeLnmId };
-  if (t.take_profit) updates.takeprofit = t.take_profit;
-  if (t.stop_loss) updates.stoploss = t.stop_loss;
 
-  console.log(`[executor] Adjusting trade ${pool.openTradeLnmId}:`, updates);
+  console.log(`[executor] Adjusting trade ${pool.openTradeLnmId}: TP=${t.take_profit} SL=${t.stop_loss}`);
 
-  const result = await (bot as any).futuresUpdateTrade(updates) as Record<string, unknown>;
+  // v3 has separate endpoints for TP and SL updates
+  const promises: Promise<Record<string, unknown>>[] = [];
+  if (t.take_profit) promises.push(bot.updateTakeProfit(pool.openTradeLnmId, t.take_profit));
+  if (t.stop_loss)   promises.push(bot.updateStopLoss(pool.openTradeLnmId, t.stop_loss));
+
+  const results = await Promise.all(promises);
+  const result = results[results.length - 1] ?? {};
 
   // Update local trade record
   const localTrade = await prisma.trade.findFirst({
