@@ -10,11 +10,11 @@ import { PanelPicker } from '@/components/layout/PanelPicker';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
 import { getPanelById } from '@/lib/panels/registry';
-import { LockedViewPrompt } from '@/components/auth/LockedViewPrompt';
 import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
 import { useSavedLayouts } from '@/hooks/useSavedLayouts';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import Link from 'next/link';
 import { useUnreadChat } from '@/hooks/useUnreadChat';
 import type { Theme, Tier } from '@/types';
 
@@ -256,35 +256,95 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Free-floating canvas — show LockedViewPrompt if preset is inaccessible */}
+        {/* Free-floating canvas — frosted preview for locked views */}
         <main ref={mainRef} className="flex-1 overflow-auto p-0">
           {(() => {
-            // Unauthenticated: only Full Overview allowed
-            if (!user && activePreset !== 'default') {
-              return (
-                <LockedViewPrompt
-                  view="Dashboard"
-                  requiredTier="general"
-                  description="Sign in to access additional dashboard views and the full briefing archive."
-                />
-              );
-            }
             const lockedView = LOCKED_VIEWS[activePreset];
-            if (lockedView && !hasAccess(userTier, lockedView.requiredTier)) {
-              return (
-                <LockedViewPrompt
-                  view={lockedView.name}
-                  requiredTier={lockedView.requiredTier}
-                  description={lockedView.description}
-                />
-              );
-            }
+            const isLocked = !user
+              ? activePreset !== 'default'
+              : !!lockedView && !hasAccess(userTier, lockedView.requiredTier);
+
             return (
-              <DashboardGrid
-                layout={layout}
-                onLayoutChange={handleLayoutChange}
-                editable={editMode}
-              />
+              <div style={{ position: 'relative', height: '100%' }}>
+                <div style={{
+                  filter: isLocked ? 'blur(6px)' : undefined,
+                  pointerEvents: isLocked ? 'none' : undefined,
+                  height: '100%',
+                  transition: 'filter 0.3s ease',
+                }}>
+                  <DashboardGrid
+                    layout={layout}
+                    onLayoutChange={handleLayoutChange}
+                    editable={editMode}
+                  />
+                </div>
+                {isLocked && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10,
+                  }}>
+                    <div style={{
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-primary)',
+                      padding: '32px 40px',
+                      textAlign: 'center',
+                      maxWidth: '360px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    }}>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)', fontSize: '10px',
+                        letterSpacing: '0.18em', color: 'var(--text-muted)',
+                        marginBottom: '8px',
+                      }}>
+                        {lockedView ? lockedView.name.toUpperCase() : 'DASHBOARD'}
+                      </div>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)', fontSize: '14px',
+                        color: 'var(--text-primary)', marginBottom: '12px',
+                        letterSpacing: '0.06em',
+                      }}>
+                        {!user
+                          ? 'Sign in required'
+                          : `${TIER_LABELS[lockedView!.requiredTier]} required`}
+                      </div>
+                      <div style={{
+                        maxWidth: '280px', fontSize: '12px',
+                        color: 'var(--text-secondary)', lineHeight: '1.7',
+                        marginBottom: '24px', fontFamily: 'var(--font-mono)',
+                      }}>
+                        {!user
+                          ? 'Sign in to access additional dashboard views and the full briefing archive.'
+                          : lockedView!.description}
+                      </div>
+                      <Link
+                        href={user ? '/support' : '/login'}
+                        style={{
+                          display: 'inline-block',
+                          padding: '10px 28px',
+                          background: 'var(--accent-primary)',
+                          color: 'var(--bg-primary)',
+                          textDecoration: 'none',
+                          fontFamily: 'var(--font-mono)', fontSize: '12px',
+                          letterSpacing: '0.12em', fontWeight: 'bold',
+                        }}
+                      >
+                        {!user
+                          ? 'SIGN IN →'
+                          : `UNLOCK ⚡ — ${TIER_PRICES[lockedView!.requiredTier].toLocaleString()} sats/mo`}
+                      </Link>
+                      {user && (
+                        <div style={{
+                          marginTop: '12px', fontSize: '11px',
+                          color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+                        }}>
+                          30-day subscription · Cancel anytime
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })()}
         </main>

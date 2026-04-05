@@ -154,14 +154,13 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
             {NAV_ITEMS.filter((item) => !item.requiresAuth || user).map((item) => {
               const active = pathname === item.href;
               const navLocked = item.requiredTier ? !canAccess(item.requiredTier) : false;
-              const navTooltipVisible = tooltip?.id === `__nav_${item.href}`;
 
               if (navLocked && item.requiredTier) {
                 return (
                   <div key={item.href}>
-                    <button
-                      onClick={() => showLockedTooltip(`__nav_${item.href}`, item.requiredTier!)}
-                      className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors w-full text-left"
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors"
                       style={{
                         backgroundColor: 'transparent',
                         color: 'var(--text-muted)',
@@ -179,31 +178,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                           </span>
                         </>
                       )}
-                    </button>
-                    {navTooltipVisible && !collapsed && item.requiredTier && (
-                      <div
-                        style={{
-                          background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
-                          padding: '8px 10px', margin: '2px 0 4px',
-                          fontSize: '10px', color: 'var(--text-secondary)', lineHeight: '1.5',
-                        }}
-                      >
-                        <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>
-                          {TIER_LABELS[item.requiredTier]} required
-                        </div>
-                        <button
-                          onClick={() => goToSupport()}
-                          style={{
-                            background: 'none', border: 'none', padding: 0,
-                            color: 'var(--accent-primary)', cursor: 'pointer',
-                            fontFamily: 'var(--font-mono)', fontSize: '10px',
-                            letterSpacing: '0.06em',
-                          }}
-                        >
-                          SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
-                        </button>
-                      </div>
-                    )}
+                    </Link>
                   </div>
                 );
               }
@@ -231,61 +206,27 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                         const lockedTier = PRESET_TIER[preset.id];
                         const isLocked = lockedTier !== null && lockedTier !== undefined && !canAccess(lockedTier);
                         const isActive = dashboardControls.activePreset === preset.id;
-                        const isShowingTooltip = tooltip?.id === preset.id;
 
                         return (
-                          <div key={preset.id}>
-                            <button
-                              onClick={() => {
-                                if (isLocked && lockedTier) {
-                                  showLockedTooltip(preset.id, lockedTier);
-                                } else {
-                                  dashboardControls.onSwitchPreset(preset.id);
-                                }
-                              }}
-                              className="flex items-center justify-between w-full text-left px-2 py-1 rounded text-xs transition-colors"
-                              style={{
-                                backgroundColor: isActive && !isLocked ? 'var(--bg-card)' : 'transparent',
-                                color: isLocked ? 'var(--text-muted)' : isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                                border: isActive && !isLocked ? '1px solid var(--border-subtle)' : '1px solid transparent',
-                                opacity: isLocked ? 0.6 : 1,
-                              }}
-                              title={preset.description}
-                            >
-                              <span>{preset.name}</span>
-                              {isLocked && lockedTier && (
-                                <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
-                                  {TIER_LABELS[lockedTier].toUpperCase()} ↑
-                                </span>
-                              )}
-                            </button>
-
-                            {/* Locked tooltip */}
-                            {isShowingTooltip && lockedTier && (
-                              <div
-                                style={{
-                                  background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
-                                  padding: '8px 10px', margin: '2px 0 4px',
-                                  fontSize: '10px', color: 'var(--text-secondary)', lineHeight: '1.5',
-                                }}
-                              >
-                                <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>
-                                  {TIER_LABELS[lockedTier]} required
-                                </div>
-                                <button
-                                  onClick={() => goToSupport()}
-                                  style={{
-                                    background: 'none', border: 'none', padding: 0,
-                                    color: 'var(--accent-primary)', cursor: 'pointer',
-                                    fontFamily: 'var(--font-mono)', fontSize: '10px',
-                                    letterSpacing: '0.06em',
-                                  }}
-                                >
-                                  SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
-                                </button>
-                              </div>
+                          <button
+                            key={preset.id}
+                            onClick={() => dashboardControls.onSwitchPreset(preset.id)}
+                            className="flex items-center justify-between w-full text-left px-2 py-1 rounded text-xs transition-colors"
+                            style={{
+                              backgroundColor: isActive ? 'var(--bg-card)' : 'transparent',
+                              color: isLocked ? 'var(--text-muted)' : isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                              border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                              opacity: isLocked ? 0.6 : 1,
+                            }}
+                            title={preset.description}
+                          >
+                            <span>{preset.name}</span>
+                            {isLocked && lockedTier && (
+                              <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
+                                {TIER_LABELS[lockedTier].toUpperCase()} ↑
+                              </span>
                             )}
-                          </div>
+                          </button>
                         );
                       })}
 
