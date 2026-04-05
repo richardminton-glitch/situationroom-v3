@@ -179,7 +179,7 @@ export function ChartPanel() {
         handleScale: { mouseWheel: true, pinch: true },
       });
 
-      const series = chart.addCandlestickSeries({
+      const series = chart.addSeries(lc.CandlestickSeries, {
         upColor: C.teal,
         downColor: C.coral,
         borderUpColor: C.teal,
