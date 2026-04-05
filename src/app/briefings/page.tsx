@@ -24,7 +24,31 @@ const THREAT_COLORS: Record<string, string> = {
 
 export default async function BriefingsArchivePage() {
   const user = await getCurrentUser();
-  const userTier = (user?.tier as Tier) ?? 'free';
+
+  // Unauthenticated users: redirect to sign in
+  if (!user) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-12" style={{ textAlign: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          SITUATION ROOM
+        </p>
+        <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '24px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '12px' }}>
+          Intelligence Briefings
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
+          Sign in to access the briefing archive.
+        </p>
+        <Link
+          href="/login"
+          style={{ display: 'inline-block', padding: '10px 24px', backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textDecoration: 'none' }}
+        >
+          SIGN IN →
+        </Link>
+      </div>
+    );
+  }
+
+  const userTier = (user.tier as Tier) ?? 'free';
   const canReadArchive = hasAccess(userTier, 'general');
   const isVip = hasAccess(userTier, 'vip');
 

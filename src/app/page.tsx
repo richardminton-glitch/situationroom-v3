@@ -262,6 +262,17 @@ export default function DashboardPage() {
         {/* Free-floating canvas — show LockedViewPrompt if preset is inaccessible */}
         <main ref={mainRef} className="flex-1 overflow-auto p-0">
           {(() => {
+            // Unauthenticated: only Full Overview allowed
+            if (!user && activePreset !== 'default') {
+              return (
+                <LockedViewPrompt
+                  view="Dashboard"
+                  requiredTier="general"
+                  description="Sign in to access additional dashboard views and the full briefing archive."
+                  onUpgradeClick={() => setShowUpgradeModal(true)}
+                />
+              );
+            }
             const lockedView = LOCKED_VIEWS[activePreset];
             if (lockedView && !hasAccess(userTier, lockedView.requiredTier)) {
               return (

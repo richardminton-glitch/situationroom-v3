@@ -52,9 +52,9 @@ const ICON_WEIGHT = 'regular' as const;
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: <SquaresFour size={ICON_SIZE} weight={ICON_WEIGHT} /> },
-  { label: 'Briefings', href: '/briefings', icon: <Newspaper size={ICON_SIZE} weight={ICON_WEIGHT} /> },
+  { label: 'Briefings', href: '/briefings', icon: <Newspaper size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
   { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
-  { label: 'Trading Pool', href: '/pool', icon: <ChartLineUp size={ICON_SIZE} weight={ICON_WEIGHT} />, requiredTier: 'members' },
+  { label: 'Trading Pool', href: '/pool', icon: <ChartLineUp size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [
@@ -228,8 +228,8 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     {!collapsed && <span>{item.label}</span>}
                   </Link>
 
-                  {/* Dashboard sub-items: presets + edit toggle */}
-                  {item.href === '/' && active && !collapsed && dashboardControls && (
+                  {/* Dashboard sub-items: presets + edit toggle (auth required) */}
+                  {item.href === '/' && active && !collapsed && dashboardControls && user && (
                     <div className="ml-7 mt-1 mb-2 space-y-1">
                       {dashboardControls.presets.map((preset) => {
                         const lockedTier = PRESET_TIER[preset.id];
