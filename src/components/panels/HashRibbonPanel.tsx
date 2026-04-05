@@ -105,6 +105,14 @@ export function HashRibbonPanel() {
   const isBullish = resp.signal === 'bullish';
   const ribbonColor = isBullish ? '#22c55e' : resp.signal === 'bearish' ? '#ef4444' : '#a8a29e';
 
+  // Dynamic Y-axis domain — 10% padding above and below the data range
+  const allValues = chartData.flatMap((p) => [p.hashrate, p.ma30, p.ma60].filter(Boolean));
+  const dataMin = Math.min(...allValues);
+  const dataMax = Math.max(...allValues);
+  const dataRange = dataMax - dataMin;
+  const yMin = Math.floor(dataMin - dataRange * 0.1);
+  const yMax = Math.ceil(dataMax + dataRange * 0.1);
+
   // Axis ticks: every ~3rd label
   const step = Math.max(1, Math.floor(chartData.length / 8));
   const xTicks = chartData.filter((_, i) => i % step === 0).map((p) => p.label);
@@ -146,6 +154,7 @@ export function HashRibbonPanel() {
               tickLine={false}
             />
             <YAxis
+              domain={[yMin, yMax]}
               tickFormatter={(v: number) => `${v.toFixed(1)}`}
               tick={{ fontSize: 8, fontFamily: 'var(--font-mono)', fill: cc.axisTick }}
               axisLine={false}
@@ -176,7 +185,7 @@ export function HashRibbonPanel() {
 
             {/* 60d MA */}
             <Line
-              type="monotone"
+              type="natural"
               dataKey="ma60"
               stroke="#f59e0b"
               strokeWidth={1.5}
@@ -186,7 +195,7 @@ export function HashRibbonPanel() {
             />
             {/* 30d MA */}
             <Line
-              type="monotone"
+              type="natural"
               dataKey="ma30"
               stroke={ribbonColor}
               strokeWidth={1.5}
