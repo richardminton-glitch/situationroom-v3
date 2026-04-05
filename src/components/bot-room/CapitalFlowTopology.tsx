@@ -266,8 +266,8 @@ export function CapitalFlowTopology() {
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      borderRight: `1px solid ${C.border}`, fontFamily: FONT, backgroundColor: C.bgPrimary,
+      display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0,
+      borderRight: 'none', fontFamily: FONT, backgroundColor: C.bgPrimary,
     }}>
       {/* Header */}
       <div style={{

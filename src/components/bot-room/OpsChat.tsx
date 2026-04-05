@@ -66,8 +66,8 @@ export function OpsChat() {
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      borderLeft: `1px solid ${C.border}`, fontFamily: FONT, backgroundColor: C.bgPrimary,
+      display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0,
+      borderTop: `1px solid ${C.border}`, fontFamily: FONT, backgroundColor: C.bgPrimary,
     }}>
       {/* Header */}
       <div style={{

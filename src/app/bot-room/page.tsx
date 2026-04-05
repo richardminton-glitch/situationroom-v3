@@ -79,12 +79,14 @@ export default function BotRoomPage() {
           <StatsBar />
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '260px 1fr 220px',
+            gridTemplateColumns: '1fr 1fr',
             minHeight: 0,
           }}>
-            <CapitalFlowTopology />
             <ChartPanel />
-            <OpsChat />
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: `1px solid ${C.border}` }}>
+              <CapitalFlowTopology />
+              <OpsChat />
+            </div>
           </div>
           <MarketHeatmap />
         </div>
