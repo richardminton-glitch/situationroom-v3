@@ -41,11 +41,6 @@ declare global {
   }
 }
 
-const FREQUENCY_OPTIONS = [
-  { value: 'daily', label: 'Daily', desc: 'Every morning at 06:00 UTC' },
-  { value: 'weekly', label: 'Weekly', desc: 'Every Sunday morning' },
-];
-
 const VIP_TOPICS = [
   { key: 'btc-network',        label: 'Bitcoin Network',             desc: 'Hashrate, mining, difficulty, Lightning' },
   { key: 'onchain',            label: 'On-Chain Analytics',          desc: 'MVRV, SOPR, exchange flows, UTXO cohorts' },
@@ -57,24 +52,14 @@ const VIP_TOPICS = [
   { key: 'emerging-markets',   label: 'Emerging Markets',           desc: 'EM adoption, capital controls, remittances' },
 ] as const;
 
-const DAY_OPTIONS = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-];
 
 export default function AccountPage() {
   const { user, refresh, logout } = useAuth();
   const router = useRouter();
 
   // Newsletter state
-  const [newsletterEnabled, setNewsletterEnabled] = useState(false);
-  const [frequency, setFrequency] = useState('weekly');
-  const [day, setDay] = useState(0);
+  const [newsletterEnabled, setNewsletterEnabled] = useState(true);
+  const [frequency, setFrequency] = useState('daily');
   const [nlLoading, setNlLoading] = useState(false);
   const [nlSaved, setNlSaved] = useState(false);
 
@@ -119,9 +104,8 @@ export default function AccountPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data) {
-          setNewsletterEnabled(data.newsletterEnabled ?? false);
-          setFrequency(data.newsletterFrequency ?? 'weekly');
-          setDay(data.newsletterDay ?? 0);
+          setNewsletterEnabled(data.newsletterEnabled ?? true);
+          setFrequency(data.newsletterFrequency ?? 'daily');
           setVipTopics(data.newsletterVipTopics ?? []);
         }
       })
@@ -181,7 +165,10 @@ export default function AccountPage() {
     }
   }
 
-  async function saveNewsletter() {
+  async function handleFrequencyChange(newFrequency: string) {
+    if (newFrequency === 'daily' && !canDaily) return;
+    setFrequency(newFrequency);
+    setNewsletterEnabled(true);
     setNlLoading(true);
     setNlSaved(false);
     setError('');
@@ -190,9 +177,8 @@ export default function AccountPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newsletterEnabled,
-          newsletterFrequency: frequency,
-          newsletterDay: day,
+          newsletterEnabled: true,
+          newsletterFrequency: newFrequency,
         }),
       });
       if (!res.ok) {
@@ -469,97 +455,63 @@ export default function AccountPage() {
         </div>
       )}
 
-      {/* ── Newsletter Frequency ── */}
+      {/* ── Newsletter ── */}
       <div style={sectionStyle}>
         <span style={labelStyle}>Newsletter</span>
+        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+          Intelligence briefings delivered to your inbox.
+        </p>
 
-        {/* Enable/disable */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {/* Daily */}
           <button
-            onClick={() => setNewsletterEnabled(!newsletterEnabled)}
+            onClick={() => handleFrequencyChange('daily')}
+            disabled={!canDaily || nlLoading}
             style={{
-              width: '36px', height: '20px', borderRadius: '10px',
-              backgroundColor: newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-primary)',
-              border: 'none', cursor: 'pointer', position: 'relative', transition: 'background-color 0.2s',
+              flex: 1, padding: '14px 16px', textAlign: 'left' as const,
+              backgroundColor: frequency === 'daily' && newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
+              border: `1px solid ${frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+              cursor: !canDaily ? 'not-allowed' : 'pointer',
+              opacity: !canDaily ? 0.5 : 1,
+              transition: 'all 0.15s',
             }}
           >
-            <div style={{
-              width: '16px', height: '16px', borderRadius: '50%',
-              backgroundColor: 'var(--bg-primary)',
-              position: 'absolute', top: '2px',
-              left: newsletterEnabled ? '18px' : '2px', transition: 'left 0.2s',
-            }} />
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {frequency === 'daily' && newsletterEnabled && <span style={{ fontSize: '8px' }}>●</span>}
+              DAILY
+              {!canDaily && <span style={{ fontSize: '9px', fontWeight: 'normal', color: 'var(--text-muted)' }}>GENERAL ↑</span>}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
+              Every morning · 06:00 UTC
+            </div>
           </button>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>
-            {newsletterEnabled ? 'Enabled' : 'Disabled'}
-          </span>
+
+          {/* Weekly */}
+          <button
+            onClick={() => handleFrequencyChange('weekly')}
+            disabled={nlLoading}
+            style={{
+              flex: 1, padding: '14px 16px', textAlign: 'left' as const,
+              backgroundColor: frequency === 'weekly' && newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
+              border: `1px solid ${frequency === 'weekly' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: frequency === 'weekly' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {frequency === 'weekly' && newsletterEnabled && <span style={{ fontSize: '8px' }}>●</span>}
+              WEEKLY
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
+              Every Sunday · 06:00 UTC
+            </div>
+          </button>
         </div>
 
-        {newsletterEnabled && (
-          <>
-            {/* Frequency */}
-            <div style={{ marginBottom: '12px' }}>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>Frequency</p>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {FREQUENCY_OPTIONS.map((opt) => {
-                  const disabled = opt.value === 'daily' && !canDaily;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => !disabled && setFrequency(opt.value)}
-                      disabled={disabled}
-                      style={{
-                        padding: '6px 14px',
-                        fontFamily: 'var(--font-mono)', fontSize: '11px',
-                        backgroundColor: frequency === opt.value ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                        color: frequency === opt.value ? 'var(--bg-primary)' : 'var(--text-secondary)',
-                        border: `1px solid ${frequency === opt.value ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        opacity: disabled ? 0.5 : 1,
-                      }}
-                    >
-                      {opt.label}
-                      {disabled && <span style={{ fontSize: '9px', marginLeft: '4px' }}>GENERAL ↑</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Day (weekly only) */}
-            {frequency === 'weekly' && (
-              <div style={{ marginBottom: '12px' }}>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>Delivery day</p>
-                <select
-                  value={day}
-                  onChange={(e) => setDay(Number(e.target.value))}
-                  style={{
-                    padding: '6px 12px',
-                    fontFamily: 'var(--font-mono)', fontSize: '11px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border-subtle)',
-                    outline: 'none',
-                  }}
-                >
-                  {DAY_OPTIONS.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <button onClick={saveNewsletter} disabled={nlLoading} style={{ ...btnStyle('primary'), opacity: nlLoading ? 0.5 : 1 }}>
-              {nlLoading ? 'SAVING...' : nlSaved ? '✓ SAVED' : 'SAVE PREFERENCES'}
-            </button>
-          </>
-        )}
-
-        {/* Save when toggling off too */}
-        {!newsletterEnabled && (
-          <button onClick={saveNewsletter} disabled={nlLoading} style={{ ...btnStyle('muted'), opacity: nlLoading ? 0.5 : 1 }}>
-            {nlLoading ? 'SAVING...' : nlSaved ? '✓ SAVED' : 'SAVE'}
-          </button>
+        {nlSaved && (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-success)', marginTop: '10px' }}>
+            ✓ Saved
+          </p>
         )}
       </div>
 

@@ -34,8 +34,8 @@ model User {
   subscriptionActivatedAt DateTime? @map("subscription_activated_at")
 
   // ── Newsletter ───────────────────────────────────────────────────────────────
-  newsletterEnabled   Boolean   @default(false) @map("newsletter_enabled")
-  newsletterFrequency String    @default("weekly") @map("newsletter_frequency")  // 'daily' | 'weekly'
+  newsletterEnabled   Boolean   @default(true)  @map("newsletter_enabled")
+  newsletterFrequency String    @default("daily") @map("newsletter_frequency")  // 'daily' | 'weekly'
   newsletterDay       Int       @default(0) @map("newsletter_day")  // 0=Sunday … 6=Saturday
   newsletterVipTopics String[]  @map("newsletter_vip_topics")
   newsletterLastSent  DateTime? @map("newsletter_last_sent")
