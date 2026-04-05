@@ -27,13 +27,13 @@ export function TopBar() {
           SITUATION ROOM
         </span>
         <span style={{
-          fontSize: '8px', color: C.teal, padding: '1px 6px',
+          fontSize: '9px', color: C.teal, padding: '1px 6px',
           border: '1px solid rgba(0,212,170,0.2)', background: C.bgOverlay,
           letterSpacing: '0.08em',
         }}>
           BOT ROOM
         </span>
-        <span style={{ fontSize: '8px', letterSpacing: '0.1em', color: C.textDim }}>
+        <span style={{ fontSize: '9px', letterSpacing: '0.1em', color: C.textDim }}>
           AUTONOMOUS TRADING — LIVE
         </span>
       </div>
@@ -43,7 +43,7 @@ export function TopBar() {
         <span className="br-blink" style={{
           width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block',
         }} />
-        <span style={{ fontSize: '9px', color: C.teal }}>Markets Open</span>
+        <span style={{ fontSize: '10px', color: C.teal }}>Markets Open</span>
       </div>
 
       {/* Right */}
@@ -60,7 +60,7 @@ export function TopBar() {
         <button
           onClick={logout}
           style={{
-            fontFamily: FONT, fontSize: '8px', letterSpacing: '0.08em',
+            fontFamily: FONT, fontSize: '9px', letterSpacing: '0.08em',
             color: C.textDim, background: 'none', cursor: 'pointer',
             border: `1px solid ${C.borderSoft}`, padding: '2px 8px',
           }}

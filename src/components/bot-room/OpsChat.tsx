@@ -76,9 +76,9 @@ export function OpsChat() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="br-blink" style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
-          <span style={{ fontSize: '7px', letterSpacing: '0.12em', color: C.textDim }}>OPS CHAT</span>
+          <span style={{ fontSize: '9px', letterSpacing: '0.14em', color: C.textDim }}>OPS CHAT</span>
         </div>
-        <span style={{ fontSize: '7px', color: C.textDim, display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: '9px', color: C.textDim, display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span className="br-blink" style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
           3 online
         </span>
@@ -91,12 +91,12 @@ export function OpsChat() {
       }}>
         {messages.map(msg => (
           <div key={msg.id}>
-            <div style={{ fontSize: '7px', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '9px', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: C.btcOrange }}>{msg.author}</span>
               <span style={{ color: C.textDim }}>{fmtTime(msg.timestamp)}</span>
             </div>
             <div style={{
-              fontSize: '8.5px', lineHeight: 1.5, padding: '5px 7px',
+              fontSize: '11px', lineHeight: 1.5, padding: '5px 7px',
               background: C.bgElevated, border: `1px solid ${C.border}`,
               borderLeft: '2px solid rgba(0,212,170,0.1)',
             }}>
@@ -113,7 +113,7 @@ export function OpsChat() {
           onChange={e => setInput(e.target.value)}
           placeholder="Message…"
           style={{
-            flex: 1, fontFamily: FONT, fontSize: '8.5px',
+            flex: 1, fontFamily: FONT, fontSize: '11px',
             background: C.bgElevated, border: `1px solid ${C.borderSoft}`,
             color: C.textMuted, padding: '4px 8px', outline: 'none',
           }}

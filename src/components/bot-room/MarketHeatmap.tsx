@@ -86,10 +86,10 @@ function Cell({ label, type, change }: { label: string; type: string; change: nu
         transition: 'border-color 0.15s',
       }}
     >
-      <div style={{ fontFamily: FONT, fontSize: '10px', fontWeight: 'bold', color: change != null ? fg : C.textDim, lineHeight: 1 }}>
+      <div style={{ fontFamily: FONT, fontSize: '11px', fontWeight: 'bold', color: change != null ? fg : C.textDim, lineHeight: 1 }}>
         {label}
       </div>
-      <div style={{ fontFamily: FONT, fontSize: '8px', color: change != null ? fg : C.textDim, marginTop: '1px' }}>
+      <div style={{ fontFamily: FONT, fontSize: '10px', color: change != null ? fg : C.textDim, marginTop: '1px' }}>
         {fmtPct(change)}
       </div>
     </div>
@@ -141,9 +141,9 @@ export function MarketHeatmap() {
               display: 'inline-block',
             }}
           />
-          <span style={{ fontSize: '7px', letterSpacing: '0.18em', color: C.textDim }}>MARKET HEATMAP</span>
+          <span style={{ fontSize: '9px', letterSpacing: '0.14em', color: C.textDim }}>MARKET HEATMAP</span>
         </div>
-        <span style={{ fontSize: '7px', color: C.textDim }}>Updated {ts}</span>
+        <span style={{ fontSize: '9px', color: C.textDim }}>Updated {ts}</span>
       </div>
 
       {/* Grid */}

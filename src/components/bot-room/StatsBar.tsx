@@ -32,7 +32,7 @@ export function StatsBar({ state = MOCK_BOT_STATE }: { state?: BotState }) {
           padding: '0 10px',
           borderRight: i < stats.length - 1 ? `1px solid ${C.border}` : 'none',
         }}>
-          <div style={{ fontSize: '7px', letterSpacing: '0.12em', color: C.textDim, textTransform: 'uppercase', marginBottom: '2px' }}>
+          <div style={{ fontSize: '9px', letterSpacing: '0.12em', color: C.textDim, textTransform: 'uppercase', marginBottom: '2px' }}>
             {s.label}
           </div>
           <div style={{ fontSize: '11px', letterSpacing: '0.04em', color: s.color || C.textPrimary }}>

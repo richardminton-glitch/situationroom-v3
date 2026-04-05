@@ -246,7 +246,7 @@ export function CapitalFlowTopology() {
           lx = p.x;
           ly = p.y + r + 12;
         }
-        ctx.font = `${node.ring === 'center' ? 8 : 7}px 'Courier New'`;
+        ctx.font = `${node.ring === 'center' ? 10 : 9}px 'Courier New'`;
         ctx.fillStyle = node.color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -275,7 +275,7 @@ export function CapitalFlowTopology() {
         padding: '0 10px', borderBottom: `1px solid ${C.border}`,
       }}>
         <span className="br-blink" style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
-        <span style={{ fontSize: '7px', letterSpacing: '0.12em', color: C.textDim }}>CAPITAL FLOW TOPOLOGY</span>
+        <span style={{ fontSize: '9px', letterSpacing: '0.14em', color: C.textDim }}>CAPITAL FLOW TOPOLOGY</span>
       </div>
 
       {/* Canvas */}
@@ -289,16 +289,16 @@ export function CapitalFlowTopology() {
         padding: '0 10px', borderTop: `1px solid ${C.border}`, justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '7px', color: C.textDim, letterSpacing: '0.08em' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', color: C.textDim, letterSpacing: '0.08em' }}>
             <span style={{ width: '12px', height: '1px', background: C.teal, display: 'inline-block' }} />
             Positive
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '7px', color: C.textDim, letterSpacing: '0.08em' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', color: C.textDim, letterSpacing: '0.08em' }}>
             <span style={{ width: '12px', height: '1px', background: C.coral, display: 'inline-block' }} />
             Inverse
           </span>
         </div>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '7px', color: C.textDim, letterSpacing: '0.08em' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', color: C.textDim, letterSpacing: '0.08em' }}>
           <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.btcOrange, display: 'inline-block' }} />
           BTC anchor
         </span>

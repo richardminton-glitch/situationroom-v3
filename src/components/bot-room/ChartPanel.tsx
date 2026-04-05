@@ -19,19 +19,19 @@ export function ChartPanel({ state = MOCK_BOT_STATE }: { state?: BotState }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{
-            fontSize: '8px', color: posColor, padding: '1px 6px',
+            fontSize: '9px', color: posColor, padding: '1px 6px',
             background: `${posColor}11`, border: `1px solid ${posColor}33`,
             letterSpacing: '0.06em',
           }}>
             ● {posLabel}
           </span>
-          <span style={{ fontSize: '8px', color: C.textPrimary, letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '10px', color: C.textPrimary, letterSpacing: '0.04em' }}>
             BTCUSD · 5M
           </span>
         </div>
         {state.entryPrice && (
           <span style={{
-            fontSize: '9px', color: C.textPrimary, padding: '2px 7px',
+            fontSize: '10px', color: C.textPrimary, padding: '2px 7px',
             background: C.bgElevated, border: `1px solid ${C.borderSoft}`,
           }}>
             Entry ${state.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}

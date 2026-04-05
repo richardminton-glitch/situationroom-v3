@@ -12,9 +12,9 @@ export const C = {
   coral:       '#ff6b4a',
   btcOrange:   '#f7931a',
   gold:        '#ffd700',
-  textPrimary: '#b8ccd4',
-  textMuted:   '#6a8a9a',
-  textDim:     '#2a4050',
+  textPrimary: '#e8edf2',
+  textMuted:   '#8494a7',
+  textDim:     '#5e7080',
   border:      '#0d1e28',
   borderSoft:  '#1a2e3a',
 };
