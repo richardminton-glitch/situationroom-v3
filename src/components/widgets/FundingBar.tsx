@@ -108,32 +108,19 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
         ))}
       </div>
 
-      {/* CTAs */}
+      {/* CTA */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         {onSubscribeClick && (
-          <>
-            <button
-              onClick={onDonateClick ?? onSubscribeClick}
-              style={{
-                padding: '10px 20px', background: 'var(--accent-primary)',
-                color: 'var(--bg-primary)', border: 'none', cursor: 'pointer',
-                fontFamily: 'var(--font-mono)', fontSize: '12px', letterSpacing: '0.1em',
-              }}
-            >
-              SUPPORT WITH SATS ⚡
-            </button>
-            <button
-              onClick={onSubscribeClick}
-              style={{
-                padding: '10px 20px', background: 'transparent',
-                color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)',
-                cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
-                letterSpacing: '0.1em',
-              }}
-            >
-              BECOME A MEMBER →
-            </button>
-          </>
+          <button
+            onClick={onDonateClick ?? onSubscribeClick}
+            style={{
+              padding: '10px 20px', background: 'var(--accent-primary)',
+              color: 'var(--bg-primary)', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-mono)', fontSize: '12px', letterSpacing: '0.1em',
+            }}
+          >
+            SUPPORT WITH SATS ⚡
+          </button>
         )}
       </div>
     </div>

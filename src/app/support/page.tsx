@@ -18,7 +18,7 @@ export default function SupportPage() {
           SITUATION ROOM
         </span>
       </div>
-      <h1 style={{ fontSize: '18px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '0.08em' }}>
+      <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '22px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '0.08em' }}>
         SUPPORT THE PROJECT
       </h1>
       <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '32px', maxWidth: '480px' }}>
@@ -35,7 +35,7 @@ export default function SupportPage() {
 
       <div style={{ marginTop: '40px', borderTop: '1px solid var(--border-subtle)', paddingTop: '24px' }}>
         <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          WHAT YOU GET
+          SUBSCRIPTION TIERS
         </div>
         {[
           { tier: 'Free', price: 'Free', color: '#8b7355', features: [
