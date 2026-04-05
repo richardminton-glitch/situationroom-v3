@@ -45,6 +45,9 @@ model User {
   portfolioCostBasis   Float? @map("portfolio_cost_basis")
   portfolioHoldingsBtc Float? @map("portfolio_holdings_btc")
 
+  // ── Bot Room / TradingView ──────────────────────────────────────────────────
+  tvChartState Json? @map("tv_chart_state")  // TradingView saved chart state (indicators, drawings, interval, etc.)
+
   sessions    Session[]
   pinCodes    PinCode[]
   layouts     UserLayout[]

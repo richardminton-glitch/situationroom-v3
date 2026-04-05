@@ -38,6 +38,8 @@ export async function GET() {
 
       portfolioCostBasis:   user.portfolioCostBasis,
       portfolioHoldingsBtc: user.portfolioHoldingsBtc,
+
+      tvChartState: user.tvChartState as Record<string, unknown> | null,
     };
 
     return NextResponse.json({ user: profile });

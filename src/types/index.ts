@@ -38,6 +38,9 @@ export interface UserProfile {
   // Portfolio (VIP)
   portfolioCostBasis: number | null;
   portfolioHoldingsBtc: number | null;
+
+  // Bot Room / TradingView
+  tvChartState: Record<string, unknown> | null;
 }
 
 export interface ConvictionSignal {

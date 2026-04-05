@@ -15,6 +15,7 @@ export async function GET() {
       currencyPref: user.currencyPref,
       themePref: user.themePref,
       isPublic: user.isPublic,
+      tvChartState: user.tvChartState,
     });
   } catch (error) {
     console.error('Get preferences error:', error);
@@ -22,7 +23,7 @@ export async function GET() {
   }
 }
 
-const ALLOWED_FIELDS = ['displayName', 'timezone', 'currencyPref', 'themePref', 'isPublic'] as const;
+const ALLOWED_FIELDS = ['displayName', 'timezone', 'currencyPref', 'themePref', 'isPublic', 'tvChartState'] as const;
 type AllowedField = typeof ALLOWED_FIELDS[number];
 
 export async function PATCH(request: NextRequest) {
@@ -56,6 +57,7 @@ export async function PATCH(request: NextRequest) {
       currencyPref: updated.currencyPref,
       themePref: updated.themePref,
       isPublic: updated.isPublic,
+      tvChartState: updated.tvChartState,
     });
   } catch (error) {
     console.error('Update preferences error:', error);
