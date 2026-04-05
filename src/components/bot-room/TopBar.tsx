@@ -50,7 +50,14 @@ function getMarketStatus(): { label: string; open: boolean } {
   return { label: 'TradFi Closed', open: false };
 }
 
-export function TopBar({ onFundPool }: { onFundPool?: () => void } = {}) {
+interface TopBarProps {
+  onFundPool?: () => void;
+  opsRoomOpen?: boolean;
+  onToggleOpsRoom?: () => void;
+  chatUnread?: number;
+}
+
+export function TopBar({ onFundPool, opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }: TopBarProps) {
   const { user } = useAuth();
   const [utcTime, setUtcTime] = useState('');
   const [marketStatus, setMarketStatus] = useState(() => getMarketStatus());
@@ -115,6 +122,35 @@ export function TopBar({ onFundPool }: { onFundPool?: () => void } = {}) {
             }}
           >
             FUND THE POOL
+          </button>
+        )}
+        {onToggleOpsRoom && (
+          <button
+            onClick={onToggleOpsRoom}
+            style={{
+              padding: '2px 10px', fontSize: 9, letterSpacing: '0.1em',
+              fontFamily: FONT, fontWeight: 600,
+              background: opsRoomOpen ? C.teal : 'transparent',
+              border: `1px solid ${C.teal}`,
+              color: opsRoomOpen ? C.bgPrimary : C.textDim,
+              cursor: 'pointer', lineHeight: '16px',
+              position: 'relative',
+              animation: chatUnread > 0 && !opsRoomOpen ? 'br-blink-kf 2s ease-in-out infinite' : 'none',
+            }}
+          >
+            OPS {opsRoomOpen ? '▸' : '◆'}
+            {chatUnread > 0 && !opsRoomOpen && (
+              <span style={{
+                position: 'absolute', top: '-5px', right: '-5px',
+                backgroundColor: '#b84040', color: '#fff',
+                fontSize: '8px', fontWeight: 700, lineHeight: 1,
+                minWidth: '14px', height: '14px', borderRadius: '7px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 3px',
+              }}>
+                {chatUnread > 9 ? '9+' : chatUnread}
+              </span>
+            )}
           </button>
         )}
         <span style={{ fontSize: '10px', color: C.textDim, letterSpacing: '0.08em' }}>{utcTime}</span>

@@ -12,12 +12,16 @@ import { ChartPanel } from '@/components/bot-room/ChartPanel';
 import { OpsChat } from '@/components/bot-room/OpsChat';
 import { MarketHeatmap } from '@/components/bot-room/MarketHeatmap';
 import { PoolDonateModal } from '@/components/pool/PoolDonateModal';
+import { OpsRoom } from '@/components/chat/OpsRoom';
+import { useUnreadChat } from '@/hooks/useUnreadChat';
 import { C, FONT } from '@/components/bot-room/constants';
 
 export default function BotRoomPage() {
   const { user, loading } = useAuth();
   const { canAccess } = useTier();
   const [showDonate, setShowDonate] = useState(false);
+  const [opsRoomOpen, setOpsRoomOpen] = useState(false);
+  const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
 
   if (loading) {
     return (
@@ -77,10 +81,17 @@ export default function BotRoomPage() {
           display: 'grid',
           gridTemplateRows: '32px 38px 1fr 112px',
           height: '100%',
+          marginRight: opsRoomOpen ? '320px' : '0',
+          transition: 'margin-right 0.2s ease',
           filter: hasAccess ? undefined : 'blur(6px)',
           pointerEvents: hasAccess ? undefined : 'none',
         }}>
-          <TopBar onFundPool={hasAccess ? () => setShowDonate(true) : undefined} />
+          <TopBar
+            onFundPool={hasAccess ? () => setShowDonate(true) : undefined}
+            opsRoomOpen={opsRoomOpen}
+            onToggleOpsRoom={() => setOpsRoomOpen((o) => !o)}
+            chatUnread={chatUnread}
+          />
           <StatsBar />
           <div style={{
             display: 'grid',
@@ -133,6 +144,9 @@ export default function BotRoomPage() {
             </div>
           </div>
         )}
+
+        {/* OPS Room slide-in panel */}
+        <OpsRoom open={opsRoomOpen} onClose={() => setOpsRoomOpen(false)} />
       </div>
     </>
   );

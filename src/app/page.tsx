@@ -30,18 +30,28 @@ export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { userTier, canAccess } = useTier();
   const { error: dataError } = useData();
-  // Restore last active preset from localStorage (or default)
-  const [activePreset, setActivePreset] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'default';
-    return localStorage.getItem('sr-active-preset') || 'default';
-  });
+  // Always start on Full Overview; restore saved preset only for logged-in users
+  const [activePreset, setActivePreset] = useState<string>('default');
   const [layout, setLayout] = useState<LayoutPanelItem[]>(() => {
-    const presetId = typeof window !== 'undefined'
-      ? localStorage.getItem('sr-active-preset') || 'default'
-      : 'default';
-    const preset = getPresetByIdForTheme(presetId, theme) ?? getDefaultForTheme(theme);
-    return preset.panels;
+    return getDefaultForTheme(theme).panels;
   });
+  const restoredRef = useRef(false);
+
+  // Once auth is resolved, restore the user's last preset from localStorage
+  useEffect(() => {
+    if (loading || restoredRef.current) return;
+    restoredRef.current = true;
+    if (!user) return; // non-logged-in → stay on Full Overview
+    const saved = localStorage.getItem('sr-active-preset');
+    if (saved && saved !== 'default') {
+      const preset = getPresetByIdForTheme(saved, theme);
+      if (preset) {
+        setActivePreset(saved);
+        setLayout(preset.panels);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
@@ -53,10 +63,12 @@ export default function DashboardPage() {
   const { layouts: savedLayouts, saveLayout, deleteLayout } = useSavedLayouts(isVip);
   const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
 
-  // Persist active preset to localStorage
+  // Persist active preset to localStorage (only for logged-in users)
   useEffect(() => {
-    localStorage.setItem('sr-active-preset', activePreset);
-  }, [activePreset]);
+    if (user) {
+      localStorage.setItem('sr-active-preset', activePreset);
+    }
+  }, [activePreset, user]);
 
   useEffect(() => {
     if (user?.themePref && user.themePref !== theme) {
