@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTier } from '@/hooks/useTier';
 import { UpgradePrompt } from '@/components/auth/UpgradePrompt';
+import { PoolDonateModal } from '@/components/pool/PoolDonateModal';
 import Link from 'next/link';
 
 interface PoolStatus {
@@ -63,6 +64,7 @@ export default function PoolPage() {
   const [pool, setPool] = useState<PoolStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDonate, setShowDonate] = useState(false);
 
   useEffect(() => {
     if (!canAccess('members')) { setLoading(false); return; }
@@ -91,12 +93,36 @@ export default function PoolPage() {
       {/* Masthead */}
       <header className="mb-8">
         <div style={{ borderTop: '3px double var(--border-primary)', paddingTop: '8px', marginBottom: '4px' }} />
-        <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '26px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '2px' }}>Trading Pool</h1>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-          AI-managed BTC futures · LNMarkets · Members only
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '26px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '2px' }}>Trading Pool</h1>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
+              AI-managed BTC futures · LNMarkets · Members only
+            </p>
+          </div>
+          <button
+            onClick={() => setShowDonate(true)}
+            style={{
+              padding: '8px 16px',
+              background: 'transparent',
+              border: '1px solid var(--accent-primary)',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.1em',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              marginTop: '4px',
+            }}
+          >
+            FUND THE POOL
+          </button>
+        </div>
         <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: '10px' }} />
       </header>
+
+      {showDonate && <PoolDonateModal onClose={() => setShowDonate(false)} />}
 
       {loading && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>Loading pool data…</p>}
       {error && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent-danger)' }}>Error: {error}</p>}

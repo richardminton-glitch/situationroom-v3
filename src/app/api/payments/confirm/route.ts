@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getOpsClient } from '@/lib/lnm/client';
+import { getOpsClient, getBotClient } from '@/lib/lnm/client';
 import { parseMemo, activateTier, recordDonation, processExpiredSubscriptions } from '@/lib/lnm/payments';
 
 export const dynamic = 'force-dynamic';
@@ -36,17 +36,20 @@ export async function POST(request: NextRequest) {
     }
 
     const lnm = getOpsClient();
-    const depositIds = pending.map((p) => p.lnmDepositId).filter(Boolean) as string[];
 
-    // Fetch recent deposit history from LNM (v3 API)
-    const history = await lnm.getDepositHistory(100);
+    // Pool donations use the bot client; subscriptions use ops client
+    const poolPending = pending.filter((p) => p.tier === 'pool_donation');
+    const opsPending  = pending.filter((p) => p.tier !== 'pool_donation');
+
+    // Fetch deposit history from both clients as needed
+    const opsHistory  = opsPending.length > 0 ? await lnm.getDepositHistory(100) : [];
+    const botHistory  = poolPending.length > 0 ? await getBotClient().getDepositHistory(100) : [];
 
     // v3: settled deposits have a non-null settledAt field
-    const confirmedById = new Map(
-      history
-        .filter((d) => d.settledAt != null)
-        .map((d) => [d.id, d]),
-    );
+    const confirmedById = new Map([
+      ...opsHistory.filter((d) => d.settledAt != null).map((d) => [d.id, d] as const),
+      ...botHistory.filter((d) => d.settledAt != null).map((d) => [d.id, d] as const),
+    ]);
 
     let confirmed = 0;
     let expired   = 0;
@@ -65,6 +68,16 @@ export async function POST(request: NextRequest) {
           });
           expired++;
         }
+        continue;
+      }
+
+      // Pool donations — just mark confirmed (funds go directly to trading pool)
+      if (payment.tier === 'pool_donation') {
+        await prisma.subscriptionPayment.update({
+          where: { id: payment.id },
+          data:  { status: 'confirmed', activatedAt: new Date() },
+        });
+        confirmed++;
         continue;
       }
 
