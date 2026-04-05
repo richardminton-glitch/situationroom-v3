@@ -110,9 +110,9 @@ const MACRO_FOCUS_PRESET: DashboardLayout = {
     { panelId: 'btc-hero',       x: 264, y:   0, w: 260, h: 132, collapsed: false, resizable: false },
     { panelId: 'fear-greed',     x: 528, y:   0, w: 260, h: 132, collapsed: false, resizable: false },
     { panelId: 'cb-asset-chart', x: 264, y: 132, w: 528, h: 660, collapsed: false, resizable: true  },
-    { panelId: 'inflation-chart',x: 792, y:   0, w: 660, h: 420, collapsed: false, resizable: true  },
-    { panelId: 'cb-rates-chart', x: 792, y: 420, w: 660, h: 420, collapsed: false, resizable: true  },
-    { panelId: 'm2-chart',       x: 792, y: 840, w: 660, h: 420, collapsed: false, resizable: true  },
+    { panelId: 'inflation-chart',x: 792, y:   0, w: 660, h: 352, collapsed: false, resizable: true  },
+    { panelId: 'm2-chart',       x: 792, y: 352, w: 660, h: 440, collapsed: false, resizable: true  },
+    { panelId: 'cb-rates-chart', x: 792, y: 792, w: 660, h: 420, collapsed: false, resizable: true  },
   ],
 };
 
