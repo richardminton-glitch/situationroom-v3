@@ -113,6 +113,144 @@ const smallValueStyle: React.CSSProperties = {
   color: 'var(--text-secondary)',
 };
 
+// ── API Usage Estimates ──────────────────────────────────────────────────────
+// Calculated from cache TTLs, polling intervals, and cron schedules.
+// Assumes continuous uptime with active traffic refreshing caches.
+
+interface ApiUsageRow {
+  service: string;
+  endpoints: string;
+  refresh: string;
+  est7d: number;
+  est30d: number;
+  monthlyLimit: number | null;
+  envVar: string | null;
+}
+
+const API_USAGE_DATA: ApiUsageRow[] = [
+  {
+    service: 'API-Ninjas',
+    endpoints: '31 (indices, commodities, FX, equities, yields, rates)',
+    refresh: '30m–6h (market-aware)',
+    // ~32 calls/cycle. ~24 cycles/day (market hrs) + ~6 cycles/day (off hrs) = ~16 avg/day
+    // ~16 cycles × 32 = 512/day avg
+    est7d: 3_580,
+    est30d: 15_360,
+    monthlyLimit: 100_000,
+    envVar: 'API_NINJAS_KEY',
+  },
+  {
+    service: 'CoinGecko',
+    endpoints: '1 (BTC market)',
+    refresh: '60s cache',
+    // 1 call per 60s = 1440/day
+    est7d: 10_080,
+    est30d: 43_200,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'Mempool.space',
+    endpoints: '9 (fees, hashrate, mempool, blocks, lightning)',
+    refresh: '30–120s cache',
+    // ~9 endpoints avg 60s = 9 × 1440 = 12,960/day
+    est7d: 90_720,
+    est30d: 388_800,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'CoinMetrics',
+    endpoints: '2 (MVRV, exchange flows)',
+    refresh: '15min cache',
+    // 2 × 96/day = 192/day
+    est7d: 1_344,
+    est30d: 5_760,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'BRK / Bitview',
+    endpoints: '8 routes (CDD, hash ribbon, LTH/STH, URPD, Puell, UTXO, signals)',
+    refresh: '1h cache + daily cron',
+    // 8 routes × 24/day = 192/day (each route may bulk-fetch multiple series)
+    est7d: 1_344,
+    est30d: 5_760,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'FRED',
+    endpoints: '11 series (CB assets, rates, M2)',
+    refresh: '7d cache, weekly cron',
+    // ~11 calls/week for CB data, ~4 calls/week for M2
+    est7d: 15,
+    est30d: 60,
+    monthlyLimit: null,
+    envVar: 'FRED_API_KEY',
+  },
+  {
+    service: 'RSS Feeds',
+    endpoints: '17 feeds (Reuters, BBC, BTC Mag, CoinDesk, etc.)',
+    refresh: '5min cache',
+    // 17 feeds × 288/day = 4,896/day
+    est7d: 34_272,
+    est30d: 146_880,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'Alternative.me',
+    endpoints: '1 (Fear & Greed)',
+    refresh: '5min cache',
+    // 288/day
+    est7d: 2_016,
+    est30d: 8_640,
+    monthlyLimit: null,
+    envVar: null,
+  },
+  {
+    service: 'Grok (xAI)',
+    endpoints: '3 (briefing, classification, analysis)',
+    refresh: 'Daily cron + on-demand',
+    // Daily briefing: 1/day, VIP: 1/day, classifications: ~50/day, analysis: ~5/day
+    est7d: 400,
+    est30d: 1_710,
+    monthlyLimit: null,
+    envVar: 'GROK_API_KEY',
+  },
+  {
+    service: 'Resend',
+    endpoints: '1 (email delivery)',
+    refresh: 'Daily + weekly cron',
+    // Depends on subscriber count. Estimate ~20 emails/day
+    est7d: 140,
+    est30d: 600,
+    monthlyLimit: null,
+    envVar: 'RESEND_API_KEY',
+  },
+  {
+    service: 'LNMarkets',
+    endpoints: '2 (invoices, pool status)',
+    refresh: 'On-demand + 60s poll',
+    // Pool status: 1440/day, invoices: ~5/day
+    est7d: 10_115,
+    est30d: 43_350,
+    monthlyLimit: null,
+    envVar: 'LNM_OPS_KEY',
+  },
+  {
+    service: 'Open-Notify',
+    endpoints: '1 (ISS position)',
+    refresh: '5s cache',
+    // 17,280/day
+    est7d: 120_960,
+    est30d: 518_400,
+    monthlyLimit: null,
+    envVar: null,
+  },
+];
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -289,6 +427,107 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── API Usage Estimates ── */}
+      <div style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
+        padding: '16px', marginBottom: 32,
+      }}>
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontFamily: FONT, fontSize: '16px', color: 'var(--text-primary)', fontWeight: 400 }}>
+            API Call Estimates
+          </h2>
+          <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 2 }}>
+            PROJECTED USAGE BASED ON CACHE TTL AND POLLING INTERVALS
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: MONO, fontSize: '11px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                {['Service', 'Endpoints', 'Refresh Rate', 'Est. 7d', 'Est. 30d', 'Limit', 'Key'].map((h) => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '8px 6px', fontWeight: 600,
+                    fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                  }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {API_USAGE_DATA.map((api) => {
+                const pct30 = api.monthlyLimit ? (api.est30d / api.monthlyLimit) * 100 : null;
+                const barColor = pct30 === null ? 'transparent' : pct30 > 80 ? '#e03030' : pct30 > 50 ? '#f0a500' : '#00c9a7';
+                return (
+                  <tr key={api.service} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '8px 6px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                      {api.service}
+                    </td>
+                    <td style={{ padding: '8px 6px', color: 'var(--text-secondary)', fontSize: '10px' }}>
+                      {api.endpoints}
+                    </td>
+                    <td style={{ padding: '8px 6px', color: 'var(--text-secondary)', fontSize: '10px' }}>
+                      {api.refresh}
+                    </td>
+                    <td style={{ padding: '8px 6px', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                      {api.est7d.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '8px 6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {api.est30d.toLocaleString()}
+                        </span>
+                        {pct30 !== null && (
+                          <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, pct30)}%`, height: '100%', background: barColor, borderRadius: 2 }} />
+                          </div>
+                        )}
+                        {pct30 !== null && (
+                          <span style={{ fontSize: '9px', color: barColor }}>{pct30.toFixed(0)}%</span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px 6px', color: 'var(--text-muted)', fontSize: '10px' }}>
+                      {api.monthlyLimit ? `${(api.monthlyLimit / 1000).toFixed(0)}K/mo` : 'Free'}
+                    </td>
+                    <td style={{ padding: '8px 6px', fontSize: '10px' }}>
+                      {api.envVar ? (
+                        <span style={{ color: '#00c9a7', fontSize: '9px' }}>{api.envVar}</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>--</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '1px solid var(--border-primary)' }}>
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: 'var(--text-primary)' }}>TOTAL</td>
+                <td />
+                <td />
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                  {API_USAGE_DATA.reduce((s, a) => s + a.est7d, 0).toLocaleString()}
+                </td>
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                  {API_USAGE_DATA.reduce((s, a) => s + a.est30d, 0).toLocaleString()}
+                </td>
+                <td />
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
+          Estimates assume continuous uptime with at least one active user refreshing caches.
+          API-Ninjas calls reduce outside US market hours (2-hour TTL) and on weekends (6-hour TTL).
+          BRK and RSS scale with active users but are bounded by server-side caching.
+        </p>
+      </div>
 
       {/* ── User Management ── */}
       <div style={{
