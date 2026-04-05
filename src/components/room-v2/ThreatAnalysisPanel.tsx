@@ -2,8 +2,10 @@
 
 /**
  * Rolling threat level shift analysis panel.
- * Triggers a Grok API call whenever the threat state changes,
- * and displays results in a scrolling log.
+ *
+ * On mount: fetches the last 3 cached analyses from the server so the
+ * user immediately sees recent threat history. Then continues to react
+ * to live state changes, generating new AI analyses as they occur.
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -42,6 +44,7 @@ export default function ThreatAnalysisPanel({
   const [hovered, setHovered] = useState(false);
   const [entries, setEntries] = useState<AnalysisEntry[]>([]);
   const mountedRef = useRef(false);
+  const cacheLoadedRef = useRef(false);
 
   // Auto-scroll when not hovered
   useEffect(() => {
@@ -50,23 +53,68 @@ export default function ThreatAnalysisPanel({
     }
   }, [entries, hovered]);
 
-  // Initial entry on mount
+  // Load cached analyses on mount, then add INIT entry
   useEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
 
-    setEntries([
-      {
-        id: `init-${Date.now()}`,
-        timestamp: Date.now(),
-        fromState: threatState,
-        toState: threatState,
-        score: threatScore,
-        analysis: `SYSTEM ONLINE -- Threat analysis engine initialised. Current posture: ${threatState} (${threatScore}/100).`,
-        loading: false,
-      },
-    ]);
-  }, [threatState, threatScore]);
+    async function loadCached() {
+      try {
+        const res = await fetch('/api/ai/threat-analysis');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.analyses && data.analyses.length > 0) {
+            // Convert cached analyses to display entries
+            const cachedEntries: AnalysisEntry[] = data.analyses.map(
+              (a: { fromState: string; toState: string; score: number; analysis: string; timestamp: number }) => ({
+                id: `cached-${a.timestamp}`,
+                timestamp: a.timestamp,
+                fromState: a.fromState as ThreatState,
+                toState: a.toState as ThreatState,
+                score: a.score,
+                analysis: a.analysis,
+                loading: false,
+              }),
+            );
+
+            // Add INIT entry showing current live state
+            const initEntry: AnalysisEntry = {
+              id: `init-${Date.now()}`,
+              timestamp: Date.now(),
+              fromState: threatState,
+              toState: threatState,
+              score: threatScore,
+              analysis: `SYSTEM ONLINE -- Threat analysis engine initialised. Current posture: ${threatState} (${threatScore}/100). Cached state: ${data.state} (${data.score}/100).`,
+              loading: false,
+            };
+
+            setEntries([...cachedEntries, initEntry]);
+            cacheLoadedRef.current = true;
+            return;
+          }
+        }
+      } catch {
+        // Fall through to default INIT
+      }
+
+      // No cached data — show default INIT
+      setEntries([
+        {
+          id: `init-${Date.now()}`,
+          timestamp: Date.now(),
+          fromState: threatState,
+          toState: threatState,
+          score: threatScore,
+          analysis: `SYSTEM ONLINE -- Threat analysis engine initialised. Current posture: ${threatState} (${threatScore}/100).`,
+          loading: false,
+        },
+      ]);
+      cacheLoadedRef.current = true;
+    }
+
+    loadCached();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch analysis from API
   const fetchAnalysis = useCallback(
@@ -111,7 +159,7 @@ export default function ThreatAnalysisPanel({
 
   // React to state changes
   useEffect(() => {
-    if (!stateChanged || !mountedRef.current) return;
+    if (!stateChanged || !cacheLoadedRef.current) return;
 
     const entryId = `analysis-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newEntry: AnalysisEntry = {
@@ -188,6 +236,7 @@ export default function ThreatAnalysisPanel({
       >
         {entries.map((entry) => {
           const isInit = entry.id.startsWith('init-');
+          const isCached = entry.id.startsWith('cached-');
 
           return (
             <div
@@ -196,7 +245,8 @@ export default function ThreatAnalysisPanel({
                 padding: '4px 10px',
                 lineHeight: '16px',
                 borderLeft: '2px solid transparent',
-                animation: 'threatLogFadeIn 0.3s ease-out',
+                animation: isCached ? 'none' : 'threatLogFadeIn 0.3s ease-out',
+                opacity: isCached ? 0.85 : 1,
               }}
             >
               {/* Top line: timestamp + state transition + score */}
@@ -234,6 +284,13 @@ export default function ThreatAnalysisPanel({
                 <span style={{ color: '#4a5a6d', fontSize: 9 }}>
                   ({entry.score}/100)
                 </span>
+
+                {/* Cached badge */}
+                {isCached && (
+                  <span style={{ color: '#3a4a5a', fontSize: 7, letterSpacing: '0.08em' }}>
+                    CACHED
+                  </span>
+                )}
               </div>
 
               {/* Analysis text */}
