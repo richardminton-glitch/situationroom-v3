@@ -51,10 +51,17 @@ export interface BtcNetworkData {
   feeFast: number;
   feeMed: number;
   feeSlow: number;
+  feeEconomy: number;
+  feeMinimum: number;
   mempoolSizeMB: number;
   mempoolTxCount: number;
+  mempoolTotalFeeBTC: number;
   hashrateEH: number;
+  difficultyT: number;
   difficulty: number;
+  difficultyProgress: number;
+  difficultyRemainBlocks: number;
+  difficultyEstRetarget: number;
   blocksUntilHalving: number;
   blocksUntilRetarget: number;
   difficultyEpoch: number;
@@ -63,19 +70,19 @@ export interface BtcNetworkData {
 export async function fetchBtcNetwork(): Promise<BtcNetworkData> {
   const [tip, fees, mempool, hashrate, diff] = await Promise.all([
     fetchJSON<number>('https://mempool.space/api/blocks/tip/height', { cacheKey: 'tip', cacheDuration: 30_000 }),
-    fetchJSON<{ fastestFee: number; halfHourFee: number; hourFee: number }>(
+    fetchJSON<{ fastestFee: number; halfHourFee: number; hourFee: number; economyFee: number; minimumFee: number }>(
       'https://mempool.space/api/v1/fees/recommended',
       { cacheKey: 'fees', cacheDuration: 30_000 }
     ),
-    fetchJSON<{ vsize: number; count: number }>(
+    fetchJSON<{ vsize: number; count: number; total_fee: number }>(
       'https://mempool.space/api/mempool',
       { cacheKey: 'mempool', cacheDuration: 30_000 }
     ),
-    fetchJSON<{ currentHashrate: number }>(
+    fetchJSON<{ currentHashrate: number; currentDifficulty: number }>(
       'https://mempool.space/api/v1/mining/hashrate/1m',
       { cacheKey: 'hashrate', cacheDuration: 60_000 }
     ),
-    fetchJSON<{ difficultyChange: number }>(
+    fetchJSON<{ difficultyChange: number; progressPercent: number; remainingBlocks: number; estimatedRetargetDate: number }>(
       'https://mempool.space/api/v1/difficulty-adjustment',
       { cacheKey: 'diff', cacheDuration: 60_000 }
     ),
@@ -91,10 +98,17 @@ export async function fetchBtcNetwork(): Promise<BtcNetworkData> {
     feeFast: fees.fastestFee,
     feeMed: fees.halfHourFee,
     feeSlow: fees.hourFee,
+    feeEconomy: fees.economyFee,
+    feeMinimum: fees.minimumFee,
     mempoolSizeMB: mempool.vsize / 1e6,
     mempoolTxCount: mempool.count,
+    mempoolTotalFeeBTC: mempool.total_fee / 1e8,
     hashrateEH: hashrate.currentHashrate / 1e18,
+    difficultyT: hashrate.currentDifficulty / 1e12,
     difficulty: diff.difficultyChange,
+    difficultyProgress: diff.progressPercent,
+    difficultyRemainBlocks: diff.remainingBlocks,
+    difficultyEstRetarget: diff.estimatedRetargetDate,
     blocksUntilHalving: nextHalving - tip,
     blocksUntilRetarget: nextRetarget - tip,
     difficultyEpoch: currentEpoch,

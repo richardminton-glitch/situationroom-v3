@@ -19,10 +19,17 @@ export interface SnapshotData {
     feeFast: number;
     feeMed: number;
     feeSlow: number;
+    feeEconomy: number;
+    feeMinimum: number;
     mempoolSizeMB: number;
     mempoolTxCount: number;
+    mempoolTotalFeeBTC: number;
     hashrateEH: number;
+    difficultyT: number;
     difficulty: number;
+    difficultyProgress: number;
+    difficultyRemainBlocks: number;
+    difficultyEstRetarget: number;
     blocksUntilHalving: number;
     blocksUntilRetarget: number;
     difficultyEpoch: number;
