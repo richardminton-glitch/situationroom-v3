@@ -126,12 +126,14 @@ export default function LoginPage() {
 
   // ── Styles ────────────────────────────────────────────────────────────
 
+  const SERIF = "Georgia, 'Times New Roman', serif";
+
   const tabStyle = (active: boolean) => ({
     flex: 1,
     padding: '10px 0',
     fontSize: '11px',
     letterSpacing: '0.14em',
-    fontFamily: 'var(--font-mono)',
+    fontFamily: SERIF,
     fontWeight: active ? 700 : 400,
     color: active ? 'var(--text-primary)' : 'var(--text-muted)',
     backgroundColor: active ? 'var(--bg-card)' : 'transparent',
@@ -148,7 +150,7 @@ export default function LoginPage() {
     backgroundColor: 'var(--bg-secondary)',
     border: '1px solid var(--border-primary)',
     color: 'var(--text-primary)',
-    fontFamily: 'var(--font-body)',
+    fontFamily: SERIF,
     fontSize: '14px',
     outline: 'none',
   };
@@ -159,7 +161,7 @@ export default function LoginPage() {
     backgroundColor: 'var(--accent-primary)',
     color: 'var(--bg-primary)',
     border: 'none',
-    fontFamily: 'var(--font-mono)',
+    fontFamily: SERIF,
     fontSize: '12px',
     letterSpacing: '0.1em',
     fontWeight: 700,
@@ -173,7 +175,7 @@ export default function LoginPage() {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    fontFamily: 'var(--font-body)',
+    fontFamily: SERIF,
     padding: 0,
     textDecoration: 'underline',
   };
@@ -193,14 +195,14 @@ export default function LoginPage() {
               letterSpacing: '0.16em',
               color: 'var(--text-muted)',
               textDecoration: 'none',
-              fontFamily: 'var(--font-mono)',
+              fontFamily: SERIF,
             }}
           >
             ← SITUATION ROOM
           </Link>
           <h1
             style={{
-              fontFamily: 'var(--font-heading)',
+              fontFamily: SERIF,
               fontSize: '20px',
               color: 'var(--text-primary)',
               margin: '12px 0 4px',
@@ -270,7 +272,7 @@ export default function LoginPage() {
                       fontSize: '10px',
                       letterSpacing: '0.12em',
                       color: 'var(--text-muted)',
-                      fontFamily: 'var(--font-mono)',
+                      fontFamily: SERIF,
                       marginBottom: '6px',
                     }}
                   >
@@ -301,7 +303,7 @@ export default function LoginPage() {
                       fontSize: '10px',
                       letterSpacing: '0.12em',
                       color: 'var(--text-muted)',
-                      fontFamily: 'var(--font-mono)',
+                      fontFamily: SERIF,
                       marginBottom: '6px',
                     }}
                   >
@@ -321,7 +323,7 @@ export default function LoginPage() {
                       textAlign: 'center',
                       fontSize: '24px',
                       letterSpacing: '0.5em',
-                      fontFamily: 'var(--font-data)',
+                      fontFamily: SERIF,
                       marginBottom: '16px',
                     }}
                     placeholder="0000"
