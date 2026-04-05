@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 
-const PRESETS = [1_000, 5_000, 10_000, 21_000, 50_000, 100_000];
-const COUNTDOWN_SECONDS = 30 * 60;
-const POLL_INTERVAL_MS = 5_000;
-const POOL_LN_ADDRESS = process.env.NEXT_PUBLIC_POOL_LN_ADDRESS || '';
+const POLL_INTERVAL_MS = 10_000;
 
-type Step = 'choose' | 'invoice' | 'success';
+// LNURL-pay string for the bot account (bech32-encoded LNM pay URL)
+const POOL_LNURL = process.env.NEXT_PUBLIC_POOL_LNURL || '';
+const POOL_LN_ADDRESS = process.env.NEXT_PUBLIC_POOL_LN_ADDRESS || '';
 
 interface Props {
   onClose: () => void;
@@ -19,67 +18,30 @@ function fmtSats(n: number): string {
 }
 
 export function PoolDonateModal({ onClose }: Props) {
-  const [step, setStep] = useState<Step>('choose');
-  const [amount, setAmount] = useState(10_000);
-  const [customInput, setCustomInput] = useState('');
-  const [isCustom, setIsCustom] = useState(false);
-  const [paymentRequest, setPaymentRequest] = useState('');
-  const [paymentId, setPaymentId] = useState('');
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState<'ln' | 'invoice' | null>(null);
+  const [received, setReceived] = useState(false);
+  const [receivedAmount, setReceivedAmount] = useState(0);
+  const [copied, setCopied] = useState<'lnurl' | 'ln' | null>(null);
+  const openedAt = useRef(new Date().toISOString());
 
-  const effectiveAmount = isCustom ? (parseInt(customInput, 10) || 0) : amount;
-
-  const generateInvoice = useCallback(async () => {
-    if (effectiveAmount < 100) { setError('Minimum 100 sats'); return; }
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/pool/donate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountSats: effectiveAmount }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to generate invoice');
-      }
-      const data = await res.json();
-      setPaymentRequest(data.paymentRequest);
-      setPaymentId(data.paymentId);
-      setCountdown(COUNTDOWN_SECONDS);
-      setStep('invoice');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not generate invoice');
-    } finally {
-      setLoading(false);
-    }
-  }, [effectiveAmount]);
-
-  // Countdown
+  // Poll for new deposits (detects LNURL payments)
   useEffect(() => {
-    if (step !== 'invoice') return;
-    if (countdown <= 0) { setError('Invoice expired. Go back and try again.'); return; }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [step, countdown]);
+    if (received) return;
 
-  // Poll for confirmation
-  useEffect(() => {
-    if (step !== 'invoice' || !paymentId) return;
     const poll = async () => {
       try {
-        const res = await fetch(`/api/payments/status/${paymentId}`);
+        const res = await fetch(`/api/pool/deposit-check?since=${encodeURIComponent(openedAt.current)}`);
         if (!res.ok) return;
-        const { status } = await res.json();
-        if (status === 'confirmed') setStep('success');
+        const data = await res.json();
+        if (data.found) {
+          setReceivedAmount(data.amount ?? 0);
+          setReceived(true);
+        }
       } catch { /* retry */ }
     };
+
     const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [step, paymentId]);
+  }, [received]);
 
   // Escape key
   useEffect(() => {
@@ -88,14 +50,11 @@ export function PoolDonateModal({ onClose }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const copyText = async (text: string, type: 'ln' | 'invoice') => {
+  const copyText = async (text: string, type: 'lnurl' | 'ln') => {
     await navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
   };
-
-  const mins = Math.floor(countdown / 60).toString().padStart(2, '0');
-  const secs = (countdown % 60).toString().padStart(2, '0');
 
   return (
     <div
@@ -143,220 +102,23 @@ export function PoolDonateModal({ onClose }: Props) {
         </div>
 
         <div style={{ padding: '20px' }}>
-          {/* ── Step 1: Choose method ── */}
-          {step === 'choose' && (
-            <>
-              {/* Lightning Address section */}
-              {POOL_LN_ADDRESS && (
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{
-                    fontSize: '9px', letterSpacing: '0.12em',
-                    color: 'var(--text-muted)', marginBottom: '10px',
-                  }}>
-                    LIGHTNING ADDRESS
-                  </div>
 
-                  <div style={{
-                    display: 'flex', justifyContent: 'center',
-                    padding: '16px', background: '#ffffff',
-                    marginBottom: '10px',
-                  }}>
-                    <QRCode value={`lightning:${POOL_LN_ADDRESS}`} size={180} />
-                  </div>
-
-                  <div
-                    onClick={() => copyText(POOL_LN_ADDRESS, 'ln')}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      gap: '8px', padding: '8px 12px',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                    }}
-                    title="Click to copy"
-                  >
-                    <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
-                      {POOL_LN_ADDRESS}
-                    </span>
-                    <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                      {copied === 'ln' ? 'COPIED' : 'COPY'}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    fontSize: '9px', color: 'var(--text-muted)',
-                    textAlign: 'center', marginTop: '8px', lineHeight: 1.5,
-                  }}>
-                    Send any amount directly to this address from any Lightning wallet
-                  </div>
-                </div>
-              )}
-
-              {/* Divider */}
-              {POOL_LN_ADDRESS && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  margin: '20px 0',
-                }}>
-                  <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
-                    OR GENERATE AN INVOICE
-                  </span>
-                  <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-                </div>
-              )}
-
-              {/* Amount selection */}
-              <div style={{
-                fontSize: '9px', letterSpacing: '0.12em',
-                color: 'var(--text-muted)', marginBottom: '10px',
-              }}>
-                {POOL_LN_ADDRESS ? 'SPECIFIC AMOUNT' : 'CHOOSE AMOUNT'}
-              </div>
-
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '6px', marginBottom: '12px',
-              }}>
-                {PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => { setAmount(preset); setIsCustom(false); }}
-                    style={{
-                      padding: '8px 4px',
-                      background: !isCustom && amount === preset ? 'var(--bg-primary)' : 'transparent',
-                      border: `1px solid ${!isCustom && amount === preset ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                      color: !isCustom && amount === preset ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px',
-                    }}
-                  >
-                    {fmtSats(preset)}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Custom amount"
-                  value={customInput}
-                  onChange={(e) => {
-                    setCustomInput(e.target.value.replace(/\D/g, ''));
-                    setIsCustom(true);
-                  }}
-                  onFocus={() => setIsCustom(true)}
-                  style={{
-                    flex: 1, padding: '8px 10px',
-                    background: 'var(--bg-primary)',
-                    border: `1px solid ${isCustom ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                    color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '12px',
-                    outline: 'none',
-                  }}
-                />
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>sats</span>
-              </div>
-
-              {error && (
-                <div style={{ fontSize: '11px', color: 'var(--accent-danger)', marginBottom: '8px' }}>{error}</div>
-              )}
-
-              <button
-                onClick={generateInvoice}
-                disabled={loading || effectiveAmount < 100}
-                style={{
-                  width: '100%', padding: '10px',
-                  background: 'var(--accent-primary)', color: 'var(--bg-primary)',
-                  border: 'none',
-                  cursor: loading || effectiveAmount < 100 ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-mono)', fontSize: '12px',
-                  letterSpacing: '0.1em', fontWeight: 'bold',
-                  opacity: loading || effectiveAmount < 100 ? 0.5 : 1,
-                }}
-              >
-                {loading ? 'GENERATING...' : `GENERATE INVOICE — ${fmtSats(effectiveAmount)} SATS`}
-              </button>
-            </>
-          )}
-
-          {/* ── Step 2: Invoice QR ── */}
-          {step === 'invoice' && (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}>
-                  {fmtSats(effectiveAmount)} sats
-                </div>
-                <div style={{ fontSize: '11px', color: countdown < 120 ? 'var(--accent-danger)' : 'var(--text-muted)' }}>
-                  Expires in {mins}:{secs}
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex', justifyContent: 'center',
-                padding: '16px', background: '#ffffff',
-                marginBottom: '12px',
-              }}>
-                <QRCode value={paymentRequest} size={220} />
-              </div>
-
-              <div
-                onClick={() => copyText(paymentRequest, 'invoice')}
-                style={{
-                  fontSize: '9px', color: 'var(--text-muted)',
-                  wordBreak: 'break-all', cursor: 'pointer',
-                  padding: '8px', background: 'var(--bg-primary)',
-                  border: '1px solid var(--border-subtle)',
-                  textAlign: 'center',
-                }}
-                title="Click to copy invoice"
-              >
-                {copied === 'invoice' ? (
-                  <span style={{ color: 'var(--accent-primary)' }}>COPIED TO CLIPBOARD</span>
-                ) : (
-                  paymentRequest.slice(0, 60) + '...'
-                )}
-              </div>
-
-              <div style={{
-                fontSize: '11px', color: 'var(--text-muted)',
-                textAlign: 'center', marginTop: '12px',
-              }}>
-                Waiting for payment...
-              </div>
-
-              {error && (
-                <div style={{ fontSize: '11px', color: 'var(--accent-danger)', marginTop: '8px', textAlign: 'center' }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={() => { setStep('choose'); setError(''); }}
-                style={{
-                  width: '100%', marginTop: '12px', padding: '8px',
-                  background: 'transparent',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-muted)', cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)', fontSize: '11px',
-                }}
-              >
-                BACK
-              </button>
-            </>
-          )}
-
-          {/* ── Step 3: Success ── */}
-          {step === 'success' && (
+          {/* ── Deposit received ── */}
+          {received ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#9889;</div>
               <div style={{
                 fontSize: '14px', color: 'var(--accent-primary)',
                 letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 'bold',
               }}>
-                POOL FUNDED
+                DEPOSIT RECEIVED
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.6 }}>
-                {fmtSats(effectiveAmount)} sats added to the trading pool.<br />
+                {receivedAmount > 0 ? (
+                  <>{fmtSats(receivedAmount)} sats added to the trading pool.<br /></>
+                ) : (
+                  <>Sats added to the trading pool.<br /></>
+                )}
                 Your contribution fuels the AI engine.
               </div>
               <button
@@ -372,6 +134,92 @@ export function PoolDonateModal({ onClose }: Props) {
                 CLOSE
               </button>
             </div>
+          ) : (
+            <>
+              {/* LNURL QR code — primary donation method */}
+              {POOL_LNURL && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{
+                    fontSize: '9px', letterSpacing: '0.12em',
+                    color: 'var(--text-muted)', marginBottom: '10px',
+                    textAlign: 'center',
+                  }}>
+                    SCAN TO DONATE
+                  </div>
+
+                  <div style={{
+                    display: 'flex', justifyContent: 'center',
+                    padding: '16px', background: '#ffffff',
+                    marginBottom: '10px',
+                  }}>
+                    <QRCode value={POOL_LNURL.toUpperCase()} size={220} />
+                  </div>
+
+                  <div
+                    onClick={() => copyText(POOL_LNURL, 'lnurl')}
+                    style={{
+                      fontSize: '9px', color: 'var(--text-muted)',
+                      wordBreak: 'break-all', cursor: 'pointer',
+                      padding: '8px', background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      textAlign: 'center',
+                    }}
+                    title="Click to copy LNURL"
+                  >
+                    {copied === 'lnurl' ? (
+                      <span style={{ color: 'var(--accent-primary)' }}>COPIED TO CLIPBOARD</span>
+                    ) : (
+                      <>
+                        <span>{POOL_LNURL.slice(0, 40)}...</span>
+                        <span style={{ marginLeft: '6px', color: 'var(--accent-primary)' }}>COPY</span>
+                      </>
+                    )}
+                  </div>
+
+                  <div style={{
+                    fontSize: '9px', color: 'var(--text-muted)',
+                    textAlign: 'center', marginTop: '8px', lineHeight: 1.5,
+                  }}>
+                    Scan with any Lightning wallet — choose your amount in-app
+                  </div>
+                </div>
+              )}
+
+              {/* Lightning address */}
+              {POOL_LN_ADDRESS && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+                      LIGHTNING ADDRESS
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+                  </div>
+
+                  <div
+                    onClick={() => copyText(POOL_LN_ADDRESS, 'ln')}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: '8px', padding: '10px 12px',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                    }}
+                    title="Click to copy"
+                  >
+                    <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                      {POOL_LN_ADDRESS}
+                    </span>
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                      {copied === 'ln' ? 'COPIED' : 'COPY'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
