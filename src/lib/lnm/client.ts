@@ -38,15 +38,15 @@ export class LnmV3Client {
 
   /** Core HTTP request with HMAC auth */
   private async request<T>(method: string, endpoint: string, data?: Record<string, unknown>): Promise<T> {
-    const path = `${VERSION}${endpoint}`;
+    let path = `${VERSION}${endpoint}`;
     const timestamp = Date.now().toString();
     const lowerMethod = method.toLowerCase();
 
     let url = `${BASE_URL}${path}`;
-    let signData = '';
+    let signBody = '';
 
     if (method === 'GET' || method === 'DELETE') {
-      // Query params go in URL + signing data
+      // v3: query string is part of the signed path (path?key=val)
       if (data && Object.keys(data).length > 0) {
         const params = new URLSearchParams();
         for (const [k, v] of Object.entries(data)) {
@@ -55,15 +55,15 @@ export class LnmV3Client {
         const qs = params.toString();
         if (qs) {
           url += `?${qs}`;
-          signData = qs;
+          path += `?${qs}`;
         }
       }
     } else {
       // POST/PUT — JSON body
-      if (data) signData = JSON.stringify(data);
+      if (data) signBody = JSON.stringify(data);
     }
 
-    const signature = this.sign(timestamp, lowerMethod, path, signData);
+    const signature = this.sign(timestamp, lowerMethod, path, signBody);
 
     const headers: Record<string, string> = {
       'lnm-access-key':        this.key,
