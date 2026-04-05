@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
 import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
@@ -10,11 +11,13 @@ import { CapitalFlowTopology } from '@/components/bot-room/CapitalFlowTopology';
 import { ChartPanel } from '@/components/bot-room/ChartPanel';
 import { OpsChat } from '@/components/bot-room/OpsChat';
 import { MarketHeatmap } from '@/components/bot-room/MarketHeatmap';
+import { PoolDonateModal } from '@/components/pool/PoolDonateModal';
 import { C, FONT } from '@/components/bot-room/constants';
 
 export default function BotRoomPage() {
   const { user, loading } = useAuth();
   const { canAccess } = useTier();
+  const [showDonate, setShowDonate] = useState(false);
 
   if (loading) {
     return (
@@ -66,7 +69,25 @@ export default function BotRoomPage() {
         .br-scroll::-webkit-scrollbar-thumb { background: ${C.borderSoft}; }
       `}</style>
 
+      {showDonate && <PoolDonateModal onClose={() => setShowDonate(false)} />}
+
       <div style={{ position: 'relative', height: '100%' }}>
+        {/* Fund the Pool button */}
+        {hasAccess && (
+          <button
+            onClick={() => setShowDonate(true)}
+            style={{
+              position: 'absolute', top: 5, right: 12, zIndex: 5,
+              padding: '4px 12px', fontSize: 10, letterSpacing: '0.1em',
+              fontFamily: FONT, fontWeight: 600,
+              background: 'transparent', border: `1px solid ${C.teal}`,
+              color: C.teal, cursor: 'pointer',
+            }}
+          >
+            FUND THE POOL
+          </button>
+        )}
+
         {/* Main grid — frosted when locked */}
         <div style={{
           display: 'grid',
