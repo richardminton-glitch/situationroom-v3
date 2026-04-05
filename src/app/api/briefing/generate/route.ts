@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/grok/pipeline';
 import { computeThreatLevel } from '@/lib/grok/quality';
+import { calculateConviction } from '@/lib/conviction/engine';
 import type { DashboardSnapshot } from '@/lib/grok/prompts';
 import {
   fetchBtcMarket,
@@ -10,7 +11,9 @@ import {
   fetchOnChain,
   fetchIndices,
   fetchCommodities,
+  fetchCentralBankRates,
 } from '@/lib/data/sources';
+import { fetchJSON } from '@/lib/data/fetcher';
 import { fetchRSSHeadlines } from '@/lib/data/rss';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Gather all data in parallel — including RSS for threat level
-    const [btcMarket, btcNetwork, lightning, fearGreed, onchain, indices, commodities, headlines] =
+    const [btcMarket, btcNetwork, lightning, fearGreed, onchain, indices, commodities, headlines, cbRates, hashrateData] =
       await Promise.allSettled([
         fetchBtcMarket(),
         fetchBtcNetwork(),
@@ -42,6 +45,11 @@ export async function POST(request: NextRequest) {
         fetchIndices(),
         fetchCommodities(),
         fetchRSSHeadlines(),
+        fetchCentralBankRates(),
+        fetchJSON<{ currentHashrate: number; hashrates: { avgHashrate: number }[] }>(
+          'https://mempool.space/api/v1/mining/hashrate/3m',
+          { cacheKey: 'hashrate3m', cacheDuration: 3600_000, timeout: 30_000 }
+        ),
       ]);
 
     const btc = btcMarket.status === 'fulfilled' ? btcMarket.value : null;
@@ -56,13 +64,31 @@ export async function POST(request: NextRequest) {
     // Compute threat level from live RSS headlines
     const threat = computeThreatLevel(headlineItems.map((h) => h.title));
 
-    // Compute conviction score from available signals
-    let convictionScore = 50;
-    if (fg) {
-      // Simplified — contrarian F&G scoring
-      const fgScore = fg.value <= 25 ? 80 : fg.value <= 45 ? 65 : fg.value <= 55 ? 50 : fg.value <= 75 ? 35 : 20;
-      convictionScore = fgScore;
+    // Compute conviction score from live 5-signal engine
+    let fedRate: number | null = null;
+    if (cbRates.status === 'fulfilled' && cbRates.value.length > 0) {
+      const fed = cbRates.value.find((r) => r.country.includes('Federal') || r.country.includes('Fed'));
+      fedRate = fed?.rate ?? null;
     }
+
+    let hashrateRatio: number | null = null;
+    if (hashrateData.status === 'fulfilled') {
+      const { currentHashrate, hashrates } = hashrateData.value;
+      if (hashrates.length > 0 && currentHashrate > 0) {
+        const avg = hashrates.reduce((s, h) => s + h.avgHashrate, 0) / hashrates.length;
+        hashrateRatio = avg > 0 ? currentHashrate / avg : null;
+      }
+    }
+
+    const conviction = calculateConviction({
+      fearGreed: fg?.value ?? null,
+      change30d: btc?.change30d ?? null,
+      mvrv: oc?.mvrv ?? null,
+      athChangePct: btc?.athChangePct ?? null,
+      fedRate,
+      hashrateRatio,
+    });
+    const convictionScore = conviction.composite;
 
     const snapshot: DashboardSnapshot = {
       btcPrice: btc?.price ?? 0,
