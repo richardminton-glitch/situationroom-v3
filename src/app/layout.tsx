@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import { AuthProvider } from '@/components/layout/AuthProvider';
 import { DataProvider } from '@/components/layout/DataProvider';
@@ -43,6 +44,14 @@ export default function RootLayout({
             </DataProvider>
           </ThemeProvider>
         </AuthProvider>
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <Script
+            async
+            src="/metrics.js"
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            data-domains="v3.situationroom.space"
+          />
+        )}
       </body>
     </html>
   );

@@ -48,6 +48,19 @@ interface AdminUser {
   paymentCount: number;
 }
 
+interface AnalyticsData {
+  activeUsers: { x: number } | null;
+  statsToday: { pageviews: { value: number }; visitors: { value: number }; visits: { value: number }; bounces: { value: number }; totaltime: { value: number } } | null;
+  stats7d: { pageviews: { value: number }; visitors: { value: number }; visits: { value: number }; bounces: { value: number }; totaltime: { value: number } } | null;
+  stats30d: { pageviews: { value: number }; visitors: { value: number }; visits: { value: number }; bounces: { value: number }; totaltime: { value: number } } | null;
+  pageviews7d: { pageviews: { x: string; y: number }[]; sessions: { x: string; y: number }[] } | null;
+  topPages: { x: string; y: number }[] | null;
+  referrers: { x: string; y: number }[] | null;
+  countries: { x: string; y: number }[] | null;
+  devices: { x: string; y: number }[] | null;
+  browsers: { x: string; y: number }[] | null;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtSats(sats: number): string {
@@ -422,6 +435,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -444,6 +458,14 @@ export default function AdminPage() {
     fetch('/api/admin/metrics')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d) setMetrics(d); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch analytics (Umami)
+  useEffect(() => {
+    fetch('/api/admin/analytics')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d && !d.error) setAnalytics(d); })
       .catch(() => {});
   }, []);
 
@@ -587,6 +609,166 @@ export default function AdminPage() {
               <div style={labelStyle}>Chat (24h / 7d)</div>
               <div style={valueStyle}>{metrics.chat.messages24h}</div>
               <div style={smallValueStyle}>{metrics.chat.messagesWeek} this week</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Site Analytics (Umami) ── */}
+      {analytics && (
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
+          padding: '16px', marginBottom: 12,
+        }}>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontFamily: FONT, fontSize: '16px', color: 'var(--text-primary)', fontWeight: 400 }}>
+              Site Analytics
+            </h2>
+            <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 2 }}>
+              LIVE TRAFFIC DATA VIA UMAMI · PRIVACY-FIRST · NO COOKIES
+            </p>
+          </div>
+
+          {/* Summary row */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Active Now</div>
+              <div style={{ ...valueStyle, color: '#2a6e2a' }}>
+                {(analytics.activeUsers as Record<string, number>)?.x ?? 0}
+              </div>
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Visitors Today</div>
+              <div style={valueStyle}>{analytics.statsToday?.visitors?.value ?? 0}</div>
+              <div style={smallValueStyle}>{analytics.statsToday?.pageviews?.value ?? 0} pageviews</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Visitors 7d</div>
+              <div style={valueStyle}>{analytics.stats7d?.visitors?.value ?? 0}</div>
+              <div style={smallValueStyle}>{analytics.stats7d?.pageviews?.value ?? 0} pageviews</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Visitors 30d</div>
+              <div style={valueStyle}>{analytics.stats30d?.visitors?.value ?? 0}</div>
+              <div style={smallValueStyle}>{analytics.stats30d?.pageviews?.value ?? 0} pageviews</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Bounce Rate (30d)</div>
+              <div style={valueStyle}>
+                {analytics.stats30d && analytics.stats30d.visits?.value > 0
+                  ? `${Math.round((analytics.stats30d.bounces.value / analytics.stats30d.visits.value) * 100)}%`
+                  : '—'}
+              </div>
+              <div style={smallValueStyle}>
+                Avg: {analytics.stats30d && analytics.stats30d.visits?.value > 0
+                  ? `${Math.round(analytics.stats30d.totaltime.value / analytics.stats30d.visits.value / 1000)}s`
+                  : '—'}
+              </div>
+            </div>
+          </div>
+
+          {/* 7-day pageview chart (ASCII-style bar chart) */}
+          {analytics.pageviews7d?.pageviews && analytics.pageviews7d.pageviews.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Pageviews — Last 7 Days</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
+                {analytics.pageviews7d.pageviews.map((point, i) => {
+                  const max = Math.max(...analytics.pageviews7d!.pageviews.map((p) => p.y), 1);
+                  const height = Math.max(2, (point.y / max) * 56);
+                  const dayLabel = new Date(point.x).toLocaleDateString('en-GB', { weekday: 'short' });
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <span style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)' }}>{point.y}</span>
+                      <div style={{
+                        width: '100%', height, maxWidth: 40,
+                        backgroundColor: 'var(--accent-primary)', opacity: 0.8,
+                        transition: 'height 0.3s ease',
+                      }} />
+                      <span style={{ fontFamily: MONO, fontSize: '8px', color: 'var(--text-muted)' }}>{dayLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom row: Top Pages, Referrers, Countries, Devices */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {/* Top Pages */}
+            <div style={{ ...cardStyle, minWidth: 200 }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Top Pages (30d)</div>
+              {(analytics.topPages || []).slice(0, 8).map((p, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>
+                    {p.x || '/'}
+                  </span>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8 }}>
+                    {p.y}
+                  </span>
+                </div>
+              ))}
+              {(!analytics.topPages || analytics.topPages.length === 0) && (
+                <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)' }}>No data yet</span>
+              )}
+            </div>
+
+            {/* Referrers */}
+            <div style={{ ...cardStyle, minWidth: 180 }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Referrers (30d)</div>
+              {(analytics.referrers || []).slice(0, 8).map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
+                    {r.x || 'Direct'}
+                  </span>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8 }}>
+                    {r.y}
+                  </span>
+                </div>
+              ))}
+              {(!analytics.referrers || analytics.referrers.length === 0) && (
+                <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)' }}>No data yet</span>
+              )}
+            </div>
+
+            {/* Countries */}
+            <div style={{ ...cardStyle, minWidth: 140 }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Countries (30d)</div>
+              {(analytics.countries || []).slice(0, 8).map((c, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-secondary)' }}>
+                    {c.x || '??'}
+                  </span>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)', marginLeft: 8 }}>
+                    {c.y}
+                  </span>
+                </div>
+              ))}
+              {(!analytics.countries || analytics.countries.length === 0) && (
+                <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)' }}>No data yet</span>
+              )}
+            </div>
+
+            {/* Devices & Browsers */}
+            <div style={{ ...cardStyle, minWidth: 140 }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Devices (30d)</div>
+              {(analytics.devices || []).map((d, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-secondary)' }}>{d.x}</span>
+                  <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)', marginLeft: 8 }}>{d.y}</span>
+                </div>
+              ))}
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 6, paddingTop: 6 }}>
+                <div style={{ ...labelStyle, marginBottom: 4 }}>Browsers</div>
+                {(analytics.browsers || []).map((b, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-secondary)' }}>{b.x}</span>
+                    <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)', marginLeft: 8 }}>{b.y}</span>
+                  </div>
+                ))}
+              </div>
+              {(!analytics.devices || analytics.devices.length === 0) && (
+                <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)' }}>No data yet</span>
+              )}
             </div>
           </div>
         </div>
