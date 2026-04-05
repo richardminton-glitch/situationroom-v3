@@ -92,7 +92,7 @@ export default function BotRoomPage() {
               <CapitalFlowTopology />
               <OpsChat />
             </div>
-            <div style={{ minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ minHeight: 0, overflow: 'hidden', height: '100%' }}>
               <ChartPanel />
             </div>
           </div>
