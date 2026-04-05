@@ -45,7 +45,7 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
       />
 
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0" style={{ position: 'relative' }}>
         {children}
       </div>
     </div>
