@@ -297,6 +297,18 @@ const AI_USAGE_DATA: AiUsageRow[] = [
     est7dCost: 0.76,
     est30dCost: 3.24,
   },
+  {
+    feature: 'Trading AI Engine',
+    model: 'grok-4-1-fast',
+    trigger: '4h cron (6×/day)',
+    inputTokens: 2_000,
+    outputTokens: 1_200,
+    callsPerDay: 6,  // 6 cycles/day × 1 Grok call per cycle
+    // (2000 × $0.20/M) + (1200 × $0.50/M) = $0.0004 + $0.0006 = $0.001
+    costPerCall: 0.001,
+    est7dCost: 0.04,
+    est30dCost: 0.18,
+  },
 ];
 
 const AI_TOTAL_7D = AI_USAGE_DATA.reduce((s, r) => s + r.est7dCost, 0);
@@ -400,11 +412,11 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   },
   {
     service: 'Grok (xAI)',
-    endpoints: '11 (briefing, classification, 9 analysis routes)',
-    refresh: 'Daily cron + on-demand',
-    // Daily briefing: 1/day, VIP: 1/day, classifications: ~50/day, analysis: ~5/day
-    est7d: 400,
-    est30d: 1_710,
+    endpoints: '12 (briefing, classification, 9 analysis routes, trading AI)',
+    refresh: 'Daily cron + on-demand + 4h trading',
+    // Daily briefing: 1/day, VIP: 1/day, classifications: ~50/day, analysis: ~5/day, trading: 6/day
+    est7d: 442,
+    est30d: 1_890,
     monthlyLimit: null,
     envVar: 'GROK_API_KEY',
   },
@@ -420,11 +432,11 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   },
   {
     service: 'LNMarkets',
-    endpoints: '2 (invoices, pool status)',
-    refresh: 'On-demand + 60s poll',
-    // Pool status: 1440/day, invoices: ~5/day
-    est7d: 10_115,
-    est30d: 43_350,
+    endpoints: '7 (invoices, pool status, trading, position sync, ticker)',
+    refresh: 'On-demand + 60s poll + 4h trading + 60s sync',
+    // Pool status: 1440/day, invoices: ~5/day, trading cycle: ~24/day, position sync: ~720/day avg
+    est7d: 15_323,
+    est30d: 65_670,
     monthlyLimit: null,
     envVar: 'LNM_OPS_KEY',
   },
