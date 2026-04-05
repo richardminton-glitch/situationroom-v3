@@ -26,7 +26,15 @@ export default function BotRoomLayout({ children }: { children: React.ReactNode 
       clearTimeout(t);
       const prev = sessionStorage.getItem('sr-ops-room-prev-theme');
       sessionStorage.removeItem('sr-ops-room-prev-theme');
-      if (prev && prev !== 'dark') setTheme(prev as 'dark' | 'parchment');
+      // Delay restoration so another dark-force room (room↔bot-room) can
+      // re-claim the session key before we revert the theme.
+      if (prev && prev !== 'dark') {
+        setTimeout(() => {
+          if (!sessionStorage.getItem('sr-ops-room-prev-theme')) {
+            setTheme(prev as 'dark' | 'parchment');
+          }
+        }, 50);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
