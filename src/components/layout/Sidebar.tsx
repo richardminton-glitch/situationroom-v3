@@ -84,13 +84,8 @@ const TOOLTIP_DISMISS_MS = 4000;
 export function Sidebar({ dashboardControls }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [fontSize, setFontSize] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('sr-font-size');
-      return stored ? parseInt(stored, 10) : FONT_DEFAULT;
-    }
-    return FONT_DEFAULT;
-  });
+  const [fontSize, setFontSize] = useState<number>(FONT_DEFAULT);
+  const [mounted, setMounted] = useState(false);
   const [tooltip, setTooltip] = useState<{ id: string; requiredTier: Exclude<Tier, 'free'> } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -99,6 +94,13 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
   const { canAccess, userTier } = useTier();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Mark mounted + hydrate font size from localStorage (avoids SSR mismatch)
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem('sr-font-size');
+    if (stored) setFontSize(parseInt(stored, 10));
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
@@ -460,6 +462,8 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
           {(() => {
             const darkLocked = !canAccess('general');
             const darkTooltipVisible = tooltip?.id === '__dark';
+            // Before mount, render parchment-state UI to match SSR (avoids hydration mismatch)
+            const displayTheme = mounted ? theme : 'parchment';
             return (
               <div>
                 <button
@@ -482,11 +486,11 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   }}
                   className="flex items-center gap-3 w-full px-3 py-2 rounded text-sm transition-colors"
                   style={{ color: 'var(--text-secondary)', opacity: darkLocked ? 0.7 : 1 }}
-                  title={collapsed ? (theme === 'parchment' ? 'Dark mode' : 'Parchment') : undefined}
+                  title={collapsed ? (displayTheme === 'parchment' ? 'Dark mode' : 'Parchment') : undefined}
                 >
-                  <span className="text-base shrink-0">{theme === 'parchment' ? <Moon size={ICON_SIZE} weight={ICON_WEIGHT} /> : <Sun size={ICON_SIZE} weight={ICON_WEIGHT} />}</span>
+                  <span className="text-base shrink-0">{displayTheme === 'parchment' ? <Moon size={ICON_SIZE} weight={ICON_WEIGHT} /> : <Sun size={ICON_SIZE} weight={ICON_WEIGHT} />}</span>
                   {!collapsed && (
-                    <span className="flex-1 text-left">{theme === 'parchment' ? 'Dark mode' : 'Parchment'}</span>
+                    <span className="flex-1 text-left">{displayTheme === 'parchment' ? 'Dark mode' : 'Parchment'}</span>
                   )}
                   {!collapsed && darkLocked && (
                     <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
