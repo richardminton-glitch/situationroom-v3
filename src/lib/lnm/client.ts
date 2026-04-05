@@ -77,8 +77,8 @@ export class LnmV3Client {
     }
 
     const fetchOpts: RequestInit = { method, headers };
-    if ((method === 'POST' || method === 'PUT') && signData) {
-      fetchOpts.body = signData;
+    if ((method === 'POST' || method === 'PUT') && signBody) {
+      fetchOpts.body = signBody;
     }
 
     const res = await fetch(url, fetchOpts);
