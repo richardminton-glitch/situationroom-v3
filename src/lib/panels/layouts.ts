@@ -180,32 +180,12 @@ export const PARCHMENT_DEFAULT_LAYOUT: DashboardLayout = {
   ],
 };
 
-const PARCHMENT_MINIMAL_PRESET: DashboardLayout = {
-  id: 'minimal',
-  name: 'Minimal',
-  description: 'Just the essentials — price, conviction, and briefing',
-  panels: [
-    ...stack(L, 0, [
-      { id: 'btc-hero', w: W, h: G },
-      { id: 'conviction', w: W, h: G * 5, resizable: true },
-      { id: 'fear-greed', w: W, h: G * 2 },
-    ]),
-    ...stack(C, 0, [
-      { id: 'ai-briefing', w: CW, h: G * 12, resizable: true },
-    ]),
-    ...stack(R, 0, [
-      { id: 'market-indices', w: W, h: G * 5 },
-    ]),
-  ],
-};
-
 export const PARCHMENT_PRESETS: DashboardLayout[] = [
   PARCHMENT_DEFAULT_LAYOUT,
   FULL_DATA_PARCHMENT,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
   AI_PRESET,
-  PARCHMENT_MINIMAL_PRESET,
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -237,32 +217,12 @@ export const DARK_DEFAULT_LAYOUT: DashboardLayout = {
   ],
 };
 
-const DARK_MINIMAL_PRESET: DashboardLayout = {
-  id: 'minimal',
-  name: 'Minimal',
-  description: 'Just the essentials — price, conviction, and briefing',
-  panels: [
-    ...stack(L, 0, [
-      { id: 'btc-hero', w: W, h: G },
-      { id: 'conviction', w: W, h: G * 5, resizable: true },
-      { id: 'fear-greed', w: W, h: G * 2 },
-    ]),
-    ...stack(C, 0, [
-      { id: 'ai-briefing', w: CW, h: G * 12, resizable: true },
-    ]),
-    ...stack(R, 0, [
-      { id: 'market-indices', w: W, h: G * 5 },
-    ]),
-  ],
-};
-
 export const DARK_PRESETS: DashboardLayout[] = [
   DARK_DEFAULT_LAYOUT,
   FULL_DATA_DARK,
   MACRO_FOCUS_PRESET,
   ONCHAIN_PRESET,
   AI_PRESET,
-  DARK_MINIMAL_PRESET,
 ];
 
 // ══════════════════════════════════════════════════════════
