@@ -86,7 +86,24 @@ export default function RoomPage() {
     );
   }
 
-  // Render the full Ops Room for all authenticated users.
-  // Posting in the operator channel is gated at Members+ within the component.
+  // Gate at Members+ tier
+  if (!canAccess('members')) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#090d12',
+          fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
+          padding: '40px 20px',
+        }}
+      >
+        <UpgradePrompt requiredTier="members" feature="Members Room" />
+      </div>
+    );
+  }
+
   return <MembersRoom />;
 }

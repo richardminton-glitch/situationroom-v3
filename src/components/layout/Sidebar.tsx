@@ -33,10 +33,9 @@ import {
 // Tier requirements for each preset
 const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
   'default':          null,       // free
-  'minimal':          null,       // free
-  'full-data':        'general',
+  'full-data':        null,       // free
   'macro-focus':      'general',
-  'onchain-deep-dive':'general',
+  'onchain-deep-dive':'members',
   'ai':               'members',
 };
 
@@ -54,7 +53,7 @@ const ICON_WEIGHT = 'regular' as const;
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: <SquaresFour size={ICON_SIZE} weight={ICON_WEIGHT} /> },
   { label: 'Briefings', href: '/briefings', icon: <Newspaper size={ICON_SIZE} weight={ICON_WEIGHT} /> },
-  { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
+  { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
   { label: 'Trading Pool', href: '/pool', icon: <ChartLineUp size={ICON_SIZE} weight={ICON_WEIGHT} />, requiredTier: 'members' },
 ];
 
