@@ -17,7 +17,7 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_TIERS = ['free', 'general', 'members', 'vip'];
+const VALID_TIERS = ['free', 'general', 'members', 'vip', 'admin'];
 const VALID_FREQUENCIES = ['daily', 'weekly'];
 
 export async function PATCH(

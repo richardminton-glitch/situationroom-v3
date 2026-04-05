@@ -75,6 +75,7 @@ const TIER_COLORS: Record<string, string> = {
   general: '#8b6914',
   members: '#4a6fa5',
   vip: '#7c5cbf',
+  admin: '#e03030',
 };
 
 // ── Styles ───────────────────────────────────────────────────────────────────
@@ -333,6 +334,7 @@ export default function AdminPage() {
               <option value="general">General</option>
               <option value="members">Members</option>
               <option value="vip">VIP</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
         </div>
@@ -386,6 +388,7 @@ export default function AdminPage() {
                           <option value="general">General</option>
                           <option value="members">Members</option>
                           <option value="vip">VIP</option>
+                          <option value="admin">Admin</option>
                         </select>
                       ) : (
                         <span style={{

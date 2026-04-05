@@ -43,7 +43,7 @@ export async function GET(req: Request) {
     ];
   }
 
-  if (tierFilter && ['free', 'general', 'members', 'vip'].includes(tierFilter)) {
+  if (tierFilter && ['free', 'general', 'members', 'vip', 'admin'].includes(tierFilter)) {
     where.tier = tierFilter;
   }
 
