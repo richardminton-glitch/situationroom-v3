@@ -3,12 +3,17 @@
  * M2 money supply — 3-year window, indexed to 100 at the earliest common point.
  *
  * FRED series:
- *   M2SL           — USA M2 (seasonally adjusted, monthly, billions USD)
- *   MABMM301EZM189S — Euro Area M2 (monthly, millions EUR — indexed only, absolute not shown)
- *   MABMM301GBM189S — UK M2 (monthly, millions GBP)
- *   MABMM301JPM189S — Japan M2 (monthly, millions JPY)
+ *   M2SL              — USA M2 (seasonally adjusted, monthly, billions USD) — absolute
+ *   MABMM301EZM657S   — Euro Area M3 (monthly, growth rate previous period %)
+ *   MABMM301GBM657S   — UK M3 (monthly, growth rate previous period %)
+ *   MABMM301JPM657S   — Japan M3 (monthly, growth rate previous period %)
  *
- * Cache: 7 days (file-based, same pattern as cbrates)
+ * The OECD absolute-value series (MABMM301*M189S) stopped updating after Nov 2023.
+ * The growth-rate variants (M657S) remain current. For EU/UK/Japan we reconstruct
+ * an indexed series by compounding MoM growth from a base of 100, which is exactly
+ * what we display anyway.
+ *
+ * Cache: 7 days (file-based)
  */
 
 import { NextResponse } from 'next/server';
@@ -21,11 +26,18 @@ const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 const THREE_YEARS_AGO = new Date(Date.now() - 3 * 365.25 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-const SERIES: { id: string; key: string }[] = [
-  { id: 'M2SL',            key: 'USA'    },
-  { id: 'MABMM301EZM189S', key: 'EU'     },
-  { id: 'MABMM301GBM189S', key: 'UK'     },
-  { id: 'MABMM301JPM189S', key: 'Japan'  },
+// Series config: 'absolute' series get indexed to 100; 'growth' series get compounded from 100
+interface SeriesCfg {
+  id: string;
+  key: string;
+  mode: 'absolute' | 'growth';
+}
+
+const SERIES: SeriesCfg[] = [
+  { id: 'M2SL',              key: 'USA',   mode: 'absolute' },
+  { id: 'MABMM301EZM657S',  key: 'EU',    mode: 'growth'   },
+  { id: 'MABMM301GBM657S',  key: 'UK',    mode: 'growth'   },
+  { id: 'MABMM301JPM657S',  key: 'Japan', mode: 'growth'   },
 ];
 
 type M2Data = Record<string, { time: number; value: number }[]>;
@@ -49,11 +61,27 @@ function writeCache(data: M2Data) {
   }
 }
 
-/** Index a series so first non-null point = 100 */
+/** Index an absolute-value series so first non-null point = 100 */
 function indexTo100(points: { time: number; value: number }[]): { time: number; value: number }[] {
   const baseline = points[0]?.value;
   if (!baseline) return points;
   return points.map((p) => ({ time: p.time, value: (p.value / baseline) * 100 }));
+}
+
+/**
+ * Reconstruct indexed series from month-over-month growth rates.
+ * Each value is a percentage (e.g. 0.167 means +0.167% that month).
+ * Start at 100 and compound forward.
+ */
+function compoundFromGrowth(points: { time: number; value: number }[]): { time: number; value: number }[] {
+  if (points.length === 0) return [];
+  const result: { time: number; value: number }[] = [];
+  let level = 100;
+  for (const p of points) {
+    level = level * (1 + p.value / 100);
+    result.push({ time: p.time, value: Math.round(level * 100) / 100 });
+  }
+  return result;
 }
 
 async function fetchFromFred(): Promise<M2Data> {
@@ -63,7 +91,7 @@ async function fetchFromFred(): Promise<M2Data> {
   const result: M2Data = {};
 
   await Promise.all(
-    SERIES.map(async ({ id, key }) => {
+    SERIES.map(async ({ id, key, mode }) => {
       const url = `${FRED_BASE}?series_id=${id}&observation_start=${THREE_YEARS_AGO}&api_key=${apiKey}&file_type=json&frequency=m`;
       const res = await fetch(url);
       if (!res.ok) { console.warn(`[m2] FRED ${id} returned ${res.status}`); return; }
@@ -76,7 +104,11 @@ async function fetchFromFred(): Promise<M2Data> {
         .map((o) => ({ time: new Date(o.date).getTime(), value: parseFloat(o.value) }))
         .sort((a, b) => a.time - b.time);
 
-      result[key] = indexTo100(points);
+      if (mode === 'absolute') {
+        result[key] = indexTo100(points);
+      } else {
+        result[key] = compoundFromGrowth(points);
+      }
     })
   );
 
