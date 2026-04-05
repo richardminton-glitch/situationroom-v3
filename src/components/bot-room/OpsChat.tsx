@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { C, FONT, MOCK_MESSAGES, type BotMessage } from './constants';
 
+
 function fmtTime(ts: number): string {
   return new Date(ts).toISOString().slice(11, 16);
 }
@@ -57,7 +58,6 @@ function colorise(text: string): ReactNode {
 
 export function OpsChat() {
   const [messages] = useState<BotMessage[]>(MOCK_MESSAGES);
-  const [input, setInput] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,11 +76,10 @@ export function OpsChat() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="br-blink" style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
-          <span style={{ fontSize: '9px', letterSpacing: '0.14em', color: C.textDim }}>OPS CHAT</span>
+          <span style={{ fontSize: '9px', letterSpacing: '0.14em', color: C.textDim }}>SITROOM AI</span>
         </div>
-        <span style={{ fontSize: '9px', color: C.textDim, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span className="br-blink" style={{ width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
-          3 online
+        <span style={{ fontSize: '9px', color: C.textDim }}>
+          {messages.length} entries
         </span>
       </div>
 
@@ -106,26 +105,6 @@ export function OpsChat() {
         ))}
       </div>
 
-      {/* Input */}
-      <div style={{ display: 'flex', gap: '4px', padding: '6px 8px', borderTop: `1px solid ${C.border}` }}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Message…"
-          style={{
-            flex: 1, fontFamily: FONT, fontSize: '11px',
-            background: C.bgElevated, border: `1px solid ${C.borderSoft}`,
-            color: C.textMuted, padding: '4px 8px', outline: 'none',
-          }}
-        />
-        <button style={{
-          fontFamily: FONT, fontSize: '11px', color: C.teal,
-          background: 'rgba(0,212,170,0.05)', border: `1px solid ${C.teal}`,
-          padding: '2px 8px', cursor: 'pointer',
-        }}>
-          ↑
-        </button>
-      </div>
     </div>
   );
 }

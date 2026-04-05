@@ -4,16 +4,68 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { C, FONT } from './constants';
 
+// ── Major market sessions (UTC hours) ─────────────────────────────────────────
+interface MarketSession {
+  label: string;
+  openUTC: number;   // decimal hours, e.g. 14.5 = 14:30
+  closeUTC: number;
+  weekdays: boolean; // only Mon–Fri
+}
+
+const SESSIONS: MarketSession[] = [
+  { label: 'NYSE',   openUTC: 14.5,  closeUTC: 21,    weekdays: true },
+  { label: 'LSE',    openUTC: 8,     closeUTC: 16.5,  weekdays: true },
+  { label: 'TSE',    openUTC: 0,     closeUTC: 6,     weekdays: true },  // Tokyo
+  { label: 'XETRA',  openUTC: 8,     closeUTC: 16.5,  weekdays: true },  // Frankfurt
+  { label: 'HKEX',   openUTC: 1.5,   closeUTC: 8,     weekdays: true },
+];
+
+function getMarketStatus(): { label: string; open: boolean } {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const isWeekday = day >= 1 && day <= 5;
+
+  // BTC trades 24/7
+  const openMarkets: string[] = ['BTC'];
+
+  if (isWeekday) {
+    for (const s of SESSIONS) {
+      if (!s.weekdays) continue;
+      // Handle sessions that cross midnight (e.g. if closeUTC < openUTC)
+      if (s.closeUTC > s.openUTC) {
+        if (utcH >= s.openUTC && utcH < s.closeUTC) openMarkets.push(s.label);
+      } else {
+        if (utcH >= s.openUTC || utcH < s.closeUTC) openMarkets.push(s.label);
+      }
+    }
+  }
+
+  const tradFiOpen = openMarkets.length > 1; // more than just BTC
+  if (tradFiOpen) {
+    // Show 2 most relevant open markets
+    const shown = openMarkets.filter(m => m !== 'BTC').slice(0, 2).join(' · ');
+    return { label: `${shown} Open`, open: true };
+  }
+  return { label: 'TradFi Closed', open: false };
+}
+
 export function TopBar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [utcTime, setUtcTime] = useState('');
+  const [marketStatus, setMarketStatus] = useState(() => getMarketStatus());
 
   useEffect(() => {
-    const tick = () => setUtcTime(new Date().toISOString().slice(11, 19) + ' UTC');
+    const tick = () => {
+      setUtcTime(new Date().toISOString().slice(11, 19) + ' UTC');
+      setMarketStatus(getMarketStatus());
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const displayName = user?.chatDisplayName || `anon-${(user?.id || '0000').slice(0, 4)}`;
 
   return (
     <div style={{
@@ -23,9 +75,6 @@ export function TopBar() {
     }}>
       {/* Left */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: C.textPrimary }}>
-          SITUATION ROOM
-        </span>
         <span style={{
           fontSize: '9px', color: C.teal, padding: '1px 6px',
           border: '1px solid rgba(0,212,170,0.2)', background: C.bgOverlay,
@@ -38,12 +87,19 @@ export function TopBar() {
         </span>
       </div>
 
-      {/* Centre */}
+      {/* Centre — market status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span className="br-blink" style={{
-          width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block',
-        }} />
-        <span style={{ fontSize: '10px', color: C.teal }}>Markets Open</span>
+        <span
+          className={marketStatus.open ? 'br-blink' : undefined}
+          style={{
+            width: '4px', height: '4px', borderRadius: '50%',
+            background: marketStatus.open ? C.teal : C.textDim,
+            display: 'inline-block',
+          }}
+        />
+        <span style={{ fontSize: '10px', color: marketStatus.open ? C.teal : C.textDim }}>
+          {marketStatus.label}
+        </span>
       </div>
 
       {/* Right */}
@@ -54,21 +110,9 @@ export function TopBar() {
             width: '4px', height: '4px', borderRadius: '50%', background: C.teal, display: 'inline-block',
           }} />
           <span style={{ fontSize: '10px', color: C.textPrimary }}>
-            {user?.displayName || user?.email?.split('@')[0] || 'Anon'}
+            {displayName}
           </span>
         </div>
-        <button
-          onClick={logout}
-          style={{
-            fontFamily: FONT, fontSize: '9px', letterSpacing: '0.08em',
-            color: C.textDim, background: 'none', cursor: 'pointer',
-            border: `1px solid ${C.borderSoft}`, padding: '2px 8px',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = C.teal; e.currentTarget.style.borderColor = C.teal; }}
-          onMouseLeave={e => { e.currentTarget.style.color = C.textDim; e.currentTarget.style.borderColor = C.borderSoft; }}
-        >
-          SIGN OUT
-        </button>
       </div>
     </div>
   );
