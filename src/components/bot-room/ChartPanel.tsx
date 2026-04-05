@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createChart, ColorType, CrosshairMode, LineStyle } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, IPriceLine, CandlestickData, Time } from 'lightweight-charts';
 import { C, FONT } from './constants';
 
 const CANDLE_LIMIT = 96;
@@ -24,9 +22,14 @@ interface PoolData {
 
 export function ChartPanel() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const priceLinesRef = useRef<IPriceLine[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chartRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const priceLinesRef = useRef<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lcRef = useRef<any>(null); // lightweight-charts module
   const poolRef = useRef<PoolData>({
     position: 'FLAT', leverage: 0, entryPrice: null,
     stopLoss: null, takeProfit: null, poolBalanceBtc: 0,
@@ -35,6 +38,55 @@ export function ChartPanel() {
   const [position, setPosition] = useState<'LONG' | 'SHORT' | 'FLAT'>('FLAT');
   const [leverage, setLeverage] = useState(0);
   const [poolBalance, setPoolBalance] = useState(0);
+
+  // Update price lines on chart
+  const updatePriceLines = useCallback(() => {
+    const series = seriesRef.current;
+    const lc = lcRef.current;
+    if (!series || !lc) return;
+
+    // Remove old lines
+    for (const line of priceLinesRef.current) {
+      series.removePriceLine(line);
+    }
+    priceLinesRef.current = [];
+
+    const pool = poolRef.current;
+    if (pool.position === 'FLAT') return;
+
+    if (pool.takeProfit) {
+      priceLinesRef.current.push(series.createPriceLine({
+        price: pool.takeProfit,
+        color: TP_COLOUR,
+        lineWidth: 1,
+        lineStyle: lc.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'TP',
+      }));
+    }
+
+    if (pool.entryPrice) {
+      priceLinesRef.current.push(series.createPriceLine({
+        price: pool.entryPrice,
+        color: ENTRY_COLOUR,
+        lineWidth: 1,
+        lineStyle: lc.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'Entry',
+      }));
+    }
+
+    if (pool.stopLoss) {
+      priceLinesRef.current.push(series.createPriceLine({
+        price: pool.stopLoss,
+        color: SL_COLOUR,
+        lineWidth: 1,
+        lineStyle: lc.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'SL',
+      }));
+    }
+  }, []);
 
   // Fetch pool status
   const fetchPool = useCallback(async () => {
@@ -57,7 +109,7 @@ export function ChartPanel() {
       setPoolBalance(pd.poolBalanceBtc);
       updatePriceLines();
     } catch { /* silent */ }
-  }, []);
+  }, [updatePriceLines]);
 
   // Fetch candle data
   const fetchCandles = useCallback(async () => {
@@ -69,18 +121,17 @@ export function ChartPanel() {
       const candles = await res.json();
       if (!Array.isArray(candles) || candles.length === 0) return;
 
-      const formatted: CandlestickData<Time>[] = candles
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const formatted = candles
         .filter((c: { open: number | null }) => c.open != null)
         .map((c: { time: string; open: number; high: number; low: number; close: number }) => ({
-          time: Math.floor(new Date(c.time).getTime() / 1000) as Time,
+          time: Math.floor(new Date(c.time).getTime() / 1000),
           open: c.open,
           high: c.high,
           low: c.low,
           close: c.close,
         }))
-        .sort((a: CandlestickData<Time>, b: CandlestickData<Time>) =>
-          (a.time as number) - (b.time as number)
-        );
+        .sort((a: { time: number }, b: { time: number }) => a.time - b.time);
 
       if (formatted.length > 0) {
         series.setData(formatted);
@@ -88,122 +139,89 @@ export function ChartPanel() {
     } catch { /* silent */ }
   }, []);
 
-  // Update price lines on chart
-  function updatePriceLines() {
-    const series = seriesRef.current;
-    if (!series) return;
-
-    // Remove old lines
-    for (const line of priceLinesRef.current) {
-      series.removePriceLine(line);
-    }
-    priceLinesRef.current = [];
-
-    const pool = poolRef.current;
-    if (pool.position === 'FLAT') return;
-
-    if (pool.takeProfit) {
-      priceLinesRef.current.push(series.createPriceLine({
-        price: pool.takeProfit,
-        color: TP_COLOUR,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'TP',
-      }));
-    }
-
-    if (pool.entryPrice) {
-      priceLinesRef.current.push(series.createPriceLine({
-        price: pool.entryPrice,
-        color: ENTRY_COLOUR,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'Entry',
-      }));
-    }
-
-    if (pool.stopLoss) {
-      priceLinesRef.current.push(series.createPriceLine({
-        price: pool.stopLoss,
-        color: SL_COLOUR,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'SL',
-      }));
-    }
-  }
-
-  // Init chart
+  // Init chart — dynamic import to avoid SSR crash
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const chart = createChart(container, {
-      layout: {
-        background: { type: ColorType.Solid, color: C.bgPrimary },
-        textColor: 'rgba(255,255,255,0.35)',
-        fontFamily: FONT,
-        fontSize: 10,
-      },
-      grid: {
-        vertLines: { color: 'rgba(255,255,255,0.04)' },
-        horzLines: { color: 'rgba(255,255,255,0.04)' },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: LineStyle.Dotted },
-        horzLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: LineStyle.Dotted },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(255,255,255,0.06)',
-        scaleMargins: { top: 0.08, bottom: 0.08 },
-      },
-      timeScale: {
-        borderColor: 'rgba(255,255,255,0.06)',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: { mouseWheel: true, pinch: true },
+    let cancelled = false;
+
+    import('lightweight-charts').then((lc) => {
+      if (cancelled) return;
+      lcRef.current = lc;
+
+      const chart = lc.createChart(container, {
+        layout: {
+          background: { type: lc.ColorType.Solid, color: C.bgPrimary },
+          textColor: 'rgba(255,255,255,0.35)',
+          fontFamily: FONT,
+          fontSize: 10,
+        },
+        grid: {
+          vertLines: { color: 'rgba(255,255,255,0.04)' },
+          horzLines: { color: 'rgba(255,255,255,0.04)' },
+        },
+        crosshair: {
+          mode: lc.CrosshairMode.Normal,
+          vertLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: lc.LineStyle.Dotted },
+          horzLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: lc.LineStyle.Dotted },
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(255,255,255,0.06)',
+          scaleMargins: { top: 0.08, bottom: 0.08 },
+        },
+        timeScale: {
+          borderColor: 'rgba(255,255,255,0.06)',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        handleScale: { mouseWheel: true, pinch: true },
+      });
+
+      const series = chart.addCandlestickSeries({
+        upColor: C.teal,
+        downColor: C.coral,
+        borderUpColor: C.teal,
+        borderDownColor: C.coral,
+        wickUpColor: C.teal,
+        wickDownColor: C.coral,
+      });
+
+      chartRef.current = chart;
+      seriesRef.current = series;
+
+      // Responsive resize
+      const ro = new ResizeObserver(() => {
+        const rect = container.getBoundingClientRect();
+        chart.resize(rect.width, rect.height);
+      });
+      ro.observe(container);
+      chart.resize(container.clientWidth, container.clientHeight);
+
+      // Initial data fetch
+      fetchCandles().then(fetchPool);
+
+      // Store cleanup refs
+      (container as any).__cleanup = () => {
+        ro.disconnect();
+        chart.remove();
+        chartRef.current = null;
+        seriesRef.current = null;
+      };
     });
-
-    const series = chart.addCandlestickSeries({
-      upColor: C.teal,
-      downColor: C.coral,
-      borderUpColor: C.teal,
-      borderDownColor: C.coral,
-      wickUpColor: C.teal,
-      wickDownColor: C.coral,
-    });
-
-    chartRef.current = chart;
-    seriesRef.current = series;
-
-    // Responsive resize
-    const ro = new ResizeObserver(() => {
-      const rect = container.getBoundingClientRect();
-      chart.resize(rect.width, rect.height);
-    });
-    ro.observe(container);
-    chart.resize(container.clientWidth, container.clientHeight);
-
-    // Initial data fetch
-    fetchCandles().then(fetchPool);
 
     // Polling
     const candleInterval = setInterval(fetchCandles, CANDLE_POLL_MS);
     const poolInterval = setInterval(fetchPool, POOL_POLL_MS);
 
     return () => {
+      cancelled = true;
       clearInterval(candleInterval);
       clearInterval(poolInterval);
-      ro.disconnect();
-      chart.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
+      if ((container as any).__cleanup) {
+        (container as any).__cleanup();
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
