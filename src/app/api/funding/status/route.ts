@@ -82,19 +82,24 @@ export async function GET() {
 
     const costs = computeCosts();
 
-    const payments = await prisma.subscriptionPayment.findMany({
-      where: {
-        status:    'confirmed',
-        activatedAt: { gte: monthStart },
-      },
-      select: { tier: true, amountSats: true },
+    // Fetch ALL confirmed payments (for all-time totals + runway)
+    const allPayments = await prisma.subscriptionPayment.findMany({
+      where: { status: 'confirmed' },
+      select: { tier: true, amountSats: true, activatedAt: true },
+      orderBy: { activatedAt: 'asc' },
     });
 
+    let allTimeSats = 0;
+    let thisMonthSats = 0;
     let subscriptionRevenueSats = 0;
     let donationRevenueSats = 0;
     const breakdown = { general: 0, members: 0, vip: 0, donations: 0 };
 
-    for (const p of payments) {
+    for (const p of allPayments) {
+      allTimeSats += p.amountSats;
+
+      const isThisMonth = p.activatedAt && p.activatedAt >= monthStart;
+
       if (p.tier === 'donation') {
         donationRevenueSats += p.amountSats;
         breakdown.donations += p.amountSats;
@@ -104,11 +109,31 @@ export async function GET() {
           breakdown[p.tier as keyof typeof breakdown] += p.amountSats;
         }
       }
+
+      if (isThisMonth) thisMonthSats += p.amountSats;
     }
 
-    const totalRevenueSats = subscriptionRevenueSats + donationRevenueSats;
-    const totalRevenueGBP  = totalRevenueSats / SATS_PER_GBP;
-    const coveragePct      = Math.min(100, Math.round((totalRevenueGBP / costs.total) * 100));
+    const thisMonthGBP = thisMonthSats / SATS_PER_GBP;
+    const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((thisMonthGBP / costs.total) * 100)) : 0;
+
+    // ── Runway calculation ──────────────────────────────────────────────────
+    // Total revenue in GBP (all time)
+    const allTimeRevenueGBP = allTimeSats / SATS_PER_GBP;
+    // First payment date (project funding start), or fallback to now
+    const firstPaymentDate = allPayments.length > 0 && allPayments[0].activatedAt
+      ? allPayments[0].activatedAt
+      : now;
+    // Months elapsed since first payment
+    const msElapsed = now.getTime() - firstPaymentDate.getTime();
+    const monthsElapsed = Math.max(1, msElapsed / (1000 * 60 * 60 * 24 * 30.44));
+    // Total costs incurred since first payment
+    const costsIncurred = monthsElapsed * costs.total;
+    // Remaining balance
+    const balanceGBP = allTimeRevenueGBP - costsIncurred;
+    // Runway: how many months from now the balance covers
+    const runwayMonths = costs.total > 0 ? Math.max(0, balanceGBP / costs.total) : 0;
+    // Runway end date
+    const runwayEndDate = new Date(now.getTime() + runwayMonths * 30.44 * 24 * 60 * 60 * 1000);
 
     // Active member counts
     const [generalCount, membersCount, vipCount] = await Promise.all([
@@ -120,11 +145,15 @@ export async function GET() {
     return NextResponse.json({
       subscriptionRevenueSats,
       donationRevenueSats,
-      totalRevenueSats,
-      totalRevenueGBP:  Math.round(totalRevenueGBP * 100) / 100,
+      totalRevenueSats: allTimeSats,
+      totalRevenueGBP:  Math.round(allTimeRevenueGBP * 100) / 100,
+      thisMonthRevenueGBP: Math.round(thisMonthGBP * 100) / 100,
       runningCostsGBP:  costs.total,
       costsBreakdown:   costs,
       coveragePct,
+      balanceGBP:       Math.round(balanceGBP * 100) / 100,
+      runwayMonths:     Math.round(runwayMonths * 10) / 10,
+      runwayEndDate:    runwayEndDate.toISOString(),
       memberCount:      generalCount + membersCount + vipCount,
       memberBreakdown:  { general: generalCount, members: membersCount, vip: vipCount },
       breakdown,

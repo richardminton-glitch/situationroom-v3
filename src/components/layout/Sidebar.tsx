@@ -5,7 +5,6 @@ import { useAuth } from './AuthProvider';
 import { useTheme } from './ThemeProvider';
 import { useTier } from '@/hooks/useTier';
 import { TIER_LABELS } from '@/lib/auth/tier';
-import { FundingBar } from '@/components/widgets/FundingBar';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Tier } from '@/types';
@@ -462,11 +461,6 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
           className="px-3 py-3 border-t space-y-2"
           style={{ borderColor: 'var(--border-subtle)' }}
         >
-          {/* Funding bar compact — only when expanded */}
-          {!collapsed && (
-            <FundingBar variant="compact" onSubscribeClick={() => goToSupport()} />
-          )}
-
           {/* Font size */}
           <div>
             <button

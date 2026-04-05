@@ -91,6 +91,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
   const [lastRefresh, setLastRefresh] = useState('--');
   const [viewers, setViewers] = useState<number | null>(null);
   const [threat, setThreat] = useState<{ level: string; score: number }>({ level: 'LOW', score: 0 });
+  const [funding, setFunding] = useState<{ coveragePct: number; runwayEndDate: string; runwayMonths: number } | null>(null);
 
   // UTC clock — updates every second
   useEffect(() => {
@@ -133,6 +134,22 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
     }
     loadThreat();
     const interval = setInterval(loadThreat, 300_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Funding status — refreshes every 5 minutes
+  useEffect(() => {
+    async function loadFunding() {
+      try {
+        const res = await fetch('/api/funding/status');
+        if (res.ok) {
+          const data = await res.json();
+          setFunding({ coveragePct: data.coveragePct, runwayEndDate: data.runwayEndDate, runwayMonths: data.runwayMonths });
+        }
+      } catch { /* */ }
+    }
+    loadFunding();
+    const interval = setInterval(loadFunding, 300_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -200,6 +217,46 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
               </span>
             </span>
           </Tooltip>
+
+          {/* Funding badge */}
+          {funding && (
+            <Tooltip text={`Monthly funding: ${funding.coveragePct}% of running costs covered this month||${funding.runwayMonths > 0 ? `Runway: ${funding.runwayMonths} months of funding remaining` : 'No funding balance — costs exceed revenue'}||Funded by sats — subscriptions & donations`}>
+              <a
+                href="/support"
+                className="inline-flex items-center gap-1.5"
+                style={{ padding: '1px 7px', border: '1px solid var(--border-subtle)', borderRadius: '3px', textDecoration: 'none', cursor: 'pointer' }}
+              >
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px', letterSpacing: '0.06em' }}>
+                  FUNDED
+                </span>
+                <span
+                  className="relative"
+                  style={{ width: '40px', height: '4px', border: '1px solid var(--border-primary)', background: 'var(--bg-card)' }}
+                >
+                  <span
+                    className="absolute inset-y-0 left-0"
+                    style={{
+                      width: `${Math.min(100, funding.coveragePct)}%`,
+                      backgroundColor: funding.coveragePct >= 100 ? '#2a6e2a' : funding.coveragePct >= 50 ? '#b8860b' : '#b85020',
+                      transition: 'width 0.8s ease',
+                    }}
+                  />
+                </span>
+                <span style={{
+                  fontWeight: 700,
+                  color: funding.coveragePct >= 100 ? '#2a6e2a' : funding.coveragePct >= 50 ? '#b8860b' : '#b85020',
+                  fontSize: '11px',
+                }}>
+                  {funding.coveragePct}%
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
+                  · {funding.runwayMonths > 0
+                    ? new Date(funding.runwayEndDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+                    : 'unfunded'}
+                </span>
+              </a>
+            </Tooltip>
+          )}
         </div>
 
         {/* Center title — absolutely centred, immune to wing widths */}
