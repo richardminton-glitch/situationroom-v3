@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { PanelLoading, chartColors } from './shared';
-import { SignalAnnotationButton } from './SignalAnnotationButton';
 
 interface DataPoint { time: number; value: number; }
 type M2Data = Record<string, DataPoint[]>;
@@ -29,7 +28,6 @@ const LABELS: Record<string, string> = { USA: 'USA', EU: 'EU', UK: 'UK', Japan: 
 
 const MARGIN = { top: 28, right: 52, bottom: 26, left: 4 };
 
-const CALLOUT = 'M2 indexed to 100 at the 3-year baseline. Diverging lines reveal different monetary responses: the USA expanded aggressively post-2020 before contracting; the EU and UK followed with a lag; Japan barely moved, constrained by decades of deflationary psychology. When the Fed expands M2, Bitcoin historically responds 12–18 months later.';
 
 export function M2ChartPanel() {
   const { theme } = useTheme();
@@ -211,18 +209,6 @@ export function M2ChartPanel() {
   if (loading) return <PanelLoading />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
-      <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }} />
-      <p style={{
-        fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)',
-        lineHeight: 1.6, letterSpacing: '0.02em', padding: '6px 8px',
-        borderTop: '1px solid var(--border-subtle)', marginTop: '4px',
-      }}>
-        {CALLOUT}
-      </p>
-      <div style={{ padding: '0 10px 6px' }}>
-        <SignalAnnotationButton panelId="m2-chart" valueKey={new Date().toISOString().slice(0, 10)} />
-      </div>
-    </div>
+    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
   );
 }

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { PanelLoading, chartColors } from './shared';
-import { SignalAnnotationButton } from './SignalAnnotationButton';
 
 interface DataPoint { time: number; value: number; }
 type InflationData = Record<string, DataPoint[]>;
@@ -42,9 +41,6 @@ function fmtPct(v: number): string {
   return `${v.toFixed(1)}%`;
 }
 
-// ── Static editorial callout ───────────────────────────────────────────────────
-const CALLOUT_G7 = 'G7 inflation peaked in 2022–23 as pandemic-era monetary expansion met supply-chain disruption. Central banks responded with the fastest rate-hiking cycle in four decades, pulling inflation back toward target. Japan remains an outlier — decades of deflation mean any sustained price rise is structurally significant.';
-const CALLOUT_EXTREME = 'Extreme cases reveal what happens when monetary discipline breaks down. Turkey\'s 2022 unorthodox rate cuts sent inflation to 85%. Argentina\'s chronic fiscal monetisation has produced triple-digit inflation. These are not outliers — they are the endpoint of every fiat experiment that prioritises growth over monetary restraint.';
 
 export function InflationChartPanel() {
   const { theme } = useTheme();
@@ -238,17 +234,6 @@ export function InflationChartPanel() {
 
   if (loading) return <PanelLoading />;
 
-  const monoStyle: React.CSSProperties = {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '9px',
-    color: 'var(--text-muted)',
-    lineHeight: 1.6,
-    letterSpacing: '0.02em',
-    padding: '6px 8px',
-    borderTop: '1px solid var(--border-subtle)',
-    marginTop: '4px',
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
       {/* Extreme mode toggle */}
@@ -270,12 +255,6 @@ export function InflationChartPanel() {
 
       {/* Chart */}
       <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }} />
-
-      {/* Editorial callout */}
-      <p style={monoStyle}>{extreme ? CALLOUT_EXTREME : CALLOUT_G7}</p>
-      <div style={{ padding: '0 10px 6px' }}>
-        <SignalAnnotationButton panelId="inflation-chart" valueKey={new Date().toISOString().slice(0, 10)} />
-      </div>
     </div>
   );
 }
