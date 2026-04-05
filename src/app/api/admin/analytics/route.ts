@@ -62,6 +62,31 @@ async function umamiGet(path: string, params: Record<string, string> = {}): Prom
   return res.json();
 }
 
+// ── Umami v3 → v2 response normalisers ────────────────────────────────────
+// v3 returns flat numbers ({ pageviews: 166 }) while the admin page expects
+// the v2 shape ({ pageviews: { value: 166 } }).  These helpers bridge both.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeStats(raw: any): any {
+  if (!raw) return null;
+  // Already v2 format?
+  if (raw.pageviews?.value !== undefined) return raw;
+  return {
+    pageviews: { value: raw.pageviews ?? 0 },
+    visitors:  { value: raw.visitors ?? 0 },
+    visits:    { value: raw.visits ?? 0 },
+    bounces:   { value: raw.bounces ?? 0 },
+    totaltime: { value: raw.totaltime ?? 0 },
+  };
+}
+
+// v3 active-users returns { visitors: N } instead of { x: N }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeActive(raw: any): any {
+  if (!raw) return { x: 0 };
+  if (raw.x !== undefined) return raw;           // v2
+  return { x: raw.visitors ?? 0 };               // v3
+}
+
 export async function GET() {
   // Admin-only
   const session = await getSession();
@@ -103,7 +128,7 @@ export async function GET() {
       umamiGet('/stats', { startAt: weekMs, endAt: nowMs }),
       umamiGet('/stats', { startAt: monthMs, endAt: nowMs }),
       umamiGet('/pageviews', { startAt: weekMs, endAt: nowMs, unit: 'day', timezone: 'UTC' }),
-      umamiGet('/metrics', { startAt: monthMs, endAt: nowMs, type: 'url', limit: '10' }),
+      umamiGet('/metrics', { startAt: monthMs, endAt: nowMs, type: 'path', limit: '10' }),
       umamiGet('/metrics', { startAt: monthMs, endAt: nowMs, type: 'referrer', limit: '10' }),
       umamiGet('/metrics', { startAt: monthMs, endAt: nowMs, type: 'country', limit: '10' }),
       umamiGet('/metrics', { startAt: monthMs, endAt: nowMs, type: 'device', limit: '5' }),
@@ -111,10 +136,10 @@ export async function GET() {
     ]);
 
     return NextResponse.json({
-      activeUsers,
-      statsToday,
-      stats7d,
-      stats30d,
+      activeUsers: normalizeActive(activeUsers),
+      statsToday:  normalizeStats(statsToday),
+      stats7d:     normalizeStats(stats7d),
+      stats30d:    normalizeStats(stats30d),
       pageviews7d,
       topPages,
       referrers,
