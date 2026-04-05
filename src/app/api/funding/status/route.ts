@@ -11,8 +11,11 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// ── Fixed costs (monthly) ────────────────────────────────────────────────────
-const HOSTING_GBP = 28;
+// ── Fixed costs (monthly, derived from annual renewals) ──────────────────────
+// VPS (KVM 1): £15.99/yr + Business Web Hosting: £167.88/yr = £183.87/yr
+const HOSTING_GBP = 15.32;   // £183.87 / 12
+// Domain: situationroom.space £26.99/yr
+const DOMAINS_GBP = 2.25;    // £26.99 / 12
 
 // ── API-Ninjas cost estimate ─────────────────────────────────────────────────
 // Plan: $35/mo (100K calls). Estimated ~15,360 calls/30d at current polling.
@@ -59,12 +62,15 @@ function computeCosts() {
   const aiUsd = estimateAiCostUsd();
   const aiGbp = Math.round(aiUsd * USD_TO_GBP);
   const apiNinjasGbp = Math.round(API_NINJAS_USD * USD_TO_GBP);
+  const hostingRounded = Math.round(HOSTING_GBP);
+  const domainsRounded = Math.round(DOMAINS_GBP);
 
   return {
-    hosting: HOSTING_GBP,
+    hosting: hostingRounded,
+    domains: domainsRounded,
     apiNinjas: apiNinjasGbp,
     ai: aiGbp,
-    total: HOSTING_GBP + apiNinjasGbp + aiGbp,
+    total: hostingRounded + domainsRounded + apiNinjasGbp + aiGbp,
   };
 }
 

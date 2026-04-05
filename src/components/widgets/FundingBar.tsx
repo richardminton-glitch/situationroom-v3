@@ -9,7 +9,7 @@ interface FundingStatus {
   subscriptionRevenueSats: number;
   donationRevenueSats: number;
   memberBreakdown: { general: number; members: number; vip: number };
-  costsBreakdown: { apiNinjas: number; hosting: number; ai: number; total: number };
+  costsBreakdown: { apiNinjas: number; hosting: number; domains: number; ai: number; total: number };
 }
 
 function progressColor(pct: number): string {
@@ -100,7 +100,7 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.08em' }}>
           RUNNING COSTS
         </div>
-        {Object.entries({ 'xAI Grok': costsBreakdown.ai, 'API Ninjas': costsBreakdown.apiNinjas, 'Hosting': costsBreakdown.hosting }).map(([name, cost]) => (
+        {Object.entries({ 'xAI Grok': costsBreakdown.ai, 'API Ninjas': costsBreakdown.apiNinjas, 'Hosting': costsBreakdown.hosting, 'Domains': costsBreakdown.domains }).map(([name, cost]) => (
           <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
             <span style={{ color: 'var(--text-muted)' }}>£{cost}/mo</span>
