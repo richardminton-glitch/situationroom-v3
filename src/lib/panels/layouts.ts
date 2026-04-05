@@ -140,8 +140,8 @@ const AI_PRESET: DashboardLayout = {
   name: 'AI Analysis',
   description: 'AI-powered signal synthesis, cohort analysis, and structured market argument',
   panels: [
-    { panelId: 'bitcoin-argument',   x: 0,   y: 0,   w: 748, h: 440, collapsed: false, resizable: true },
-    { panelId: 'cohort-analysis',    x: 0,   y: 440, w: 748, h: 308, collapsed: false, resizable: true },
+    { panelId: 'bitcoin-argument',   x: 0,   y: 0,   w: 748, h: 528, collapsed: false, resizable: true },
+    { panelId: 'cohort-analysis',    x: 0,   y: 528, w: 748, h: 220, collapsed: false, resizable: true },
     { panelId: 'signal-interpreter', x: 748, y: 0,   w: 704, h: 748, collapsed: false, resizable: true },
   ],
 };
