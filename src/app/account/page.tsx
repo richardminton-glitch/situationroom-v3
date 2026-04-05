@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TIER_LABELS, TIER_ORDER, isAdmin } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_ORDER, isAdmin, hasAccess } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 
 declare global {
@@ -20,6 +20,17 @@ const FREQUENCY_OPTIONS = [
   { value: 'daily', label: 'Daily', desc: 'Every morning at 06:00 UTC' },
   { value: 'weekly', label: 'Weekly', desc: 'Every Sunday morning' },
 ];
+
+const VIP_TOPICS = [
+  { key: 'btc-network',        label: 'Bitcoin Network',             desc: 'Hashrate, mining, difficulty, Lightning' },
+  { key: 'onchain',            label: 'On-Chain Analytics',          desc: 'MVRV, SOPR, exchange flows, UTXO cohorts' },
+  { key: 'macro-banks',        label: 'Macro & Central Banks',      desc: 'Rates, M2, QE/QT, central bank policy' },
+  { key: 'geopolitical',       label: 'Geopolitical Risk',          desc: 'Conflict, sanctions, regulatory shifts' },
+  { key: 'inflation',          label: 'Inflation & Purchasing Power', desc: 'CPI, real yields, currency debasement' },
+  { key: 'energy-commodities', label: 'Energy & Commodities',       desc: 'Oil, gas, gold, mining energy costs' },
+  { key: 'btc-equities',       label: 'Bitcoin Equities',           desc: 'MSTR, miners, ETF flows, equity proxies' },
+  { key: 'emerging-markets',   label: 'Emerging Markets',           desc: 'EM adoption, capital controls, remittances' },
+] as const;
 
 const DAY_OPTIONS = [
   { value: 0, label: 'Sunday' },
@@ -41,6 +52,11 @@ export default function AccountPage() {
   const [day, setDay] = useState(0);
   const [nlLoading, setNlLoading] = useState(false);
   const [nlSaved, setNlSaved] = useState(false);
+
+  // VIP briefing topics
+  const [vipTopics, setVipTopics] = useState<string[]>([]);
+  const [vipLoading, setVipLoading] = useState(false);
+  const [vipSaved, setVipSaved] = useState(false);
 
   // PIN reset
   const [pinResetting, setPinResetting] = useState(false);
@@ -72,6 +88,7 @@ export default function AccountPage() {
           setNewsletterEnabled(data.newsletterEnabled ?? false);
           setFrequency(data.newsletterFrequency ?? 'weekly');
           setDay(data.newsletterDay ?? 0);
+          setVipTopics(data.newsletterVipTopics ?? []);
         }
       })
       .catch(() => {});
@@ -144,6 +161,38 @@ export default function AccountPage() {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setNlLoading(false);
+    }
+  }
+
+  function toggleVipTopic(key: string) {
+    setVipTopics((prev) => {
+      if (prev.includes(key)) return prev.filter((t) => t !== key);
+      if (prev.length >= 3) return prev; // max 3
+      return [...prev, key];
+    });
+    setVipSaved(false);
+  }
+
+  async function saveVipTopics() {
+    setVipLoading(true);
+    setVipSaved(false);
+    setError('');
+    try {
+      const res = await fetch('/api/newsletter/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newsletterVipTopics: vipTopics }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save');
+      }
+      setVipSaved(true);
+      setTimeout(() => setVipSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setVipLoading(false);
     }
   }
 
@@ -423,6 +472,89 @@ export default function AccountPage() {
             {nlLoading ? 'SAVING...' : nlSaved ? '✓ SAVED' : 'SAVE'}
           </button>
         )}
+      </div>
+
+      {/* ── VIP Briefing Topics ── */}
+      <div style={{
+        ...sectionStyle,
+        opacity: hasAccess(userTier, 'vip') ? 1 : 0.45,
+        position: 'relative',
+      }}>
+        <span style={{ ...labelStyle, color: '#7c5cbf' }}>VIP Briefing</span>
+
+        {!hasAccess(userTier, 'vip') && (
+          <div style={{
+            position: 'absolute', top: 20, right: 24,
+            padding: '3px 10px',
+            fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em',
+            color: '#7c5cbf', border: '1px solid #7c5cbf', backgroundColor: 'rgba(124, 92, 191, 0.08)',
+          }}>
+            VIP ONLY
+          </div>
+        )}
+
+        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+          Choose up to 3 focus topics. Your daily briefing will be personalised with deeper analysis
+          in these areas, weighted above the standard briefing sections.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+          {VIP_TOPICS.map((topic) => {
+            const selected = vipTopics.includes(topic.key);
+            const atLimit = vipTopics.length >= 3 && !selected;
+            const disabled = !hasAccess(userTier, 'vip') || atLimit;
+
+            return (
+              <button
+                key={topic.key}
+                onClick={() => !disabled && toggleVipTopic(topic.key)}
+                disabled={disabled}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 14px', textAlign: 'left',
+                  fontFamily: 'var(--font-mono)', fontSize: '11px',
+                  backgroundColor: selected ? 'rgba(124, 92, 191, 0.12)' : 'var(--bg-secondary)',
+                  color: selected ? '#7c5cbf' : 'var(--text-secondary)',
+                  border: `1px solid ${selected ? '#7c5cbf' : 'var(--border-subtle)'}`,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  opacity: disabled && !selected ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{
+                  width: '16px', height: '16px', flexShrink: 0,
+                  border: `1px solid ${selected ? '#7c5cbf' : 'var(--border-primary)'}`,
+                  backgroundColor: selected ? '#7c5cbf' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '10px', color: 'var(--bg-primary)',
+                }}>
+                  {selected ? '✓' : ''}
+                </span>
+                <span style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 600, display: 'block', marginBottom: '2px' }}>{topic.label}</span>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{topic.desc}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={saveVipTopics}
+            disabled={vipLoading || !hasAccess(userTier, 'vip')}
+            style={{
+              ...btnStyle('primary'),
+              backgroundColor: '#7c5cbf',
+              opacity: vipLoading || !hasAccess(userTier, 'vip') ? 0.5 : 1,
+            }}
+          >
+            {vipLoading ? 'SAVING...' : vipSaved ? '✓ SAVED' : 'SAVE TOPICS'}
+          </button>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
+            {vipTopics.length}/3 selected
+          </span>
+        </div>
       </div>
 
       {/* ── Reset PIN ── */}
