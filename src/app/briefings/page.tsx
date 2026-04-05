@@ -28,11 +28,11 @@ export default async function BriefingsArchivePage() {
   const canReadArchive = hasAccess(userTier, 'general');
   const isVip = hasAccess(userTier, 'vip');
 
-  // General+: 30 days. Free: 3 most recent (teasers only — detail pages still gated).
+  // General+: 30 days. Free: 7 days (outlook section only on detail page).
   const briefings = await prisma.briefing.findMany({
     select: { date: true, headline: true, threatLevel: true, convictionScore: true, generatedAt: true },
     orderBy: { date: 'desc' },
-    take: canReadArchive ? 30 : 3,
+    take: canReadArchive ? 30 : 7,
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -66,7 +66,7 @@ export default async function BriefingsArchivePage() {
       ) : (
         <div>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            {canReadArchive ? `Archive — last 30 days` : `Recent briefings — ${briefings.length} shown`}
+            {canReadArchive ? `Archive — last 30 days` : `Recent briefings — last 7 days (outlook only)`}
           </p>
 
           {briefings.map((b, i) => {

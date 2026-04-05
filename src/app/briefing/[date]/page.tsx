@@ -45,7 +45,11 @@ export default async function BriefingPage({ params }: Props) {
   if (!briefing) notFound();
 
   const userTier = (user?.tier as Tier) ?? 'free';
-  const canRead = hasAccess(userTier, 'general');
+  const canReadFull = hasAccess(userTier, 'general');
+
+  // Free tier: can view outlook section only, within 7-day window
+  const daysSinceBriefing = Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+  const freeWindowExpired = !canReadFull && daysSinceBriefing > 7;
 
   const sourcesCount = (JSON.parse(briefing.sourcesJson) as unknown[]).length;
   const dataSnapshot = JSON.parse(briefing.dataSnapshotJson) as Record<string, number>;
@@ -150,8 +154,9 @@ export default async function BriefingPage({ params }: Props) {
         </div>
       )}
 
-      {/* ── Sections — gated to General+ ──────────────────────────────────── */}
-      {canRead ? (
+      {/* ── Sections ──────────────────────────────────────────────────────── */}
+      {canReadFull ? (
+        /* General+ : all 5 sections */
         <>
           {sections.map((section, i) => (
             <section key={section.key} style={{ marginBottom: i < sections.length - 1 ? '36px' : '28px' }}>
@@ -164,16 +169,16 @@ export default async function BriefingPage({ params }: Props) {
           {/* VIP personalised position context — renders client-side if applicable */}
           <PersonalBriefingContext date={date} />
         </>
-      ) : (
-        /* Upgrade wall — free users */
+      ) : freeWindowExpired ? (
+        /* Free tier — briefing older than 7 days */
         <div style={{ border: '1px solid var(--border-primary)', padding: '32px 28px', textAlign: 'center', marginBottom: '32px', backgroundColor: 'var(--bg-secondary)' }}>
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: '10px' }}>
-            FULL BRIEFING · 5 SECTIONS · {sourcesCount} SOURCES
+            FREE ARCHIVE · 7 DAYS
           </p>
           <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-            Full briefings are available to General members and above.
+            This briefing is outside the 7-day free window.
             <br />
-            Subscribe for 10,000 sats/month to unlock daily analysis.
+            Subscribe to General for 30-day full archive access.
           </p>
           <Link
             href="/support"
@@ -181,11 +186,34 @@ export default async function BriefingPage({ params }: Props) {
           >
             SUBSCRIBE ⚡ 10,000 SATS
           </Link>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '12px' }}>
-            Already subscribed?{' '}
-            <a href="/api/auth/login" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>Sign in</a>
-          </p>
         </div>
+      ) : (
+        /* Free tier — within 7 days: show outlook only + upgrade prompt for full */
+        <>
+          {/* Outlook section (V) */}
+          <section style={{ marginBottom: '28px' }}>
+            <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px', marginBottom: '14px' }}>
+              V. Outlook
+            </h2>
+            <BriefingMarkdown content={briefing.outlookSection} />
+          </section>
+
+          {/* Upgrade prompt for full sections */}
+          <div style={{ border: '1px solid var(--border-primary)', padding: '32px 28px', textAlign: 'center', marginBottom: '32px', backgroundColor: 'var(--bg-secondary)' }}>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: '10px' }}>
+              4 MORE SECTIONS · MARKET · NETWORK · GEOPOLITICAL · MACRO
+            </p>
+            <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
+              Full briefings with all 5 agent sections available to General members.
+            </p>
+            <Link
+              href="/support"
+              style={{ display: 'inline-block', padding: '10px 24px', backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textDecoration: 'none' }}
+            >
+              SUBSCRIBE ⚡ 10,000 SATS/MO
+            </Link>
+          </div>
+        </>
       )}
 
       {/* Prev / Next — always visible */}
