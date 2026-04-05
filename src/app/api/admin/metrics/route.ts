@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { isAdmin } from '@/lib/auth/tier';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
