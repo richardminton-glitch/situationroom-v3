@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { PanelLoading } from './shared';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { BlurGate } from '@/components/auth/BlurGate';
 import { useTier } from '@/hooks/useTier';
+import { ConvictionBreakdownModal } from './ConvictionBreakdownModal';
 import type { ConvictionResult } from '@/lib/conviction/engine';
 import {
   ChatCircleDots,
@@ -76,6 +78,7 @@ function dirColor(dir: string): string {
 export function ConvictionPanel() {
   const [data, setData] = useState<ConvictionResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
   const { theme } = useTheme();
   const { canAccess } = useTier();
   const isVip = canAccess('vip');
@@ -109,50 +112,67 @@ export function ConvictionPanel() {
     : data.bandColor;
 
   return (
-    <div className="flex items-center gap-3" style={{ width: '100%' }}>
-      {/* Signal list — gated: General required for breakdown */}
-      <BlurGate requiredTier="general" featureName="Conviction Breakdown">
-        <div className="flex-1">
-          {data.signals.map((sig) => (
-            <div key={sig.key} className="flex items-center justify-between py-0.5">
-              <span className="text-xs inline-flex items-center" style={{ color: 'var(--text-muted)' }}>
-                <span className="inline-flex w-4 justify-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
-                {' '}
-                <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
-                  {sig.name.split(' ')[0]}
+    <>
+      <div
+        className="flex items-center gap-3"
+        style={{ width: '100%', cursor: 'pointer' }}
+        onClick={() => setModalOpen(true)}
+        title="Click for full conviction breakdown"
+      >
+        {/* Signal list — gated: General required for breakdown */}
+        <BlurGate requiredTier="general" featureName="Conviction Breakdown">
+          <div className="flex-1">
+            {data.signals.map((sig) => (
+              <div key={sig.key} className="flex items-center justify-between py-0.5">
+                <span className="text-xs inline-flex items-center" style={{ color: 'var(--text-muted)' }}>
+                  <span className="inline-flex w-4 justify-center">{SIGNAL_ICONS[sig.key] || '•'}</span>
+                  {' '}
+                  <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
+                    {sig.name.split(' ')[0]}
+                  </span>
                 </span>
-              </span>
-              <span className="text-xs font-medium" style={{ fontFamily: 'var(--font-data)', color: dirColor(sig.direction) }}>
-                {sig.score}
-              </span>
-            </div>
-          ))}
-        </div>
-      </BlurGate>
-
-      {/* Gauge */}
-      <div className="shrink-0 text-center">
-        <GaugeArc score={data.composite} color={bandColor} />
-        <div
-          className="text-xs uppercase tracking-widest font-medium -mt-1"
-          style={{ color: bandColor, fontSize: '8px', letterSpacing: '0.1em' }}
-        >
-          {data.band.split(' ').map((w) => <div key={w}>{w}</div>)}
-        </div>
-        {isVip && personal && personal.positionStatus !== 'no_data' && (
-          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '2px' }}>YOUR SCORE</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 'bold', color: personal.personalScore >= 60 ? 'var(--accent-success)' : personal.personalScore >= 40 ? 'var(--text-secondary)' : 'var(--accent-danger)' }}>
-              {personal.personalScore} — {personal.personalLabel}
-            </div>
-            {personal.profitPct !== null && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: personal.profitPct >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)', marginTop: '2px' }}>
-                Position: {personal.profitPct >= 0 ? '+' : ''}{personal.profitPct}%
+                <span className="text-xs font-medium" style={{ fontFamily: 'var(--font-data)', color: dirColor(sig.direction) }}>
+                  {sig.score}
+                </span>
               </div>
-            )}
+            ))}
           </div>
-        )}
+        </BlurGate>
+
+        {/* Gauge */}
+        <div className="shrink-0 text-center">
+          <GaugeArc score={data.composite} color={bandColor} />
+          <div
+            className="text-xs uppercase tracking-widest font-medium -mt-1"
+            style={{ color: bandColor, fontSize: '8px', letterSpacing: '0.1em' }}
+          >
+            {data.band.split(' ').map((w) => <div key={w}>{w}</div>)}
+          </div>
+          {isVip && personal && personal.positionStatus !== 'no_data' && (
+            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '2px' }}>YOUR SCORE</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 'bold', color: personal.personalScore >= 60 ? 'var(--accent-success)' : personal.personalScore >= 40 ? 'var(--text-secondary)' : 'var(--accent-danger)' }}>
+                {personal.personalScore} — {personal.personalLabel}
+              </div>
+              {personal.profitPct !== null && (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: personal.profitPct >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)', marginTop: '2px' }}>
+                  Position: {personal.profitPct >= 0 ? '+' : ''}{personal.profitPct}%
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Breakdown modal — portaled to body */}
+      {modalOpen && typeof document !== 'undefined' && createPortal(
+        <ConvictionBreakdownModal
+          data={data}
+          personal={personal}
+          onClose={() => setModalOpen(false)}
+        />,
+        document.body,
+      )}
+    </>
   );
 }

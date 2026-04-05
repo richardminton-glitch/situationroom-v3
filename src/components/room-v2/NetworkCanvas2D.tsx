@@ -1119,7 +1119,7 @@ export default function NetworkCanvas2D({
           }}
         >
           {/* Title */}
-          <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', marginBottom: 6 }}>
+          <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#8494a7', marginBottom: 6 }}>
             THREAT ASSESSMENT MODULE
           </div>
 
@@ -1131,7 +1131,7 @@ export default function NetworkCanvas2D({
             }}>
               {threatScore}
             </span>
-            <span style={{ fontSize: 9, color: '#6b7a8d' }}>/100</span>
+            <span style={{ fontSize: 9, color: '#8494a7' }}>/100</span>
             <span style={{
               fontSize: 8, letterSpacing: '0.08em',
               color: stateColor,
@@ -1143,7 +1143,7 @@ export default function NetworkCanvas2D({
           </div>
 
           {/* Domain contribution bars */}
-          <div style={{ fontSize: 8, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+          <div style={{ fontSize: 8, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
             DOMAIN CONTRIBUTIONS
           </div>
           {hoverData.domainContributions.length > 0 ? (
@@ -1154,16 +1154,16 @@ export default function NetworkCanvas2D({
                 const pct = threatScore > 0 ? (score / threatScore) * 100 : 0;
                 const barW = 120;
                 const filledW = Math.min(barW, (score / 40) * barW); // 40 = max tier impact
-                const info = DOMAIN_LABELS[key] || { label: key, color: '#6b7a8d' };
+                const info = DOMAIN_LABELS[key] || { label: key, color: '#8494a7' };
                 return (
                   <div key={key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
                       <span style={{ fontSize: 8, letterSpacing: '0.08em', color: info.color }}>
                         {info.label}
                       </span>
-                      <span style={{ fontSize: 9, color: score > 0 ? info.color : '#4a5a6d', fontWeight: 600 }}>
+                      <span style={{ fontSize: 9, color: score > 0 ? info.color : '#5e7080', fontWeight: 600 }}>
                         {score > 0 ? '+' + score.toFixed(1) : '0'}
-                        {pct > 0 && <span style={{ color: '#4a5a6d', marginLeft: 4, fontWeight: 400 }}>{pct.toFixed(0)}%</span>}
+                        {pct > 0 && <span style={{ color: '#5e7080', marginLeft: 4, fontWeight: 400 }}>{pct.toFixed(0)}%</span>}
                       </span>
                     </div>
                     <div style={{ width: barW, height: 3, background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
@@ -1178,11 +1178,11 @@ export default function NetworkCanvas2D({
               })}
             </div>
           ) : (
-            <div style={{ fontSize: 9, color: '#4a5a6d' }}>NO ACTIVE THREATS</div>
+            <div style={{ fontSize: 9, color: '#5e7080' }}>NO ACTIVE THREATS</div>
           )}
 
           {/* Methodology note */}
-          <div style={{ fontSize: 7, color: '#3a4a5a', marginTop: 6, lineHeight: '10px' }}>
+          <div style={{ fontSize: 7, color: '#4d6070', marginTop: 6, lineHeight: '10px' }}>
             Exponential decay · 3h half-life · Recalculated every second
           </div>
         </div>

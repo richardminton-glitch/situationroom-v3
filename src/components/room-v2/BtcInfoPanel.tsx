@@ -9,7 +9,7 @@
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 const COLORS = {
-  label: '#6b7a8d',
+  label: '#8494a7',
   primary: '#e8edf2',
   positive: '#00e5c8',
   negative: '#e03030',

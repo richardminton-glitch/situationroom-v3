@@ -81,7 +81,7 @@ export default function TopBar({
     >
       {/* Left: UTC clock */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span style={{ color: '#4a5a6d', fontSize: 9, letterSpacing: '0.05em' }}>
+        <span style={{ color: '#5e7080', fontSize: 9, letterSpacing: '0.05em' }}>
           {utc}
         </span>
       </div>
@@ -135,7 +135,7 @@ export default function TopBar({
           <span
             style={{
               fontSize: 9,
-              color: '#6b7a8d',
+              color: '#8494a7',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
@@ -179,14 +179,14 @@ export default function TopBar({
             />
 
             {/* Title */}
-            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#8494a7', marginBottom: 8 }}>
               THREAT POSTURE MODEL
             </div>
 
             {/* Current score bar */}
             <div style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: '#8a9aad' }}>Current Score</span>
+                <span style={{ fontSize: 10, color: '#a0b0c0' }}>Current Score</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: stateColor, fontVariantNumeric: 'tabular-nums' }}>
                   {threatScore}/100
                 </span>
@@ -207,7 +207,7 @@ export default function TopBar({
             </div>
 
             {/* Thresholds */}
-            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
               STATE THRESHOLDS
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
@@ -232,11 +232,11 @@ export default function TopBar({
                         boxShadow: threatState === t.state ? `0 0 4px ${t.color}` : 'none',
                       }}
                     />
-                    <span style={{ fontSize: 9, fontWeight: threatState === t.state ? 600 : 400, color: threatState === t.state ? t.color : '#6b7a8d', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: 9, fontWeight: threatState === t.state ? 600 : 400, color: threatState === t.state ? t.color : '#8494a7', letterSpacing: '0.08em' }}>
                       {t.state}
                     </span>
                   </div>
-                  <span style={{ fontSize: 9, color: '#4a5a6d', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 9, color: '#5e7080', fontVariantNumeric: 'tabular-nums' }}>
                     {t.state === 'QUIET' ? '0 – 15' : t.state === 'MONITORING' ? '16 – 35' : t.state === 'ELEVATED' ? '36 – 55' : t.state === 'ALERT' ? '56 – 75' : '76 – 100'}
                   </span>
                 </div>
@@ -244,12 +244,12 @@ export default function TopBar({
             </div>
 
             {/* Methodology */}
-            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#4a5a6d', marginBottom: 4 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
               METHODOLOGY
             </div>
-            <div style={{ fontSize: 9, color: '#6b7a8d', lineHeight: '14px' }}>
+            <div style={{ fontSize: 9, color: '#8494a7', lineHeight: '14px' }}>
               Five domain agents (Geopolitical, Economic, Bitcoin, Disaster, Political) feed intelligence to the Threat Assessment Module.
-              Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: '#8a9aad' }}>3-hour half-life</span>.
+              Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: '#a0b0c0' }}>3-hour half-life</span>.
               Score is the decaying sum of all impacts, capped at 100, recalculated every second.
             </div>
           </div>
@@ -258,10 +258,10 @@ export default function TopBar({
 
       {/* Right: Feed status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ color: '#6b7a8d', fontSize: 9, letterSpacing: '0.06em' }}>
+        <span style={{ color: '#8494a7', fontSize: 9, letterSpacing: '0.06em' }}>
           {operatorCount} OPS
         </span>
-        <span style={{ color: '#6b7a8d', fontSize: 9, letterSpacing: '0.06em' }}>
+        <span style={{ color: '#8494a7', fontSize: 9, letterSpacing: '0.06em' }}>
           {eventCount} EVT/30m
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

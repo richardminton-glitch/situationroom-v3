@@ -208,7 +208,7 @@ export default function ThreatAnalysisPanel({
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#6b7a8d',
+          color: '#8494a7',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           flexShrink: 0,
           display: 'flex',
@@ -218,7 +218,7 @@ export default function ThreatAnalysisPanel({
       >
         <span>THREAT ANALYSIS</span>
         {hovered && (
-          <span style={{ color: '#4a5a6d', fontSize: 8 }}>PAUSED</span>
+          <span style={{ color: '#5e7080', fontSize: 8 }}>PAUSED</span>
         )}
       </div>
 
@@ -254,7 +254,7 @@ export default function ThreatAnalysisPanel({
                 {/* Timestamp */}
                 <span
                   style={{
-                    color: '#3a4a5a',
+                    color: '#4d6070',
                     flexShrink: 0,
                     fontVariantNumeric: 'tabular-nums',
                     width: 56,
@@ -265,7 +265,7 @@ export default function ThreatAnalysisPanel({
 
                 {/* State transition badge or INIT */}
                 {isInit ? (
-                  <span style={{ color: '#6b7a8d', fontWeight: 600, fontSize: 9 }}>
+                  <span style={{ color: '#8494a7', fontWeight: 600, fontSize: 9 }}>
                     INIT
                   </span>
                 ) : (
@@ -273,7 +273,7 @@ export default function ThreatAnalysisPanel({
                     <span style={{ color: STATE_COLORS[entry.fromState] }}>
                       {entry.fromState}
                     </span>
-                    <span style={{ color: '#4a5a6d', margin: '0 3px' }}>{'->'}</span>
+                    <span style={{ color: '#5e7080', margin: '0 3px' }}>{'->'}</span>
                     <span style={{ color: STATE_COLORS[entry.toState] }}>
                       {entry.toState}
                     </span>
@@ -281,13 +281,13 @@ export default function ThreatAnalysisPanel({
                 )}
 
                 {/* Score */}
-                <span style={{ color: '#4a5a6d', fontSize: 9 }}>
+                <span style={{ color: '#5e7080', fontSize: 9 }}>
                   ({entry.score}/100)
                 </span>
 
                 {/* Cached badge */}
                 {isCached && (
-                  <span style={{ color: '#3a4a5a', fontSize: 7, letterSpacing: '0.08em' }}>
+                  <span style={{ color: '#4d6070', fontSize: 7, letterSpacing: '0.08em' }}>
                     CACHED
                   </span>
                 )}
@@ -296,7 +296,7 @@ export default function ThreatAnalysisPanel({
               {/* Analysis text */}
               <div
                 style={{
-                  color: '#8a9aad',
+                  color: '#a0b0c0',
                   marginTop: 2,
                   paddingLeft: 62,
                   lineHeight: '14px',
@@ -305,7 +305,7 @@ export default function ThreatAnalysisPanel({
                 {entry.loading ? (
                   <span
                     style={{
-                      color: '#6b7a8d',
+                      color: '#8494a7',
                       animation: 'analysisPulse 1.5s ease-in-out infinite',
                     }}
                   >

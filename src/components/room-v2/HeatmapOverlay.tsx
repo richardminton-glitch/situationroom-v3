@@ -64,7 +64,7 @@ export default function HeatmapOverlay({ visible, onClose }: HeatmapOverlayProps
             fontSize: 10,
             fontFamily: FONT,
             letterSpacing: '0.12em',
-            color: '#6b7a8d',
+            color: '#8494a7',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             justifyContent: 'space-between',
@@ -78,7 +78,7 @@ export default function HeatmapOverlay({ visible, onClose }: HeatmapOverlayProps
             style={{
               background: 'none',
               border: '1px solid rgba(255,255,255,0.1)',
-              color: '#6b7a8d',
+              color: '#8494a7',
               fontSize: 9,
               fontFamily: FONT,
               cursor: 'pointer',

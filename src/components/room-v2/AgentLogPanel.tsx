@@ -65,7 +65,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#6b7a8d',
+          color: '#8494a7',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           flexShrink: 0,
           display: 'flex',
@@ -75,7 +75,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
       >
         <span>AGENT TELEMETRY</span>
         {hovered && (
-          <span style={{ color: '#4a5a6d', fontSize: 8 }}>PAUSED</span>
+          <span style={{ color: '#5e7080', fontSize: 8 }}>PAUSED</span>
         )}
       </div>
 
@@ -92,7 +92,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
         }}
       >
         {entries.map((entry) => {
-          const color = DOMAIN_COLORS[entry.domain] || '#6b7a8d';
+          const color = DOMAIN_COLORS[entry.domain] || '#8494a7';
           const agent = AGENTS[entry.domain as keyof typeof AGENTS];
           const label = agent?.shortLabel || entry.domain;
           const isTiered = entry.tier && entry.tier >= 3;
@@ -113,7 +113,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
               {/* Timestamp */}
               <span
                 style={{
-                  color: '#3a4a5a',
+                  color: '#4d6070',
                   flexShrink: 0,
                   fontVariantNumeric: 'tabular-nums',
                   width: 56,
@@ -136,7 +136,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
               </span>
 
               {/* Message */}
-              <span style={{ color: '#8a9aad' }}>
+              <span style={{ color: '#a0b0c0' }}>
                 {entry.message}
               </span>
             </div>

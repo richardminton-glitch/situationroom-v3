@@ -82,7 +82,7 @@ export default function NostrChatSlot({
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#6b7a8d',
+          color: '#8494a7',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           flexShrink: 0,
           display: 'flex',
@@ -121,10 +121,10 @@ export default function NostrChatSlot({
               >
                 {icon} {msg.authorDisplay}
               </span>
-              <span style={{ color: '#3a4a5a', fontSize: 9, marginLeft: 6 }}>
+              <span style={{ color: '#4d6070', fontSize: 9, marginLeft: 6 }}>
                 {new Date(msg.createdAt).toISOString().slice(11, 16)}
               </span>
-              <div style={{ color: '#8a9aad', marginTop: 1 }}>
+              <div style={{ color: '#a0b0c0', marginTop: 1 }}>
                 {msg.content}
               </div>
             </div>
@@ -169,7 +169,7 @@ export default function NostrChatSlot({
                 background: sending || !draft.trim()
                   ? 'rgba(255,255,255,0.04)'
                   : '#00e5c8',
-                color: sending || !draft.trim() ? '#4a5a6d' : '#090d12',
+                color: sending || !draft.trim() ? '#5e7080' : '#090d12',
                 border: 'none',
                 borderRadius: 0,
                 fontSize: 9,
@@ -184,7 +184,7 @@ export default function NostrChatSlot({
             </button>
           </div>
         ) : (
-          <div style={{ fontSize: 10, color: '#4a5a6d', fontFamily: FONT }}>
+          <div style={{ fontSize: 10, color: '#5e7080', fontFamily: FONT }}>
             Members upgrade required{' '}
             <Link
               href="/support"
