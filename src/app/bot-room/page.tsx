@@ -86,12 +86,15 @@ export default function BotRoomPage() {
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             minHeight: 0,
+            overflow: 'hidden',
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: `1px solid ${C.border}` }}>
               <CapitalFlowTopology />
               <OpsChat />
             </div>
-            <ChartPanel />
+            <div style={{ minHeight: 0, overflow: 'hidden' }}>
+              <ChartPanel />
+            </div>
           </div>
           <MarketHeatmap />
         </div>

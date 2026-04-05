@@ -194,10 +194,19 @@ export function ChartPanel() {
       // Responsive resize
       const ro = new ResizeObserver(() => {
         const rect = container.getBoundingClientRect();
-        chart.resize(rect.width, rect.height);
+        if (rect.width > 0 && rect.height > 0) {
+          chart.resize(rect.width, rect.height);
+        }
       });
       ro.observe(container);
-      chart.resize(container.clientWidth, container.clientHeight);
+      // Initial resize — retry on next frame if container hasn't laid out yet
+      if (container.clientWidth > 0 && container.clientHeight > 0) {
+        chart.resize(container.clientWidth, container.clientHeight);
+      } else {
+        requestAnimationFrame(() => {
+          chart.resize(container.clientWidth, container.clientHeight);
+        });
+      }
 
       // Initial data fetch
       fetchCandles().then(fetchPool);
