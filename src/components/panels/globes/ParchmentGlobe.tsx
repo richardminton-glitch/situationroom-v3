@@ -298,19 +298,9 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
       rotateBtn.title = userPaused ? 'Resume rotation' : 'Pause rotation';
     };
 
-    const chartBtn = document.createElement('button');
-    chartBtn.innerHTML = '📈';
-    chartBtn.title = 'Switch to BTC chart';
-    chartBtn.style.cssText = btnStyle;
-    chartBtn.onclick = () => {
-      // Dispatch custom event for GlobePanel to handle
-      container.closest('[style*="min-height"]')?.dispatchEvent(new Event('globe-toggle-chart', { bubbles: true }));
-    };
-
     controlsDiv.appendChild(zoomInBtn);
     controlsDiv.appendChild(zoomOutBtn);
     controlsDiv.appendChild(rotateBtn);
-    controlsDiv.appendChild(chartBtn);
     container.appendChild(controlsDiv);
 
     return () => {

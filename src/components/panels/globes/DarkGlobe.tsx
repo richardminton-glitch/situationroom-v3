@@ -471,18 +471,9 @@ export function DarkGlobe() {
       rotateBtn.title = rotationPaused ? 'Resume rotation' : 'Pause rotation';
     };
 
-    const chartBtn = document.createElement('button');
-    chartBtn.innerHTML = '📈';
-    chartBtn.title = 'Switch to BTC chart';
-    chartBtn.style.cssText = btnStyle;
-    chartBtn.onclick = () => {
-      container.closest('[style*="min-height"]')?.dispatchEvent(new Event('globe-toggle-chart', { bubbles: true }));
-    };
-
     controlsDiv.appendChild(zoomInBtn);
     controlsDiv.appendChild(zoomOutBtn);
     controlsDiv.appendChild(rotateBtn);
-    controlsDiv.appendChild(chartBtn);
     container.appendChild(controlsDiv);
 
     function loop() {

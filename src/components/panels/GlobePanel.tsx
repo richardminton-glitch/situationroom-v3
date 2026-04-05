@@ -60,14 +60,6 @@ export function GlobePanel() {
     setView((v) => (v === 'globe' ? 'chart' : 'globe'));
   }, []);
 
-  // Listen for custom event from DOM-injected chart toggle button inside globe
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const handler = () => toggleView();
-    el.addEventListener('globe-toggle-chart', handler);
-    return () => el.removeEventListener('globe-toggle-chart', handler);
-  }, [toggleView]);
 
   const legend = view === 'globe' && theme === 'parchment' ? (
     <div
@@ -117,32 +109,30 @@ export function GlobePanel() {
         </div>
       )}
 
-      {/* Chart view: show globe toggle button */}
-      {view === 'chart' && (
-        <button
-          onClick={toggleView}
-          title="Switch to globe"
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: '8px',
-            zIndex: 50,
-            width: '28px',
-            height: '28px',
-            borderRadius: '4px',
-            border: `1px solid ${theme === 'parchment' ? '#d4c9b8' : 'rgba(45,54,64,0.8)'}`,
-            backgroundColor: theme === 'parchment' ? 'rgba(245,240,232,0.85)' : 'rgba(10,15,20,0.85)',
-            color: theme === 'parchment' ? '#5a4e3c' : '#00d4c8',
-            fontSize: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          🌍
-        </button>
-      )}
+      {/* View toggle — always top-left, same position in both views */}
+      <button
+        onClick={toggleView}
+        title={view === 'globe' ? 'Switch to BTC chart' : 'Switch to globe'}
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: '8px',
+          zIndex: 50,
+          width: '28px',
+          height: '28px',
+          borderRadius: '4px',
+          border: `1px solid ${theme === 'parchment' ? '#d4c9b8' : 'rgba(45,54,64,0.8)'}`,
+          backgroundColor: theme === 'parchment' ? 'rgba(245,240,232,0.85)' : 'rgba(10,15,20,0.85)',
+          color: theme === 'parchment' ? '#5a4e3c' : '#00d4c8',
+          fontSize: '12px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {view === 'globe' ? '📈' : '🌍'}
+      </button>
     </div>
   );
 }
