@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import type { Tier } from '@/types';
 import type { LayoutPanelItem } from '@/lib/panels/layouts';
 import type { ReactNode } from 'react';
+import { isAdmin as checkAdmin } from '@/lib/auth/tier';
 import {
   SquaresFour,
   Newspaper,
@@ -26,6 +27,7 @@ import {
   CaretLeft,
   SignIn,
   Lightning,
+  ShieldStar,
 } from '@phosphor-icons/react';
 
 // Tier requirements for each preset
@@ -437,6 +439,24 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   </Link>
                 );
               })}
+
+              {/* Admin — only visible to admin users */}
+              {checkAdmin(user.email) && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors"
+                  style={{
+                    backgroundColor: pathname === '/admin' ? 'var(--bg-card)' : 'transparent',
+                    color: pathname === '/admin' ? '#7c5cbf' : '#7c5cbf',
+                    border: pathname === '/admin' ? '1px solid var(--border-primary)' : '1px solid transparent',
+                    opacity: pathname === '/admin' ? 1 : 0.8,
+                  }}
+                  title={collapsed ? 'Admin' : undefined}
+                >
+                  <span className="text-base shrink-0"><ShieldStar size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
+                  {!collapsed && <span>Admin</span>}
+                </Link>
+              )}
             </>
           )}
         </nav>
