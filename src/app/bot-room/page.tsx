@@ -72,22 +72,6 @@ export default function BotRoomPage() {
       {showDonate && <PoolDonateModal onClose={() => setShowDonate(false)} />}
 
       <div style={{ position: 'relative', height: '100%' }}>
-        {/* Fund the Pool button */}
-        {hasAccess && (
-          <button
-            onClick={() => setShowDonate(true)}
-            style={{
-              position: 'absolute', top: 5, right: 12, zIndex: 5,
-              padding: '4px 12px', fontSize: 10, letterSpacing: '0.1em',
-              fontFamily: FONT, fontWeight: 600,
-              background: 'transparent', border: `1px solid ${C.teal}`,
-              color: C.teal, cursor: 'pointer',
-            }}
-          >
-            FUND THE POOL
-          </button>
-        )}
-
         {/* Main grid — frosted when locked */}
         <div style={{
           display: 'grid',
@@ -96,7 +80,7 @@ export default function BotRoomPage() {
           filter: hasAccess ? undefined : 'blur(6px)',
           pointerEvents: hasAccess ? undefined : 'none',
         }}>
-          <TopBar />
+          <TopBar onFundPool={hasAccess ? () => setShowDonate(true) : undefined} />
           <StatsBar />
           <div style={{
             display: 'grid',

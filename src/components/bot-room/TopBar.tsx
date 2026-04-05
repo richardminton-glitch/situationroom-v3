@@ -50,7 +50,7 @@ function getMarketStatus(): { label: string; open: boolean } {
   return { label: 'TradFi Closed', open: false };
 }
 
-export function TopBar() {
+export function TopBar({ onFundPool }: { onFundPool?: () => void } = {}) {
   const { user } = useAuth();
   const [utcTime, setUtcTime] = useState('');
   const [marketStatus, setMarketStatus] = useState(() => getMarketStatus());
@@ -104,6 +104,19 @@ export function TopBar() {
 
       {/* Right */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {onFundPool && (
+          <button
+            onClick={onFundPool}
+            style={{
+              padding: '2px 10px', fontSize: 9, letterSpacing: '0.1em',
+              fontFamily: FONT, fontWeight: 600,
+              background: 'transparent', border: `1px solid ${C.teal}`,
+              color: C.teal, cursor: 'pointer', lineHeight: '16px',
+            }}
+          >
+            FUND THE POOL
+          </button>
+        )}
         <span style={{ fontSize: '10px', color: C.textDim, letterSpacing: '0.08em' }}>{utcTime}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="br-blink" style={{

@@ -59,7 +59,7 @@ export function StatsBar() {
   }, [fetchPool]);
 
   const stats = [
-    { label: 'Pool Balance', value: online ? `${state.poolBalance.toFixed(5)} BTC` : '\u2014' },
+    { label: 'Pool Balance', value: online ? `${Math.round(state.poolBalance * 1e8).toLocaleString()} sats` : '\u2014' },
     { label: 'Position', value: state.position === 'FLAT' ? 'FLAT' : `${state.position} ${state.leverage}\u00d7`, color: posColor(state.position) },
     { label: 'Entry Price', value: state.entryPrice ? `$${state.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '\u2014' },
     { label: 'Unrealised P&L', value: online ? `${state.unrealisedPnl >= 0 ? '+' : ''}${state.unrealisedPnl} sats` : '\u2014', color: online ? pnlColor(state.unrealisedPnl) : undefined },

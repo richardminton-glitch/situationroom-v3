@@ -69,7 +69,7 @@ export async function fetchPoolState(): Promise<PoolState> {
       hasPosition: !!pos,
       positionSide: pos ? (isLong(pos.side) ? 'long' : 'short') : null,
       entryPrice: safe<number | null>(pos?.price, null),
-      unrealisedPnlSats: pos ? Math.round(safe<number>(pos.pl, 0) * 1e8) : 0,
+      unrealisedPnlSats: pos ? Math.round(safe<number>(pos.pl, 0)) : 0,
       leverage: safe<number>(pos?.leverage, 0),
       takeProfit: safe<number | null>(pos?.takeprofit, null),
       stopLoss: safe<number | null>(pos?.stoploss, null),
