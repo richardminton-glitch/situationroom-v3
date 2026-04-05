@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
-import { callGrokAnalysis, callGrokAnalysisJSON } from '@/lib/grok/analysis';
+import { callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import * as crypto from 'crypto';
 import type { Tier } from '@/types';
 
@@ -43,45 +43,19 @@ interface BaseBriefing {
   convictionScore: number;
 }
 
-interface PortfolioContext {
-  costBasis: number | null;
-  holdings: number | null;
-  btcPrice: number;
-}
-
 interface VipContent {
   contentJson: string;
   headline: string;
-  portfolioCtx: string | null;
 }
 
 async function generateVipContent(
   baseBriefing: BaseBriefing,
   topics: string[],
-  portfolioContext: PortfolioContext,
 ): Promise<VipContent> {
   const topicEntries = topics
     .map((t) => VIP_TOPICS[t as keyof typeof VIP_TOPICS])
     .filter(Boolean);
   const topicNames = topicEntries.map((t) => t.name).join(', ');
-
-  const portfolioNote =
-    portfolioContext.costBasis && portfolioContext.holdings
-      ? `User holds ${portfolioContext.holdings} BTC with a cost basis of $${portfolioContext.costBasis.toLocaleString()}. Current price: $${portfolioContext.btcPrice.toLocaleString()}. ${
-          portfolioContext.btcPrice > portfolioContext.costBasis
-            ? `Currently in profit (+${(((portfolioContext.btcPrice - portfolioContext.costBasis) / portfolioContext.costBasis) * 100).toFixed(1)}%).`
-            : `Currently underwater (${(((portfolioContext.btcPrice - portfolioContext.costBasis) / portfolioContext.costBasis) * 100).toFixed(1)}%).`
-        }`
-      : '';
-
-  // ── Generate personalised portfolio context paragraph ──
-  let portfolioCtx: string | null = null;
-  if (portfolioNote) {
-    portfolioCtx = await callGrokAnalysis(
-      `${portfolioNote}\n\nToday's briefing headline: "${baseBriefing.headline}"\nThreat level: ${baseBriefing.threatLevel}\nConviction score: ${Math.round(baseBriefing.convictionScore)}/100\n\nWrite a 2-3 sentence personalised paragraph about what today's market conditions mean specifically for this user's Bitcoin position. Be direct and analytical, not reassuring. Focus on what the data means for their specific situation.`,
-      { maxTokens: 200 },
-    );
-  }
 
   // ── Adapt all 5 sections via single Grok call ──
   // This produces a coherent, topic-weighted version of the entire briefing
@@ -140,7 +114,6 @@ Each value should be the adapted section text (plain text, not markdown).`;
   return {
     contentJson: JSON.stringify(content),
     headline: baseBriefing.headline,
-    portfolioCtx,
   };
 }
 
@@ -175,8 +148,6 @@ export async function POST(request: NextRequest) {
     select: {
       id: true,
       newsletterVipTopics: true,
-      portfolioCostBasis: true,
-      portfolioHoldingsBtc: true,
     },
   });
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -202,20 +173,8 @@ export async function POST(request: NextRequest) {
   const briefing = await prisma.briefing.findFirst({ orderBy: { date: 'desc' } });
   if (!briefing) return NextResponse.json({ error: 'No briefing found' }, { status: 404 });
 
-  // Get current BTC price from latest snapshot
-  let btcPrice = 0;
   try {
-    const snap = await prisma.dataSnapshot.findFirst({ orderBy: { timestamp: 'desc' } });
-    if (snap) {
-      const d = JSON.parse(snap.dataJson) as { btcPrice?: number };
-      btcPrice = d.btcPrice ?? 0;
-    }
-  } catch {
-    // btcPrice stays 0 — portfolio note will be omitted if both cost basis and holdings exist
-  }
-
-  try {
-    const { contentJson, headline, portfolioCtx } = await generateVipContent(
+    const { contentJson, headline } = await generateVipContent(
       {
         marketSection:      briefing.marketSection,
         networkSection:     briefing.networkSection,
@@ -228,11 +187,6 @@ export async function POST(request: NextRequest) {
         convictionScore:    briefing.convictionScore,
       },
       topics,
-      {
-        costBasis: user.portfolioCostBasis,
-        holdings:  user.portfolioHoldingsBtc,
-        btcPrice,
-      },
     );
 
     const vipBriefing = await (prisma as any).vipBriefing.create({
@@ -243,7 +197,7 @@ export async function POST(request: NextRequest) {
         topics:      JSON.stringify(topics),
         contentJson,
         headline,
-        portfolioCtx,
+        portfolioCtx: null,
       },
     });
 

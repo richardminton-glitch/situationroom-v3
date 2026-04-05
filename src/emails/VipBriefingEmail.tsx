@@ -2,8 +2,6 @@
  * VIP daily briefing email template.
  * Extends General template with:
  *   - Focus topics bar (after data snapshot)
- *   - Personal score line in header
- *   - Position context block (if portfolio configured)
  *   - Same pool status + alerts as Members
  *
  * Subject: Situation Room · VIP · [LEVEL] · [DATE] · [TOPIC1] · [TOPIC2]
@@ -21,7 +19,6 @@ export interface VipBriefingEmailProps {
   threatLevel: string;
   convictionScore: number;
   sourcesCount: number;
-  personalScore?: number;   // VIP-only weighted conviction score
   sections: {
     market: string;
     network: string;
@@ -54,7 +51,6 @@ export interface VipBriefingEmailProps {
     lastTradeDesc: string;
     winRatePct: number;
   };
-  portfolioCtx?: string;    // AI paragraph about user's position
   alerts?: string[];
 }
 
@@ -103,11 +99,11 @@ const SECTION_TITLES = [
 ] as const;
 
 export function VipBriefingEmail({
-  date, headline, threatLevel, convictionScore, sourcesCount, personalScore,
+  date, headline, threatLevel, convictionScore, sourcesCount,
   sections, btcPrice, btcChange24h, fearGreed, hashrate, mvrv,
   blockHeight, sp500, vix, gold, dxy, us10y, oil,
   briefingUrl, unsubscribeUrl, viewInBrowserUrl,
-  topicNames, poolStatus, portfolioCtx, alerts,
+  topicNames, poolStatus, alerts,
 }: VipBriefingEmailProps) {
   return (
     <Html lang="en">
@@ -130,11 +126,6 @@ export function VipBriefingEmail({
             <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.muted, margin: '0 0 4px' }}>
               {date}{'  ·  '}CONVICTION {convictionScore}/100{'  ·  '}{sourcesCount} SOURCES
             </Text>
-            {personalScore != null && (
-              <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.accent, margin: '0 0 4px' }}>
-                YOUR SCORE: {personalScore}/100{'  ·  '}SITE SCORE: {convictionScore}/100
-              </Text>
-            )}
             <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.accent, margin: '0 0 14px' }}>
               THREAT: {threatLevel}
             </Text>
@@ -243,19 +234,6 @@ export function VipBriefingEmail({
                   {alert}
                 </Text>
               ))}
-            </Section>
-          )}
-
-          {/* Portfolio / position context — VIP only, shown when AI paragraph available */}
-          {portfolioCtx && (
-            <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '16px 28px' }}>
-              <Hr style={{ borderColor: C.dimBorder, margin: '0 0 12px' }} />
-              <Text style={{ fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 10px', textTransform: 'uppercase' as const }}>
-                WHAT THIS MEANS FOR YOUR POSITION
-              </Text>
-              <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0' }}>
-                {portfolioCtx}
-              </Text>
             </Section>
           )}
 

@@ -195,8 +195,8 @@ export async function GET(request: NextRequest) {
       // Look up today's VIP briefing
       const vipBriefing = await (prisma as any).vipBriefing.findUnique({
         where: { userId_date: { userId: user.id, date: todayUTC } },
-        select: { contentJson: true, headline: true, portfolioCtx: true, topics: true },
-      }) as { contentJson: string; headline: string; portfolioCtx: string | null; topics: string } | null;
+        select: { contentJson: true, headline: true, topics: true },
+      }) as { contentJson: string; headline: string; topics: string } | null;
 
       if (vipBriefing) {
         // Parse personalised content
@@ -225,7 +225,6 @@ export async function GET(request: NextRequest) {
             viewInBrowserUrl,
             topicNames: vipTopics,
             poolStatus: includePool ? poolStatus! : undefined,
-            portfolioCtx: vipBriefing.portfolioCtx ?? undefined,
             alerts: includeAlerts ? memberAlerts : undefined,
           })
         );
