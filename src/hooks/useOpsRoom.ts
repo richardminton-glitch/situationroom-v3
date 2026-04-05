@@ -21,9 +21,19 @@ export interface NetworkHealth {
   hashrateEH: number;
   hashrateStatus: 'NOMINAL' | 'DEGRADED';
   mempoolMB: number;
+  mempoolTxCount: number;
+  mempoolTotalFeeBTC: number;
   mempoolStatus: 'CLEAR' | 'CONGESTED';
   feeFast: number;
+  feeMed: number;
+  feeSlow: number;
+  feeEconomy: number;
   feeStatus: 'LOW' | 'ELEVATED';
+  difficultyT: number;
+  difficultyChange: number;
+  difficultyProgress: number;
+  difficultyRemainBlocks: number;
+  blockHeight: number;
   nextBlockMin: number;
 }
 
@@ -160,9 +170,19 @@ export function useOpsRoom() {
         hashrateEH: snap.btcNetwork.hashrateEH ?? 0,
         hashrateStatus: (snap.btcNetwork.hashrateEH ?? 0) > 800 ? 'NOMINAL' : 'DEGRADED',
         mempoolMB: snap.btcNetwork.mempoolSizeMB ?? 0,
+        mempoolTxCount: snap.btcNetwork.mempoolTxCount ?? 0,
+        mempoolTotalFeeBTC: snap.btcNetwork.mempoolTotalFeeBTC ?? 0,
         mempoolStatus: (snap.btcNetwork.mempoolSizeMB ?? 0) < 50 ? 'CLEAR' : 'CONGESTED',
         feeFast: snap.btcNetwork.feeFast ?? 0,
+        feeMed: snap.btcNetwork.feeMed ?? 0,
+        feeSlow: snap.btcNetwork.feeSlow ?? 0,
+        feeEconomy: snap.btcNetwork.feeEconomy ?? 0,
         feeStatus: (snap.btcNetwork.feeFast ?? 0) < 5 ? 'LOW' : 'ELEVATED',
+        difficultyT: snap.btcNetwork.difficultyT ?? 0,
+        difficultyChange: snap.btcNetwork.difficulty ?? 0,
+        difficultyProgress: snap.btcNetwork.difficultyProgress ?? 0,
+        difficultyRemainBlocks: snap.btcNetwork.difficultyRemainBlocks ?? 0,
+        blockHeight: snap.btcNetwork.blockHeight ?? 0,
         nextBlockMin: Math.round((snap.btcNetwork.blocksUntilRetarget ?? 0) > 0 ? 10 : 10),
       } : null;
 

@@ -28,9 +28,19 @@ interface BtcInfoPanelProps {
     hashrateEH: number;
     hashrateStatus: 'NOMINAL' | 'DEGRADED';
     mempoolMB: number;
+    mempoolTxCount: number;
+    mempoolTotalFeeBTC: number;
     mempoolStatus: 'CLEAR' | 'CONGESTED';
     feeFast: number;
+    feeMed: number;
+    feeSlow: number;
+    feeEconomy: number;
     feeStatus: 'LOW' | 'ELEVATED';
+    difficultyT: number;
+    difficultyChange: number;
+    difficultyProgress: number;
+    difficultyRemainBlocks: number;
+    blockHeight: number;
   } | null;
   goldPrice: number;
   goldDelta: number;
@@ -328,43 +338,127 @@ export default function BtcInfoPanel({
         {/* -- NETWORK -------------------------------------------- */}
         <SectionLabel>NETWORK</SectionLabel>
         {network ? (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '2px 12px',
-              padding: '0 12px 6px',
-            }}
-          >
-            <NetworkCell
-              label="HASHRATE"
-              value={network.hashrateEH.toFixed(1)}
-              unit="EH/s"
-              status={network.hashrateStatus}
-              statusColor={statusColor(network.hashrateStatus)}
-            />
-            <NetworkCell
-              label="MEMPOOL"
-              value={network.mempoolMB.toFixed(1)}
-              unit="MB"
-              status={network.mempoolStatus}
-              statusColor={statusColor(network.mempoolStatus)}
-            />
-            <NetworkCell
-              label="FEE RATE"
-              value={String(network.feeFast)}
-              unit="sat/vB"
-              status={network.feeStatus}
-              statusColor={statusColor(network.feeStatus)}
-            />
-            <NetworkCell
-              label="THREAT"
-              value={`${threatScore}/100`}
-              unit=""
-              status={threatState}
-              statusColor={threatColor(threatState)}
-            />
-          </div>
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '2px 12px',
+                padding: '0 12px 6px',
+              }}
+            >
+              <NetworkCell
+                label="HASHRATE"
+                value={network.hashrateEH.toFixed(1)}
+                unit="EH/s"
+                status={network.hashrateStatus}
+                statusColor={statusColor(network.hashrateStatus)}
+              />
+              <NetworkCell
+                label="MEMPOOL"
+                value={network.mempoolMB.toFixed(1)}
+                unit={`MB / ${network.mempoolTxCount.toLocaleString()} txs`}
+                status={network.mempoolStatus}
+                statusColor={statusColor(network.mempoolStatus)}
+              />
+              <NetworkCell
+                label="FEE RATE"
+                value={String(network.feeFast)}
+                unit="sat/vB"
+                status={network.feeStatus}
+                statusColor={statusColor(network.feeStatus)}
+              />
+              <NetworkCell
+                label="THREAT"
+                value={`${threatScore}/100`}
+                unit=""
+                status={threatState}
+                statusColor={threatColor(threatState)}
+              />
+            </div>
+
+            {/* Extended network data */}
+            <div style={{ padding: '0 12px 6px' }}>
+              {/* Fee tiers */}
+              <div style={{
+                display: 'flex', gap: 6, alignItems: 'center',
+                padding: '3px 0', borderTop: `1px solid ${COLORS.dimBorder}`,
+              }}>
+                <span style={{ fontSize: 8, fontFamily: FONT, letterSpacing: '0.1em', color: COLORS.label, width: 42 }}>FEES</span>
+                {[
+                  { label: 'FAST', value: network.feeFast },
+                  { label: 'MED', value: network.feeMed },
+                  { label: 'SLOW', value: network.feeSlow },
+                  { label: 'ECO', value: network.feeEconomy },
+                ].map((f) => (
+                  <span key={f.label} style={{ fontSize: 9, fontFamily: FONT, color: COLORS.primary, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: COLORS.label, fontSize: 7 }}>{f.label} </span>{f.value}
+                  </span>
+                ))}
+              </div>
+
+              {/* Mempool pending fees */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '3px 0',
+              }}>
+                <span style={{ fontSize: 8, fontFamily: FONT, letterSpacing: '0.1em', color: COLORS.label }}>PENDING FEES</span>
+                <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.primary, fontVariantNumeric: 'tabular-nums' }}>
+                  {network.mempoolTotalFeeBTC.toFixed(4)} <span style={{ fontSize: 8, color: COLORS.label }}>BTC</span>
+                </span>
+              </div>
+
+              {/* Block height */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '3px 0',
+              }}>
+                <span style={{ fontSize: 8, fontFamily: FONT, letterSpacing: '0.1em', color: COLORS.label }}>BLOCK</span>
+                <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.primary, fontVariantNumeric: 'tabular-nums' }}>
+                  {network.blockHeight.toLocaleString()}
+                </span>
+              </div>
+
+              {/* Difficulty */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '3px 0',
+              }}>
+                <span style={{ fontSize: 8, fontFamily: FONT, letterSpacing: '0.1em', color: COLORS.label }}>DIFFICULTY</span>
+                <span style={{ fontSize: 10, fontFamily: FONT, color: COLORS.primary, fontVariantNumeric: 'tabular-nums' }}>
+                  {network.difficultyT.toFixed(1)} <span style={{ fontSize: 8, color: COLORS.label }}>T</span>
+                  <span style={{ fontSize: 9, color: network.difficultyChange >= 0 ? COLORS.positive : COLORS.negative, marginLeft: 4 }}>
+                    {network.difficultyChange >= 0 ? '+' : ''}{network.difficultyChange.toFixed(1)}%
+                  </span>
+                </span>
+              </div>
+
+              {/* Epoch progress bar */}
+              <div style={{ padding: '3px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                  <span style={{ fontSize: 8, fontFamily: FONT, letterSpacing: '0.1em', color: COLORS.label }}>EPOCH</span>
+                  <span style={{ fontSize: 9, fontFamily: FONT, color: COLORS.primary, fontVariantNumeric: 'tabular-nums' }}>
+                    {network.difficultyProgress.toFixed(1)}%
+                    <span style={{ fontSize: 8, color: COLORS.label, marginLeft: 4 }}>
+                      {network.difficultyRemainBlocks.toLocaleString()} blks
+                    </span>
+                  </span>
+                </div>
+                <div style={{
+                  height: 3, borderRadius: 1.5,
+                  background: 'rgba(255,255,255,0.08)',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%', borderRadius: 1.5,
+                    width: `${Math.min(100, network.difficultyProgress)}%`,
+                    background: COLORS.positive,
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div
             style={{
