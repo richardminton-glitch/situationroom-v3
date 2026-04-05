@@ -117,7 +117,6 @@ const smallValueStyle: React.CSSProperties = {
 // Based on xAI pricing (Apr 2026):
 //   grok-4.20 multi-agent (Responses API): $3.00/M in, $15.00/M out + $5/1K web searches
 //   grok-4-1-fast-non-reasoning:           $0.20/M in, $0.50/M out
-//   grok-3:                                $3.00/M in, $15.00/M out
 
 interface AiUsageRow {
   feature: string;
@@ -163,15 +162,15 @@ const AI_USAGE_DATA: AiUsageRow[] = [
   },
   {
     feature: 'RSS Classifier',
-    model: 'grok-3',
+    model: 'grok-4-1-fast',
     trigger: 'Auto (feed ingest)',
     inputTokens: 1_250,
     outputTokens: 175,
     callsPerDay: 75,  // 50–100 depending on feed velocity
-    // (1250 × $3/M) + (175 × $15/M) = $0.006
-    costPerCall: 0.006,
-    est7dCost: 3.15,
-    est30dCost: 13.50,
+    // (1250 × $0.20/M) + (175 × $0.50/M) = $0.0003
+    costPerCall: 0.0003,
+    est7dCost: 0.16,
+    est30dCost: 0.68,
   },
   {
     feature: 'Signal Annotation',
@@ -364,7 +363,7 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   },
   {
     service: 'Grok (xAI)',
-    endpoints: '3 (briefing, classification, analysis)',
+    endpoints: '11 (briefing, classification, 9 analysis routes)',
     refresh: 'Daily cron + on-demand',
     // Daily briefing: 1/day, VIP: 1/day, classifications: ~50/day, analysis: ~5/day
     est7d: 400,
@@ -611,12 +610,20 @@ export default function AdminPage() {
           </div>
           <div style={{ ...cardStyle, minWidth: 180, flex: 'none' }}>
             <div style={labelStyle}>Top Cost Driver</div>
-            <div style={{ fontFamily: MONO, fontSize: '13px', fontWeight: 600, color: '#f0a500' }}>
-              RSS Classifier
-            </div>
-            <div style={smallValueStyle}>
-              grok-3 @ $3/$15 per M — {((13.50 / AI_TOTAL_30D) * 100).toFixed(0)}% of total
-            </div>
+            {(() => {
+              const top = [...AI_USAGE_DATA].sort((a, b) => b.est30dCost - a.est30dCost)[0];
+              const pct = AI_TOTAL_30D > 0 ? ((top.est30dCost / AI_TOTAL_30D) * 100).toFixed(0) : '0';
+              return (
+                <>
+                  <div style={{ fontFamily: MONO, fontSize: '13px', fontWeight: 600, color: MODEL_COLORS[top.model] || 'var(--text-primary)' }}>
+                    {top.feature}
+                  </div>
+                  <div style={smallValueStyle}>
+                    {top.model} — {pct}% of total
+                  </div>
+                </>
+              );
+            })()}
           </div>
           <div style={{ ...cardStyle, flex: 1, minWidth: 200 }}>
             <div style={labelStyle}>Model Breakdown (30d)</div>
@@ -725,7 +732,7 @@ export default function AdminPage() {
 
         <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
           Pricing: grok-4.20 (Responses API) $3.00/$15.00 per M tokens + $5/1K web searches •
-          grok-4-1-fast $0.20/$0.50 per M tokens • grok-3 $3.00/$15.00 per M tokens.
+          grok-4-1-fast $0.20/$0.50 per M tokens.
           On-demand estimates assume moderate subscriber traffic with aggressive caching.
           VIP briefings scale linearly with VIP user count (~$0.001/user/day).
           RSS classifier volume depends on feed velocity and keyword confidence thresholds (120 calls/hr hard cap).

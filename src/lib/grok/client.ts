@@ -17,7 +17,7 @@ const RETRY_DELAY = 5000;
 // ── Classifier surface (chat completions — no web search) ─────────────────────
 
 const CLASSIFIER_URL   = 'https://api.x.ai/v1/chat/completions';
-const CLASSIFIER_MODEL = 'grok-3';          // fast, supports json_object format
+const CLASSIFIER_MODEL = 'grok-4-1-fast-non-reasoning'; // 15x cheaper than grok-3, supports json_object
 const CLASSIFIER_TIMEOUT_MS = 15_000;       // classification should be sub-5s
 
 interface GrokResponse {
