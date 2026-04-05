@@ -439,6 +439,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'calendar',
   },
   {
+    id: 'macro-analysis',
+    name: 'Macro Deep Analysis',
+    category: 'macro',
+    defaultW: 792, defaultH: 440, minW: 440, minH: 352,
+    resizable: true,
+    refreshInterval: 21600, // 6 hours
+    dataSources: ['briefing'],
+    description: 'VIP Grok-3 deep dive — monetary policy, liquidity, risk appetite, dollar, inflation, Bitcoin outlook',
+    icon: 'ai',
+  },
+  {
     id: 'm2-chart',
     name: 'M2 Money Supply',
     category: 'macro',
