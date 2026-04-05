@@ -11,7 +11,6 @@ import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
 import { getPanelById } from '@/lib/panels/registry';
 import { LockedViewPrompt } from '@/components/auth/LockedViewPrompt';
-import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
 import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
 import { useSavedLayouts } from '@/hooks/useSavedLayouts';
@@ -45,8 +44,6 @@ export default function DashboardPage() {
   });
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [upgradeModalTier, setUpgradeModalTier] = useState<Exclude<Tier, 'free'>>('general');
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [savedLayoutName, setSavedLayoutName] = useState('');
@@ -269,7 +266,6 @@ export default function DashboardPage() {
                   view="Dashboard"
                   requiredTier="general"
                   description="Sign in to access additional dashboard views and the full briefing archive."
-                  onUpgradeClick={() => setShowUpgradeModal(true)}
                 />
               );
             }
@@ -280,10 +276,6 @@ export default function DashboardPage() {
                   view={lockedView.name}
                   requiredTier={lockedView.requiredTier}
                   description={lockedView.description}
-                  onUpgradeClick={() => {
-                    setUpgradeModalTier(lockedView.requiredTier);
-                    setShowUpgradeModal(true);
-                  }}
                 />
               );
             }
@@ -303,14 +295,6 @@ export default function DashboardPage() {
           currentPanels={layout}
           onAdd={addPanel}
           onClose={() => setShowPicker(false)}
-        />
-      )}
-
-      {showUpgradeModal && (
-        <SubscriptionModal
-          initialTier={upgradeModalTier}
-          onClose={() => setShowUpgradeModal(false)}
-          onSuccess={() => setShowUpgradeModal(false)}
         />
       )}
 

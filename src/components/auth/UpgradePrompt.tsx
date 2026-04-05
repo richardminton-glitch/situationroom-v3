@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 
@@ -18,15 +19,17 @@ export function UpgradePrompt({
   onUpgradeClick,
 }: UpgradePromptProps) {
   const [dismissed, setDismissed] = useState(false);
+  const router = useRouter();
   const tierLabel = TIER_LABELS[requiredTier];
   const price = TIER_PRICES[requiredTier].toLocaleString();
+  const goToSupport = onUpgradeClick ?? (() => router.push('/support'));
 
   if (variant === 'inline') {
     return (
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
         {featureName ? `${featureName} — ` : ''}
         <button
-          onClick={onUpgradeClick}
+          onClick={goToSupport}
           style={{ color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0, letterSpacing: 'inherit' }}
         >
           [{tierLabel.toUpperCase()} ↑ UNLOCK →]
@@ -46,7 +49,7 @@ export function UpgradePrompt({
         }}
       >
         <button
-          onClick={onUpgradeClick}
+          onClick={goToSupport}
           style={{
             background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
             color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)',
@@ -103,7 +106,7 @@ export function UpgradePrompt({
           {featureName ? `Unlock ${featureName}` : `Requires ${tierLabel} tier`}
         </div>
         <button
-          onClick={onUpgradeClick}
+          onClick={goToSupport}
           style={{
             width: '100%', padding: '8px 16px',
             background: 'var(--accent-primary)', color: 'var(--bg-primary)',

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { Tier } from '@/types';
 import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
 
@@ -7,7 +8,7 @@ interface LockedViewPromptProps {
   view: string;
   requiredTier: Exclude<Tier, 'free'>;
   description: string;
-  onUpgradeClick: () => void;
+  onUpgradeClick?: () => void;
 }
 
 /**
@@ -15,6 +16,8 @@ interface LockedViewPromptProps {
  * The left data column remains visible alongside this — only the canvas is replaced.
  */
 export function LockedViewPrompt({ view, requiredTier, description, onUpgradeClick }: LockedViewPromptProps) {
+  const router = useRouter();
+  const goToSupport = onUpgradeClick ?? (() => router.push('/support'));
   const tier = TIER_LABELS[requiredTier];
   const price = TIER_PRICES[requiredTier].toLocaleString();
 
@@ -41,7 +44,7 @@ export function LockedViewPrompt({ view, requiredTier, description, onUpgradeCli
         {description}
       </div>
       <button
-        onClick={onUpgradeClick}
+        onClick={goToSupport}
         style={{
           padding: '10px 28px', background: 'var(--accent-primary)',
           color: 'var(--bg-primary)', border: 'none', cursor: 'pointer',

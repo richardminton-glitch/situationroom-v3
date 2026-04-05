@@ -100,7 +100,7 @@ export default function RoomPage() {
           padding: '40px 20px',
         }}
       >
-        <UpgradePrompt requiredTier="members" feature="Members Room" />
+        <UpgradePrompt requiredTier="members" featureName="Members Room" variant="overlay" />
       </div>
     );
   }

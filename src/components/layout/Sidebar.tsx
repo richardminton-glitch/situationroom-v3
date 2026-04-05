@@ -5,10 +5,9 @@ import { useAuth } from './AuthProvider';
 import { useTheme } from './ThemeProvider';
 import { useTier } from '@/hooks/useTier';
 import { TIER_LABELS } from '@/lib/auth/tier';
-import { SubscriptionModal } from '@/components/auth/SubscriptionModal';
 import { FundingBar } from '@/components/widgets/FundingBar';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { Tier } from '@/types';
 import type { LayoutPanelItem } from '@/lib/panels/layouts';
 import type { ReactNode } from 'react';
@@ -93,14 +92,13 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
     return FONT_DEFAULT;
   });
   const [tooltip, setTooltip] = useState<{ id: string; requiredTier: Exclude<Tier, 'free'> } | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalTier, setModalTier] = useState<Exclude<Tier, 'free'>>('general');
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { canAccess, userTier } = useTier();
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
@@ -113,10 +111,9 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
     tooltipTimer.current = setTimeout(() => setTooltip(null), TOOLTIP_DISMISS_MS);
   }
 
-  function openModal(tier: Exclude<Tier, 'free'>) {
-    setModalTier(tier);
-    setShowModal(true);
+  function goToSupport() {
     setTooltip(null);
+    router.push('/support');
   }
 
   return (
@@ -196,7 +193,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                           {TIER_LABELS[item.requiredTier]} required
                         </div>
                         <button
-                          onClick={() => openModal(item.requiredTier!)}
+                          onClick={() => goToSupport()}
                           style={{
                             background: 'none', border: 'none', padding: 0,
                             color: 'var(--accent-primary)', cursor: 'pointer',
@@ -277,7 +274,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                                   {TIER_LABELS[lockedTier]} required
                                 </div>
                                 <button
-                                  onClick={() => openModal(lockedTier)}
+                                  onClick={() => goToSupport()}
                                   style={{
                                     background: 'none', border: 'none', padding: 0,
                                     color: 'var(--accent-primary)', cursor: 'pointer',
@@ -374,7 +371,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                               >
                                 <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>VIP required</div>
                                 <button
-                                  onClick={() => openModal('vip')}
+                                  onClick={() => goToSupport()}
                                   style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
                                 >
                                   SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
@@ -467,7 +464,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
         >
           {/* Funding bar compact — only when expanded */}
           {!collapsed && (
-            <FundingBar variant="compact" onSubscribeClick={() => openModal('general')} />
+            <FundingBar variant="compact" onSubscribeClick={() => goToSupport()} />
           )}
 
           {/* Font size */}
@@ -560,7 +557,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   >
                     <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>General required</div>
                     <button
-                      onClick={() => openModal('general')}
+                      onClick={() => goToSupport()}
                       style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
                     >
                       SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
@@ -611,13 +608,6 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
         </div>
       </aside>
 
-      {showModal && (
-        <SubscriptionModal
-          initialTier={modalTier}
-          onClose={() => setShowModal(false)}
-          onSuccess={() => setShowModal(false)}
-        />
-      )}
     </>
   );
 }
