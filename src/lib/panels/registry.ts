@@ -326,6 +326,18 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'onchain',
   },
 
+  {
+    id: 'onchain-analysis',
+    name: 'On-Chain Deep Analysis',
+    category: 'onchain',
+    defaultW: 704, defaultH: 528, minW: 440, minH: 352,
+    resizable: true,
+    refreshInterval: 21600, // 6 hours
+    dataSources: ['brk', 'briefing'],
+    description: 'VIP Grok-3 deep dive — market regime, miner health, holder behaviour, price outlook',
+    icon: 'ai',
+  },
+
   // ── AI Analysis ──
   {
     id: 'signal-interpreter',

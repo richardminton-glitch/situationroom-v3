@@ -47,6 +47,7 @@ function estimateAiCostUsd(): number {
     briefingSearch: 2 * 0.0026,
     briefingRetro: 3 * 0.0007,
     threatAnalysis: 15 * 0.0003,
+    onchainAnalysis: 4 * 0.027,  // grok-3, VIP, 6h cache
   };
 
   const dailyTotal = Object.values(dailyCosts).reduce((s, v) => s + v, 0);

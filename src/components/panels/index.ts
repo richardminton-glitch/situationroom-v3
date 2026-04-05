@@ -39,6 +39,7 @@ import { NetworkSignalsPanel } from './NetworkSignalsPanel';
 import { BitcoinArgumentPanel } from './BitcoinArgumentPanel';
 import { SignalInterpreterPanel } from './SignalInterpreterPanel';
 import { CohortAnalysisPanel } from './CohortAnalysisPanel';
+import { OnChainAnalysisPanel } from './OnChainAnalysisPanel';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -77,4 +78,5 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'bitcoin-argument':  BitcoinArgumentPanel,
   'signal-interpreter': SignalInterpreterPanel,
   'cohort-analysis':    CohortAnalysisPanel,
+  'onchain-analysis':   OnChainAnalysisPanel,
 };

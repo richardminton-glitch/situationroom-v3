@@ -260,6 +260,18 @@ const AI_USAGE_DATA: AiUsageRow[] = [
     est7dCost: 0.03,
     est30dCost: 0.14,
   },
+  {
+    feature: 'On-Chain Deep Analysis',
+    model: 'grok-3',
+    trigger: 'On-demand (VIP only)',
+    inputTokens: 3_000,
+    outputTokens: 1_200,
+    callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
+    // (3000 × $3/M) + (1200 × $15/M) = $0.009 + $0.018 = $0.027
+    costPerCall: 0.027,
+    est7dCost: 0.76,
+    est30dCost: 3.24,
+  },
 ];
 
 const AI_TOTAL_7D = AI_USAGE_DATA.reduce((s, r) => s + r.est7dCost, 0);
