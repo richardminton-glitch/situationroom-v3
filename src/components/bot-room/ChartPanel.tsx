@@ -42,7 +42,7 @@ export function ChartPanel({ state = MOCK_BOT_STATE }: { state?: BotState }) {
       {/* TradingView Widget */}
       <div style={{ flex: 1, position: 'relative' }}>
         <iframe
-          src="https://s.tradingview.com/widgetembed/?symbol=BITSTAMP:BTCUSD&interval=5&hideideas=1&hidenews=1&theme=dark&style=1&timezone=Etc%2FUTC&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&details=0&calendar=0&hotlist=0"
+          src="https://s.tradingview.com/widgetembed/?symbol=BITSTAMP:BTCUSD&interval=5&hideideas=1&hidenews=1&theme=dark&style=1&timezone=Etc%2FUTC&hide_side_toolbar=0&allow_symbol_change=0&save_image=0&details=0&calendar=0&hotlist=0&withdateranges=0"
           style={{ width: '100%', height: '100%', border: 'none' }}
           title="BTCUSD Chart"
           sandbox="allow-scripts allow-same-origin"

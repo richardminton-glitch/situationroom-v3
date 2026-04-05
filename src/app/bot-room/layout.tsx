@@ -1,17 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useAuth } from '@/components/layout/AuthProvider';
+
+// SSR-safe useLayoutEffect — fires synchronously before paint on client
+const useDarkForce = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export default function BotRoomLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const [phase, setPhase] = useState<'entering' | 'visible'>('entering');
 
-  // Force dark mode on mount, revert on unmount
-  useEffect(() => {
+  // Force dark mode synchronously before first paint (prevents parchment flash)
+  useDarkForce(() => {
+    // Immediately set DOM to dark — CSS custom properties update instantly
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('dark');
+
+    // Then update React state through ThemeProvider for proper lifecycle
     const userPref = user?.themePref || localStorage.getItem('sr-theme') || 'parchment';
     sessionStorage.setItem('sr-ops-room-prev-theme', userPref);
     if (theme !== 'dark') setTheme('dark');
