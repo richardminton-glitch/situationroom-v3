@@ -22,7 +22,7 @@ import type { ThreatState } from '@/lib/room/threatEngine';
 const AGENT_KEYS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
 const LABS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
 // Default dim colour when domain has no threat contribution
-const DEFAULT_AGENT_COL = '#2a5a5a';
+const DEFAULT_AGENT_COL = '#3d9090';
 const APOS = [
   { fx: 0.18, fy: 0.68 }, // GEOPOLITICAL — lower-left
   { fx: 0.78, fy: 0.28 }, // ECONOMIC     — upper-right
@@ -171,12 +171,12 @@ class CNode {
     } else if (type === 'agent') {
       [3.8, 2.4].forEach((m, i) => {
         ctx.beginPath(); ctx.arc(x, y, dr * m + act * 6, 0, Math.PI * 2);
-        ctx.strokeStyle = col + ha((0.06 + act * 0.14 - i * 0.01) * 255);
+        ctx.strokeStyle = col + ha((0.14 + act * 0.14 - i * 0.02) * 255);
         ctx.lineWidth = 0.7; ctx.stroke();
       });
     } else if (type === 'sub') {
       ctx.beginPath(); ctx.arc(x, y, dr * 2.5 + act * 4, 0, Math.PI * 2);
-      ctx.strokeStyle = col + ha((0.08 + act * 0.16) * 255);
+      ctx.strokeStyle = col + ha((0.16 + act * 0.16) * 255);
       ctx.lineWidth = 0.5; ctx.stroke();
     }
 
@@ -188,7 +188,7 @@ class CNode {
       ctx.fillStyle = col; ctx.fill(); ctx.shadowBlur = 0;
     } else if (type === 'agent') {
       ctx.beginPath(); ctx.arc(x, y, dr, 0, Math.PI * 2);
-      ctx.shadowBlur = Math.min(25, 14 + act * 30);
+      ctx.shadowBlur = Math.min(30, 18 + act * 30);
       ctx.shadowColor = col;
       ctx.fillStyle = col; ctx.fill(); ctx.shadowBlur = 0;
     } else {
@@ -196,7 +196,7 @@ class CNode {
       ctx.shadowBlur = 0;
       const glowR = dr * 1.6;
       ctx.beginPath(); ctx.arc(x, y, glowR, 0, Math.PI * 2);
-      ctx.fillStyle = col + ha(0.15 * 255); ctx.fill();
+      ctx.fillStyle = col + ha(0.25 * 255); ctx.fill();
       ctx.beginPath(); ctx.arc(x, y, dr, 0, Math.PI * 2);
       ctx.fillStyle = col; ctx.fill();
     }
@@ -478,7 +478,7 @@ function drawDataOverlays(
       if (i < filled) {
         ctx.strokeStyle = ag.col + ha((0.55 + ag.act * 0.25) * 255);
       } else {
-        ctx.strokeStyle = '#ffffff' + ha(0.06 * 255);
+        ctx.strokeStyle = '#ffffff' + ha(0.10 * 255);
       }
       ctx.lineWidth = 2; ctx.stroke();
     }
@@ -600,7 +600,7 @@ function renderFrame(
 
   // Edges: sub -> agent (skip subs on recon)
   s.allNodes.filter(n => n.type === 'sub' && !n._onRecon).forEach(n => {
-    if (n.parent) edge(ctx, n, n.parent, 0.085 + n.act * 0.25, 0.55, n.col);
+    if (n.parent) edge(ctx, n, n.parent, 0.14 + n.act * 0.25, 0.55, n.col);
   });
   // Edges: agent -> coordinator (threat-driven brightness)
   s.agents.forEach(ag => {
