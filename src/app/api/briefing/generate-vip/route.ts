@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
-import { callGrokAnalysis } from '@/lib/grok/analysis';
+import { callGrokAnalysis, callGrokAnalysisJSON } from '@/lib/grok/analysis';
 import * as crypto from 'crypto';
 import type { Tier } from '@/types';
 
@@ -60,9 +60,10 @@ async function generateVipContent(
   topics: string[],
   portfolioContext: PortfolioContext,
 ): Promise<VipContent> {
-  const topicNames = topics
-    .map((t) => VIP_TOPICS[t as keyof typeof VIP_TOPICS]?.name ?? t)
-    .join(', ');
+  const topicEntries = topics
+    .map((t) => VIP_TOPICS[t as keyof typeof VIP_TOPICS])
+    .filter(Boolean);
+  const topicNames = topicEntries.map((t) => t.name).join(', ');
 
   const portfolioNote =
     portfolioContext.costBasis && portfolioContext.holdings
@@ -73,7 +74,7 @@ async function generateVipContent(
         }`
       : '';
 
-  // Generate personalised portfolio context paragraph if portfolio data available
+  // ── Generate personalised portfolio context paragraph ──
   let portfolioCtx: string | null = null;
   if (portfolioNote) {
     portfolioCtx = await callGrokAnalysis(
@@ -82,18 +83,58 @@ async function generateVipContent(
     );
   }
 
-  // Personalise the outlook section with topic focus
-  const personalisedOutlook = await callGrokAnalysis(
-    `Original outlook section:\n${baseBriefing.outlookSection}\n\nThis user's focus topics: ${topicNames}\n\nRewrite this outlook section (same length) emphasising the insights most relevant to these focus topics. Keep the same analytical tone. Do not add new information — just reframe existing conclusions through the lens of these topics.`,
-    { maxTokens: 300 },
-  );
+  // ── Adapt all 5 sections via single Grok call ──
+  // This produces a coherent, topic-weighted version of the entire briefing
+  const adaptPrompt = `You are the intelligence editor for a Bitcoin & macro analysis platform called "The Situation Room".
 
+A VIP subscriber has selected these focus topics: ${topicNames}
+
+Your job is to adapt each section of today's standard briefing to emphasise insights most relevant to their chosen topics. The adapted version should:
+- Expand detail on paragraphs/data points related to the user's topics
+- Keep other content but at reduced emphasis (shorter, summarised)
+- Never invent new data or facts — only reframe and reweight what exists
+- Maintain the same analytical, direct tone throughout
+- Each section should be roughly the same total length as the original
+
+Here is today's standard briefing:
+
+=== MARKET SECTION ===
+${baseBriefing.marketSection}
+
+=== NETWORK SECTION ===
+${baseBriefing.networkSection}
+
+=== GEOPOLITICAL SECTION ===
+${baseBriefing.geopoliticalSection}
+
+=== MACRO SECTION ===
+${baseBriefing.macroSection}
+
+=== OUTLOOK SECTION ===
+${baseBriefing.outlookSection}
+
+Return a JSON object with exactly 5 keys: "market", "network", "geo", "macro", "outlook".
+Each value should be the adapted section text (plain text, not markdown).`;
+
+  const adapted = await callGrokAnalysisJSON<{
+    market: string;
+    network: string;
+    geo: string;
+    macro: string;
+    outlook: string;
+  }>(adaptPrompt, {
+    system: 'You adapt intelligence briefings for individual subscribers by reweighting content toward their focus topics. Output valid JSON only.',
+    maxTokens: 3000,
+    timeoutMs: 60_000,
+  });
+
+  // Fall back to base sections if Grok call fails
   const content = {
-    market:  baseBriefing.marketSection,
-    network: baseBriefing.networkSection,
-    geo:     baseBriefing.geopoliticalSection,
-    macro:   baseBriefing.macroSection,
-    outlook: personalisedOutlook ?? baseBriefing.outlookSection,
+    market:  adapted?.market  ?? baseBriefing.marketSection,
+    network: adapted?.network ?? baseBriefing.networkSection,
+    geo:     adapted?.geo     ?? baseBriefing.geopoliticalSection,
+    macro:   adapted?.macro   ?? baseBriefing.macroSection,
+    outlook: adapted?.outlook ?? baseBriefing.outlookSection,
   };
 
   return {
