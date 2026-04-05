@@ -36,16 +36,46 @@ export default function SupportPage() {
           WHAT YOU GET
         </div>
         {[
-          { tier: 'General', price: '10,000 sats/mo', features: ['Full briefings — all 5 agent sections', 'All dashboard views', 'Conviction score breakdown', '30-day briefing archive'] },
-          { tier: 'Members', price: '25,000 sats/mo', features: ['Everything in General', 'Ops Room — member chat', 'Trading pool view + bot signals', 'Miners & network on-chain section', 'Pool status in email briefing'] },
-          { tier: 'VIP', price: '50,000 sats/mo', features: ['Everything in Members', 'Custom dashboard layouts', 'Personal conviction score', 'AI "Why Bitcoin" annotations', 'Personalised briefings by topic', 'Threshold alerts via Nostr DM'] },
-        ].map(({ tier, price, features }) => (
+          { tier: 'Free', price: 'Free', color: '#8b7355', features: [
+            'Newsletter signup — daily or weekly',
+            'Daily letter: outlook section only',
+            'Weekly letter: outlook + price & metric summary',
+            'Full Overview & Full Data dashboards',
+            'Briefing outlook section (dashboard + archive)',
+            '7-day briefing archive',
+          ], cta: 'SIGN UP' },
+          { tier: 'General', price: '10,000 sats/mo', color: '#8b6914', features: [
+            'Everything in Free',
+            'Full briefings — all 5 agent sections',
+            'Macro Focus dashboard',
+            'Conviction score breakdown',
+            '30-day briefing archive',
+            'Full daily newsletter',
+            'Dark mode',
+          ], cta: 'SUBSCRIBE' },
+          { tier: 'Members', price: '25,000 sats/mo', color: '#4a6fa5', features: [
+            'Everything in General',
+            'Ops Room — member chat',
+            'Trading pool view + bot signals',
+            'On-Chain Deep Dive dashboard',
+            'AI Analysis dashboard',
+            'AI "Why Bitcoin" annotations',
+          ], cta: 'SUBSCRIBE' },
+          { tier: 'VIP', price: '50,000 sats/mo', color: '#7c5cbf', features: [
+            'Everything in Members',
+            'Custom dashboard layouts',
+            'Personal conviction score',
+            'Grok-3 on-chain deep analysis',
+            'Personalised briefings by topic',
+            'Threshold alerts via Nostr DM',
+          ], cta: 'SUBSCRIBE' },
+        ].map(({ tier, price, color, features, cta }) => (
           <div
             key={tier}
             style={{ marginBottom: '20px', padding: '16px', border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-primary)', letterSpacing: '0.08em' }}>{tier.toUpperCase()}</span>
+              <span style={{ fontSize: '12px', color: color, letterSpacing: '0.08em', fontWeight: 'bold' }}>{tier.toUpperCase()}</span>
               <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{price}</span>
             </div>
             <ul style={{ margin: 0, padding: '0 0 0 12px', listStyle: 'none' }}>
@@ -56,15 +86,15 @@ export default function SupportPage() {
               ))}
             </ul>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => tier === 'Free' ? setShowModal(true) : setShowModal(true)}
               style={{
                 marginTop: '12px', padding: '6px 16px',
-                background: 'transparent', border: '1px solid var(--accent-primary)',
-                color: 'var(--accent-primary)', cursor: 'pointer',
+                background: 'transparent', border: `1px solid ${color}`,
+                color: color, cursor: 'pointer',
                 fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em',
               }}
             >
-              SUBSCRIBE ⚡
+              {cta} ⚡
             </button>
           </div>
         ))}

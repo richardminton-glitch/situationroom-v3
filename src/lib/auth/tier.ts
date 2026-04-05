@@ -35,45 +35,65 @@ export function hasAccess(userTier: Tier, requiredTier: Tier): boolean {
 }
 
 type Feature =
+  // ── Free ──
+  | 'newsletter_signup'        // daily/weekly newsletter
+  | 'full_overview_view'       // Full Overview dashboard
+  | 'full_data_view'           // Full Data dashboard
+  | 'briefing_outlook'         // outlook section only of briefings
+  | 'briefing_archive_7d'      // 7-day briefing archive (outlook only)
+  // ── General ──
   | 'dark_mode'
-  | 'full_data_view'
   | 'macro_focus_view'
   | 'conviction_breakdown'
-  | 'ai_intelligence_panel'
-  | 'briefing_detail'
-  | 'briefing_archive_30d'
+  | 'ai_intelligence_panel'    // full briefing (all 5 sections)
+  | 'briefing_full'            // full briefing detail (all sections)
+  | 'briefing_archive_30d'     // 30-day briefing archive (full)
+  | 'newsletter_daily'         // full daily newsletter
+  // ── Members ──
   | 'onchain_deep_dive'
   | 'ops_room_chat_post'
   | 'pool_view'
   | 'miners_network_section'
+  | 'ai_annotations'
+  | 'ai_analysis_view'         // AI Analysis layout preset
+  // ── VIP ──
   | 'edit_layout'
   | 'personal_conviction'
-  | 'ai_annotations'
   | 'alerts'
   | 'vip_briefing'
-  | 'newsletter_daily'
   | 'newsletter_vip_topics'
+  | 'onchain_ai_analysis'      // Grok-3 on-chain deep analysis
   | 'portfolio_context';
 
 const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
+  // Free — available to everyone
+  newsletter_signup:      'free',
+  full_overview_view:     'free',
+  full_data_view:         'free',
+  briefing_outlook:       'free',
+  briefing_archive_7d:    'free',
+  // General
   dark_mode:              'general',
-  full_data_view:         'general',
   macro_focus_view:       'general',
   conviction_breakdown:   'general',
   ai_intelligence_panel:  'general',
-  briefing_detail:        'general',
+  briefing_full:          'general',
   briefing_archive_30d:   'general',
+  newsletter_daily:       'general',
+  // Members
   onchain_deep_dive:      'members',
   ops_room_chat_post:     'members',
   pool_view:              'members',
   miners_network_section: 'members',
+  ai_annotations:         'members',
+  ai_analysis_view:       'members',
+  // VIP
   edit_layout:            'vip',
   personal_conviction:    'vip',
-  ai_annotations:         'members',
   alerts:                 'vip',
   vip_briefing:           'vip',
-  newsletter_daily:       'general',
   newsletter_vip_topics:  'vip',
+  onchain_ai_analysis:    'vip',
   portfolio_context:      'vip',
 };
 
