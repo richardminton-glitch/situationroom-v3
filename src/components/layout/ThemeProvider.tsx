@@ -20,12 +20,6 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
-function readStoredTheme(fallback: Theme): Theme {
-  if (typeof window === 'undefined') return fallback;
-  const stored = localStorage.getItem('sr-theme') as Theme | null;
-  return stored === 'dark' || stored === 'parchment' ? stored : fallback;
-}
-
 export function ThemeProvider({
   children,
   initialTheme = 'parchment',
@@ -34,7 +28,16 @@ export function ThemeProvider({
   initialTheme?: Theme;
 }) {
   const { user, loading } = useAuth();
-  const [theme, setThemeRaw] = useState<Theme>(() => readStoredTheme(initialTheme));
+  // Always start with initialTheme to match SSR; sync from localStorage after mount
+  const [theme, setThemeRaw] = useState<Theme>(initialTheme);
+
+  // Hydrate theme from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('sr-theme') as Theme | null;
+    if (stored === 'dark' || stored === 'parchment') {
+      setThemeRaw(stored);
+    }
+  }, []);
 
   // Wrap setTheme to enforce tier gate (except Members Room override)
   const setTheme = (next: Theme) => {
