@@ -113,6 +113,159 @@ const smallValueStyle: React.CSSProperties = {
   color: 'var(--text-secondary)',
 };
 
+// ── AI / LLM Cost Estimates ──────────────────────────────────────────────────
+// Based on xAI pricing (Apr 2026):
+//   grok-4.20 multi-agent (Responses API): $3.00/M in, $15.00/M out + $5/1K web searches
+//   grok-4-1-fast-non-reasoning:           $0.20/M in, $0.50/M out
+//   grok-3:                                $3.00/M in, $15.00/M out
+
+interface AiUsageRow {
+  feature: string;
+  model: string;
+  trigger: string;
+  inputTokens: number;   // avg per call
+  outputTokens: number;  // avg per call
+  callsPerDay: number;   // estimated avg
+  costPerCall: number;   // USD
+  est7dCost: number;     // USD
+  est30dCost: number;    // USD
+}
+
+const MODEL_COLORS: Record<string, string> = {
+  'grok-4.20': '#7c5cbf',
+  'grok-4-1-fast': '#00c9a7',
+  'grok-3': '#f0a500',
+};
+
+const AI_USAGE_DATA: AiUsageRow[] = [
+  {
+    feature: 'Daily Briefing',
+    model: 'grok-4.20',
+    trigger: 'Cron 06:00 UTC',
+    inputTokens: 3_000,
+    outputTokens: 400,
+    callsPerDay: 6,
+    // (3000 × $3/M) + (400 × $15/M) + ~3 web searches × $0.005 = $0.030
+    costPerCall: 0.030,
+    est7dCost: 1.26,
+    est30dCost: 5.40,
+  },
+  {
+    feature: 'VIP Briefings',
+    model: 'grok-4-1-fast',
+    trigger: 'Cron 06:10 UTC',
+    inputTokens: 1_750,
+    outputTokens: 250,
+    callsPerDay: 10,  // ~5 VIP users × 2 calls
+    costPerCall: 0.0005,
+    est7dCost: 0.04,
+    est30dCost: 0.15,
+  },
+  {
+    feature: 'RSS Classifier',
+    model: 'grok-3',
+    trigger: 'Auto (feed ingest)',
+    inputTokens: 1_250,
+    outputTokens: 175,
+    callsPerDay: 75,  // 50–100 depending on feed velocity
+    // (1250 × $3/M) + (175 × $15/M) = $0.006
+    costPerCall: 0.006,
+    est7dCost: 3.15,
+    est30dCost: 13.50,
+  },
+  {
+    feature: 'Signal Annotation',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 800,
+    outputTokens: 125,
+    callsPerDay: 10,
+    costPerCall: 0.0002,
+    est7dCost: 0.01,
+    est30dCost: 0.06,
+  },
+  {
+    feature: 'Signal Interpreter',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 2_500,
+    outputTokens: 750,
+    callsPerDay: 5,
+    costPerCall: 0.0009,
+    est7dCost: 0.03,
+    est30dCost: 0.14,
+  },
+  {
+    feature: 'Cohort Analysis',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 1_800,
+    outputTokens: 430,
+    callsPerDay: 4,
+    costPerCall: 0.0006,
+    est7dCost: 0.02,
+    est30dCost: 0.07,
+  },
+  {
+    feature: 'Bitcoin Argument',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 2_000,
+    outputTokens: 500,
+    callsPerDay: 2,
+    costPerCall: 0.0007,
+    est7dCost: 0.01,
+    est30dCost: 0.04,
+  },
+  {
+    feature: 'Pattern Historian',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 1_600,
+    outputTokens: 430,
+    callsPerDay: 3,
+    costPerCall: 0.0005,
+    est7dCost: 0.01,
+    est30dCost: 0.05,
+  },
+  {
+    feature: 'Briefing Search',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (VIP only)',
+    inputTokens: 10_000,
+    outputTokens: 1_100,
+    callsPerDay: 2,
+    costPerCall: 0.0026,
+    est7dCost: 0.04,
+    est30dCost: 0.16,
+  },
+  {
+    feature: 'Briefing Retrospective',
+    model: 'grok-4-1-fast',
+    trigger: 'On-demand (Members+)',
+    inputTokens: 2_500,
+    outputTokens: 450,
+    callsPerDay: 3,
+    costPerCall: 0.0007,
+    est7dCost: 0.02,
+    est30dCost: 0.06,
+  },
+  {
+    feature: 'Threat Analysis',
+    model: 'grok-4-1-fast',
+    trigger: 'Auto (state shifts)',
+    inputTokens: 1_200,
+    outputTokens: 175,
+    callsPerDay: 15,
+    costPerCall: 0.0003,
+    est7dCost: 0.03,
+    est30dCost: 0.14,
+  },
+];
+
+const AI_TOTAL_7D = AI_USAGE_DATA.reduce((s, r) => s + r.est7dCost, 0);
+const AI_TOTAL_30D = AI_USAGE_DATA.reduce((s, r) => s + r.est30dCost, 0);
+
 // ── API Usage Estimates ──────────────────────────────────────────────────────
 // Calculated from cache TTLs, polling intervals, and cron schedules.
 // Assumes continuous uptime with active traffic refreshing caches.
@@ -427,6 +580,157 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── AI / LLM Cost Estimates ── */}
+      <div style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
+        padding: '16px', marginBottom: 12,
+      }}>
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontFamily: FONT, fontSize: '16px', color: 'var(--text-primary)', fontWeight: 400 }}>
+            AI / LLM Cost Estimates
+          </h2>
+          <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: 2 }}>
+            PROJECTED xAI GROK SPEND BASED ON TOKEN USAGE AND CURRENT PRICING
+          </p>
+        </div>
+
+        {/* Summary cards */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ ...cardStyle, minWidth: 120, flex: 'none' }}>
+            <div style={labelStyle}>Est. 7d Cost</div>
+            <div style={{ ...valueStyle, color: '#00c9a7' }}>${AI_TOTAL_7D.toFixed(2)}</div>
+          </div>
+          <div style={{ ...cardStyle, minWidth: 120, flex: 'none' }}>
+            <div style={labelStyle}>Est. 30d Cost</div>
+            <div style={{ ...valueStyle, color: '#f0a500' }}>${AI_TOTAL_30D.toFixed(2)}</div>
+          </div>
+          <div style={{ ...cardStyle, minWidth: 120, flex: 'none' }}>
+            <div style={labelStyle}>Est. Annual</div>
+            <div style={{ ...valueStyle, color: 'var(--text-secondary)' }}>${(AI_TOTAL_30D * 12).toFixed(0)}</div>
+          </div>
+          <div style={{ ...cardStyle, minWidth: 180, flex: 'none' }}>
+            <div style={labelStyle}>Top Cost Driver</div>
+            <div style={{ fontFamily: MONO, fontSize: '13px', fontWeight: 600, color: '#f0a500' }}>
+              RSS Classifier
+            </div>
+            <div style={smallValueStyle}>
+              grok-3 @ $3/$15 per M — {((13.50 / AI_TOTAL_30D) * 100).toFixed(0)}% of total
+            </div>
+          </div>
+          <div style={{ ...cardStyle, flex: 1, minWidth: 200 }}>
+            <div style={labelStyle}>Model Breakdown (30d)</div>
+            <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+              {(['grok-4.20', 'grok-3', 'grok-4-1-fast'] as const).map((m) => {
+                const mCost = AI_USAGE_DATA.filter((r) => r.model === m).reduce((s, r) => s + r.est30dCost, 0);
+                return (
+                  <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: MODEL_COLORS[m] }} />
+                    <span style={{ fontFamily: MONO, fontSize: '10px', color: MODEL_COLORS[m] }}>{m}</span>
+                    <span style={{ fontFamily: MONO, fontSize: '10px', color: 'var(--text-muted)' }}>${mCost.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Cost breakdown bar */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+            {(['grok-4.20', 'grok-3', 'grok-4-1-fast'] as const).map((m) => {
+              const mCost = AI_USAGE_DATA.filter((r) => r.model === m).reduce((s, r) => s + r.est30dCost, 0);
+              const pct = AI_TOTAL_30D > 0 ? (mCost / AI_TOTAL_30D) * 100 : 0;
+              return <div key={m} style={{ width: `${pct}%`, background: MODEL_COLORS[m], minWidth: pct > 0 ? 2 : 0 }} />;
+            })}
+          </div>
+        </div>
+
+        {/* Detail table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: MONO, fontSize: '11px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                {['Feature', 'Model', 'Trigger', 'In / Out Tokens', 'Calls/Day', '$/Call', 'Est. 7d', 'Est. 30d'].map((h) => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '8px 6px', fontWeight: 600,
+                    fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                  }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {AI_USAGE_DATA.map((row) => (
+                <tr key={row.feature} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    {row.feature}
+                  </td>
+                  <td style={{ padding: '8px 6px' }}>
+                    <span style={{
+                      fontSize: '9px', padding: '1px 5px', borderRadius: 2,
+                      background: `${MODEL_COLORS[row.model]}18`,
+                      color: MODEL_COLORS[row.model],
+                      fontWeight: 600, letterSpacing: '0.03em',
+                    }}>
+                      {row.model}
+                    </span>
+                  </td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-secondary)', fontSize: '10px' }}>
+                    {row.trigger}
+                  </td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-secondary)', fontSize: '10px', fontVariantNumeric: 'tabular-nums' }}>
+                    {row.inputTokens.toLocaleString()} / {row.outputTokens.toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                    ~{row.callsPerDay}
+                  </td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', fontSize: '10px' }}>
+                    {row.costPerCall < 0.01 ? `$${row.costPerCall.toFixed(4)}` : `$${row.costPerCall.toFixed(3)}`}
+                  </td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                    ${row.est7dCost.toFixed(2)}
+                  </td>
+                  <td style={{ padding: '8px 6px', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{
+                      color: row.est30dCost > 5 ? '#e03030' : row.est30dCost > 1 ? '#f0a500' : 'var(--text-primary)',
+                      fontWeight: row.est30dCost > 1 ? 600 : 400,
+                    }}>
+                      ${row.est30dCost.toFixed(2)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '1px solid var(--border-primary)' }}>
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: 'var(--text-primary)' }}>TOTAL</td>
+                <td /><td /><td />
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  ~{AI_USAGE_DATA.reduce((s, r) => s + r.callsPerDay, 0)}/day
+                </td>
+                <td />
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: '#00c9a7', fontVariantNumeric: 'tabular-nums' }}>
+                  ${AI_TOTAL_7D.toFixed(2)}
+                </td>
+                <td style={{ padding: '8px 6px', fontWeight: 600, color: '#f0a500', fontVariantNumeric: 'tabular-nums' }}>
+                  ${AI_TOTAL_30D.toFixed(2)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
+          Pricing: grok-4.20 (Responses API) $3.00/$15.00 per M tokens + $5/1K web searches •
+          grok-4-1-fast $0.20/$0.50 per M tokens • grok-3 $3.00/$15.00 per M tokens.
+          On-demand estimates assume moderate subscriber traffic with aggressive caching.
+          VIP briefings scale linearly with VIP user count (~$0.001/user/day).
+          RSS classifier volume depends on feed velocity and keyword confidence thresholds (120 calls/hr hard cap).
+        </p>
+      </div>
 
       {/* ── API Usage Estimates ── */}
       <div style={{
