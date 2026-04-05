@@ -437,18 +437,6 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: 'G4 M2 money supply indexed to 100 — USA, EU, UK, Japan',
     icon: 'chart',
   },
-  {
-    id: 'account-settings',
-    name: 'Account & Newsletter',
-    category: 'ui',
-    defaultW: 340, defaultH: 440, minW: 280, minH: 300,
-    resizable: true,
-    refreshInterval: 0,
-    dataSources: [],
-    description: 'Newsletter preferences, frequency settings, and portfolio fields',
-    icon: 'settings',
-  },
-
 ];
 
 export function getPanelById(id: string): PanelRegistryEntry | undefined {
