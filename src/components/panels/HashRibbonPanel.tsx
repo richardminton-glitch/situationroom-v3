@@ -22,11 +22,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from 'recharts';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { chartColors, PanelLoading } from './shared';
-import { SignalAnnotationButton } from './SignalAnnotationButton';
+// SignalAnnotationButton removed — callout stripped
 
 interface HashRibbonPoint {
   date:     string;
@@ -55,7 +54,7 @@ function formatDateLabel(iso: string): string {
 }
 
 function fmtEH(v: number): string {
-  return `${v.toFixed(0)} EH/s`;
+  return `${v.toFixed(1)} EH/s`;
 }
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { dataKey?: string; color?: string; name?: string; value?: number }[]; label?: string }) {
@@ -130,7 +129,7 @@ export function HashRibbonPanel() {
           </span>
         </div>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-secondary)' }}>
-          {resp.currentHashrate.toFixed(0)} EH/s
+          {resp.currentHashrate.toFixed(1)} EH/s
         </span>
       </div>
 
@@ -147,11 +146,11 @@ export function HashRibbonPanel() {
               tickLine={false}
             />
             <YAxis
-              tickFormatter={(v: number) => `${v.toFixed(0)}`}
+              tickFormatter={(v: number) => `${v.toFixed(1)}`}
               tick={{ fontSize: 8, fontFamily: 'var(--font-mono)', fill: cc.axisTick }}
               axisLine={false}
               tickLine={false}
-              width={36}
+              width={44}
             />
             <Tooltip content={<CustomTooltip />} />
 
@@ -224,14 +223,6 @@ export function HashRibbonPanel() {
         ))}
       </div>
 
-      {/* Callout */}
-      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', lineHeight: 1.5, padding: '6px 10px', borderTop: '1px solid var(--border-subtle)', margin: 0 }}>
-        Hash Ribbon identifies miner capitulation cycles. When the 30d MA crosses above the 60d MA,
-        miners have survived stress and are back to accumulating — historically a high-conviction buy signal.
-      </p>
-      <div style={{ padding: '0 10px 6px' }}>
-        <SignalAnnotationButton panelId="hash-ribbon" valueKey={new Date().toISOString().slice(0, 10)} />
-      </div>
     </div>
   );
 }
