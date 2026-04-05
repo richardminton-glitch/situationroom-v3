@@ -70,7 +70,7 @@ async function callGrok3(prompt: string): Promise<string | null> {
 
 // ── Internal data fetchers ──────────────────────────────────────────────────
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 async function fetchJSON<T>(path: string): Promise<T | null> {
   try {

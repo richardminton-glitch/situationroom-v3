@@ -70,7 +70,7 @@ async function callGrok3(prompt: string): Promise<string | null> {
 
 // ── Internal data fetchers ──────────────────────────────────────────────────
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 async function fetchJSON<T>(path: string): Promise<T | null> {
   try {
@@ -82,56 +82,41 @@ async function fetchJSON<T>(path: string): Promise<T | null> {
   }
 }
 
-// Snapshot — BTC price, F&G, DXY, VIX, etc.
-interface SnapshotData {
-  btcPrice: number;
-  btc24hPct: number;
-  fearGreed: { value: number; classification: string };
-  sp500: number;
-  vix: number;
-  gold: number;
-  dxy: number;
-  us10y: number;
-  oil: number;
-}
+// ── Actual API response types (matching what the endpoints really return) ──
 
-// Central bank assets (balance sheets)
-interface CBAssetSeries {
-  label: string;
-  data: { date: string; value: number }[];
+// /api/data/snapshot — nested object
+interface TickerData {
+  name: string;
+  price: number;
+  changePct: number;
 }
-
-// Central bank rates
-interface CBRateSeries {
-  label: string;
-  data: { date: string; value: number }[];
-}
-
-// Inflation data
-interface InflationSeries {
+interface CentralBankRate {
   country: string;
-  data: { date: string; value: number }[];
+  rate: number;
+  lastUpdated: string;
+}
+interface SnapshotResponse {
+  btcMarket: { price: number; change24h: number; change7d: number; change30d: number; marketCap: number; volume24h: number } | null;
+  fearGreed: { value: number; classification: string } | null;
+  indices: Record<string, TickerData> | null;
+  commodities: Record<string, TickerData> | null;
+  fx: Record<string, TickerData> | null;
+  rates: CentralBankRate[] | null;
+  timestamp: number;
 }
 
-// M2 money supply
-interface M2Series {
-  label: string;
-  data: { date: string; value: number }[];
-}
+// /api/data/cbassets — Record keyed by bank name
+type CBAssetsResponse = Record<string, { year: number; value: number }[]>;
 
-// Market indices
-interface MarketIndex {
-  name: string;
-  price: number;
-  change_pct: number;
-}
+// /api/data/cbrates — Record keyed by bank name
+type CBRatesResponse = Record<string, { time: number; value: number }[]>;
 
-// Commodities
-interface Commodity {
-  name: string;
-  price: number;
-  change_pct: number;
-}
+// /api/data/inflation — Record keyed by country
+type InflationResponse = Record<string, { time: number; value: number }[]>;
+
+// /api/data/m2 — Record keyed by country (values indexed to 100)
+type M2Response = Record<string, { time: number; value: number }[]>;
+
 
 function cacheKey(): string {
   const now = new Date();
@@ -140,88 +125,158 @@ function cacheKey(): string {
 }
 
 function buildPrompt(
-  snapshot: SnapshotData | null,
-  cbAssets: CBAssetSeries[] | null,
-  cbRates: CBRateSeries[] | null,
-  inflation: InflationSeries[] | null,
-  m2: M2Series[] | null,
-  indices: MarketIndex[] | null,
-  commodities: Commodity[] | null,
+  snapshot: SnapshotResponse | null,
+  cbAssets: CBAssetsResponse | null,
+  cbRates: CBRatesResponse | null,
+  inflation: InflationResponse | null,
+  m2: M2Response | null,
 ): string {
   const today = new Date().toISOString().slice(0, 10);
   const sections: string[] = [];
 
+  // ── Market Snapshot (from /api/data/snapshot) ──
   if (snapshot) {
-    sections.push(`MARKET SNAPSHOT:
-- BTC Price: $${snapshot.btcPrice?.toLocaleString() ?? '—'}
-- BTC 24h Change: ${snapshot.btc24hPct?.toFixed(2) ?? '—'}%
-- Fear & Greed: ${snapshot.fearGreed?.value ?? '—'} (${snapshot.fearGreed?.classification ?? '—'})
-- S&P 500: ${snapshot.sp500?.toLocaleString() ?? '—'}
-- VIX: ${snapshot.vix?.toFixed(2) ?? '—'}
-- Gold: $${snapshot.gold?.toFixed(0) ?? '—'}
-- DXY: ${snapshot.dxy?.toFixed(2) ?? '—'}
-- US 10Y Yield: ${snapshot.us10y?.toFixed(2) ?? '—'}%
-- Oil (WTI): $${snapshot.oil?.toFixed(2) ?? '—'}`);
+    const btc = snapshot.btcMarket;
+    const fg = snapshot.fearGreed;
+    const sp500 = snapshot.indices?.sp500;
+    const vix = snapshot.indices?.vix;
+    const gold = snapshot.commodities?.gold;
+    const dxy = snapshot.commodities?.dxy;
+    const us10y = snapshot.commodities?.us10y;
+    const oil = snapshot.commodities?.['crude-oil'];
+
+    const rows: string[] = [];
+    if (btc) {
+      rows.push(`- BTC Price: $${btc.price?.toLocaleString() ?? '—'}`);
+      rows.push(`- BTC 24h Change: ${btc.change24h?.toFixed(2) ?? '—'}%`);
+    }
+    if (fg) rows.push(`- Fear & Greed: ${fg.value} (${fg.classification})`);
+    if (sp500) rows.push(`- S&P 500: ${sp500.price?.toLocaleString()} (${sp500.changePct >= 0 ? '+' : ''}${sp500.changePct?.toFixed(2)}%)`);
+    if (vix) rows.push(`- VIX: ${vix.price?.toFixed(2)}`);
+    if (gold) rows.push(`- Gold: $${gold.price?.toFixed(0)} (${gold.changePct >= 0 ? '+' : ''}${gold.changePct?.toFixed(2)}%)`);
+    if (dxy) rows.push(`- DXY: ${dxy.price?.toFixed(2)} (${dxy.changePct >= 0 ? '+' : ''}${dxy.changePct?.toFixed(2)}%)`);
+    if (us10y) rows.push(`- US 10Y Yield: ${us10y.price?.toFixed(2)}%`);
+    if (oil) rows.push(`- Oil (WTI): $${oil.price?.toFixed(2)} (${oil.changePct >= 0 ? '+' : ''}${oil.changePct?.toFixed(2)}%)`);
+
+    if (rows.length > 0) sections.push(`MARKET SNAPSHOT:\n${rows.join('\n')}`);
   }
 
-  if (indices && indices.length > 0) {
-    const rows = indices.map((i) => `  ${i.name}: ${i.price?.toLocaleString()} (${i.change_pct >= 0 ? '+' : ''}${i.change_pct?.toFixed(2)}%)`);
-    sections.push(`EQUITY INDICES:\n${rows.join('\n')}`);
+  // ── Equity Indices (from snapshot.indices) ──
+  if (snapshot?.indices) {
+    const idx = snapshot.indices;
+    const indexRows = Object.entries(idx).map(([, data]) =>
+      `  ${data.name}: ${data.price?.toLocaleString()} (${data.changePct >= 0 ? '+' : ''}${data.changePct?.toFixed(2)}%)`
+    );
+    if (indexRows.length > 0) sections.push(`EQUITY INDICES:\n${indexRows.join('\n')}`);
   }
 
-  if (commodities && commodities.length > 0) {
-    const rows = commodities.map((c) => `  ${c.name}: $${c.price?.toFixed(2)} (${c.change_pct >= 0 ? '+' : ''}${c.change_pct?.toFixed(2)}%)`);
-    sections.push(`COMMODITIES:\n${rows.join('\n')}`);
+  // ── Commodities (from snapshot.commodities) ──
+  if (snapshot?.commodities) {
+    const comms = snapshot.commodities;
+    const commRows = Object.entries(comms)
+      .filter(([key]) => !['dxy', 'us10y', 'us2y'].includes(key)) // yields/DXY shown in snapshot
+      .map(([, data]) =>
+        `  ${data.name}: $${data.price?.toFixed(2)} (${data.changePct >= 0 ? '+' : ''}${data.changePct?.toFixed(2)}%)`
+      );
+    if (commRows.length > 0) sections.push(`COMMODITIES:\n${commRows.join('\n')}`);
   }
 
-  if (cbRates && cbRates.length > 0) {
-    const latestRates = cbRates.map((s) => {
-      const latest = s.data?.[s.data.length - 1];
-      return latest ? `  ${s.label}: ${latest.value?.toFixed(2)}%` : null;
-    }).filter(Boolean);
-    if (latestRates.length > 0) {
-      sections.push(`CENTRAL BANK POLICY RATES:\n${latestRates.join('\n')}`);
+  // ── FX Pairs (from snapshot.fx) ──
+  if (snapshot?.fx) {
+    const fxRows = Object.entries(snapshot.fx).map(([, data]) =>
+      `  ${data.name}: ${data.price?.toFixed(4)} (${data.changePct >= 0 ? '+' : ''}${data.changePct?.toFixed(2)}%)`
+    );
+    if (fxRows.length > 0) sections.push(`FX PAIRS:\n${fxRows.join('\n')}`);
+  }
+
+  // ── Live Central Bank Rates (from snapshot.rates) ──
+  if (snapshot?.rates && Array.isArray(snapshot.rates) && snapshot.rates.length > 0) {
+    const rateRows = snapshot.rates.map((r) =>
+      `  ${r.country}: ${r.rate?.toFixed(2)}% (updated: ${r.lastUpdated})`
+    );
+    sections.push(`CENTRAL BANK POLICY RATES (current):\n${rateRows.join('\n')}`);
+  }
+
+  // ── Historical CB Rates (from /api/data/cbrates — FRED) ──
+  if (cbRates && typeof cbRates === 'object') {
+    const historicalRows: string[] = [];
+    for (const [bank, series] of Object.entries(cbRates)) {
+      if (!Array.isArray(series) || series.length === 0) continue;
+      const latest = series[series.length - 1];
+      // Find value from ~1 year ago
+      const oneYearAgoMs = Date.now() - 365 * 86400_000;
+      const yearAgoPoint = series.reduce((closest, pt) =>
+        Math.abs(pt.time - oneYearAgoMs) < Math.abs(closest.time - oneYearAgoMs) ? pt : closest
+      , series[0]);
+      const change = latest.value - yearAgoPoint.value;
+      historicalRows.push(`  ${bank}: ${latest.value.toFixed(2)}% (1yr change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}pp)`);
+    }
+    if (historicalRows.length > 0) {
+      sections.push(`CENTRAL BANK RATES (FRED historical, latest available):\n${historicalRows.join('\n')}`);
     }
   }
 
-  if (cbAssets && cbAssets.length > 0) {
-    const assetRows = cbAssets.map((s) => {
-      const latest = s.data?.[s.data.length - 1];
-      const yearAgo = s.data?.find((d) => d.date <= new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10));
-      const yoyChange = latest && yearAgo ? ((latest.value - yearAgo.value) / yearAgo.value * 100).toFixed(1) : '—';
-      return latest ? `  ${s.label}: $${(latest.value / 1e12).toFixed(2)}T (YoY: ${yoyChange}%)` : null;
-    }).filter(Boolean);
+  // ── Central Bank Balance Sheets (from /api/data/cbassets — FRED) ──
+  if (cbAssets && typeof cbAssets === 'object') {
+    const assetRows: string[] = [];
+    for (const [bank, series] of Object.entries(cbAssets)) {
+      if (!Array.isArray(series) || series.length === 0) continue;
+      const latest = series[series.length - 1];
+      const prev = series.length >= 2 ? series[series.length - 2] : null;
+      const yoyChange = prev ? ((latest.value - prev.value) / prev.value * 100).toFixed(1) : '—';
+      assetRows.push(`  ${bank}: $${latest.value.toFixed(2)}T (${latest.year}, YoY: ${yoyChange}%)`);
+    }
     if (assetRows.length > 0) {
       sections.push(`CENTRAL BANK BALANCE SHEETS:\n${assetRows.join('\n')}`);
     }
   }
 
-  if (inflation && inflation.length > 0) {
-    const inflRows = inflation.map((s) => {
-      const latest = s.data?.[s.data.length - 1];
-      return latest ? `  ${s.country}: ${latest.value?.toFixed(1)}%` : null;
-    }).filter(Boolean);
+  // ── Inflation (from /api/data/inflation — FRED) ──
+  if (inflation && typeof inflation === 'object') {
+    const inflRows: string[] = [];
+    for (const [country, series] of Object.entries(inflation)) {
+      if (!Array.isArray(series) || series.length === 0) continue;
+      const latest = series[series.length - 1];
+      const date = new Date(latest.time).toISOString().slice(0, 7);
+      inflRows.push(`  ${country}: ${latest.value.toFixed(1)}% (${date})`);
+    }
     if (inflRows.length > 0) {
       sections.push(`INFLATION (CPI YoY):\n${inflRows.join('\n')}`);
     }
   }
 
-  if (m2 && m2.length > 0) {
-    const m2Rows = m2.map((s) => {
-      const latest = s.data?.[s.data.length - 1];
-      const sixMonthsAgo = s.data && s.data.length > 6 ? s.data[s.data.length - 7] : null;
-      const change = latest && sixMonthsAgo ? ((latest.value - sixMonthsAgo.value) / sixMonthsAgo.value * 100).toFixed(1) : '—';
-      return latest ? `  ${s.label}: $${(latest.value / 1e12).toFixed(2)}T (6m change: ${change}%)` : null;
-    }).filter(Boolean);
+  // ── M2 Money Supply (from /api/data/m2 — indexed to 100) ──
+  if (m2 && typeof m2 === 'object') {
+    const m2Rows: string[] = [];
+    for (const [country, series] of Object.entries(m2)) {
+      if (country === 'error') continue; // skip error field
+      if (!Array.isArray(series) || series.length === 0) continue;
+      const latest = series[series.length - 1];
+      // Find 6-month-ago point
+      const sixMonthsAgoMs = Date.now() - 180 * 86400_000;
+      const sixMonthPoint = series.reduce((closest, pt) =>
+        Math.abs(pt.time - sixMonthsAgoMs) < Math.abs(closest.time - sixMonthsAgoMs) ? pt : closest
+      , series[0]);
+      const sixMonthChange = ((latest.value - sixMonthPoint.value) / sixMonthPoint.value * 100).toFixed(1);
+      // Find 1-year-ago point
+      const oneYearAgoMs = Date.now() - 365 * 86400_000;
+      const yearAgoPoint = series.reduce((closest, pt) =>
+        Math.abs(pt.time - oneYearAgoMs) < Math.abs(closest.time - oneYearAgoMs) ? pt : closest
+      , series[0]);
+      const yoyChange = ((latest.value - yearAgoPoint.value) / yearAgoPoint.value * 100).toFixed(1);
+      m2Rows.push(`  ${country}: index ${latest.value.toFixed(1)} (6m: ${sixMonthChange}%, YoY: ${yoyChange}%)`);
+    }
     if (m2Rows.length > 0) {
-      sections.push(`GLOBAL M2 MONEY SUPPLY:\n${m2Rows.join('\n')}`);
+      sections.push(`GLOBAL M2 MONEY SUPPLY (indexed, base=100):\n${m2Rows.join('\n')}`);
     }
   }
+
+  const dataPresent = sections.length > 0;
 
   return `Date: ${today}
 
 You are reviewing the COMPLETE live macro dashboard for Bitcoin. Below are today's readings from every macro indicator available.
-
+${dataPresent ? '' : '\n⚠ WARNING: No live data was available. Do NOT fabricate numbers — state that data is unavailable.\n'}
 ${sections.join('\n\n')}
 
 Provide a comprehensive deep-dive analysis covering:
@@ -240,6 +295,8 @@ Provide a comprehensive deep-dive analysis covering:
    - Short-term (1-2 weeks): how macro conditions favour or pressure BTC
    - Medium-term (1-3 months): key macro catalysts and risks
    - Accumulation guidance: is the macro backdrop favourable for adding BTC exposure?
+
+IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not invent, estimate, or assume any values. If a data point is missing, say it is unavailable rather than guessing.
 
 Write in a direct, intelligence-briefing style. Use specific numbers from the data. 500-700 words. Do not pad with disclaimers.`;
 }
@@ -276,17 +333,36 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Fetch all macro data in parallel ────────────────────────────────────
-  const [snapshot, cbAssets, cbRates, inflation, m2, indices, commodities] = await Promise.all([
-    fetchJSON<SnapshotData>('/api/data/snapshot'),
-    fetchJSON<CBAssetSeries[]>('/api/data/cbassets'),
-    fetchJSON<CBRateSeries[]>('/api/data/cbrates'),
-    fetchJSON<InflationSeries[]>('/api/data/inflation'),
-    fetchJSON<M2Series[]>('/api/data/m2'),
-    fetchJSON<MarketIndex[]>('/api/data/charts?type=indices'),
-    fetchJSON<Commodity[]>('/api/data/charts?type=commodities'),
+  // Snapshot contains: btcMarket, indices, commodities, fx, rates, fearGreed
+  // FRED endpoints: cbassets, cbrates, inflation, m2
+  const [snapshot, cbAssets, cbRates, inflation, m2] = await Promise.all([
+    fetchJSON<SnapshotResponse>('/api/data/snapshot'),
+    fetchJSON<CBAssetsResponse>('/api/data/cbassets'),
+    fetchJSON<CBRatesResponse>('/api/data/cbrates'),
+    fetchJSON<InflationResponse>('/api/data/inflation'),
+    fetchJSON<M2Response>('/api/data/m2'),
   ]);
 
-  const prompt = buildPrompt(snapshot, cbAssets, cbRates, inflation, m2, indices, commodities);
+  const prompt = buildPrompt(snapshot, cbAssets, cbRates, inflation, m2);
+
+  // Log data availability for debugging
+  console.log('[MacroAnalysis] Data availability:', {
+    snapshot: !!snapshot,
+    snapshotFields: snapshot ? {
+      btcMarket: !!snapshot.btcMarket,
+      indices: !!snapshot.indices,
+      commodities: !!snapshot.commodities,
+      fx: !!snapshot.fx,
+      rates: !!snapshot.rates,
+      fearGreed: !!snapshot.fearGreed,
+    } : null,
+    cbAssets: !!cbAssets && Object.keys(cbAssets).length,
+    cbRates: !!cbRates && Object.keys(cbRates).length,
+    inflation: !!inflation && Object.keys(inflation).length,
+    m2: !!m2 && Object.keys(m2).length,
+    baseUrl: BASE,
+  });
+
   const text = await callGrok3(prompt);
 
   if (!text) {
