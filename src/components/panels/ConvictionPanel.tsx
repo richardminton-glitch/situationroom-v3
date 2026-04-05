@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { PanelLoading } from './shared';
 import { useTheme } from '@/components/layout/ThemeProvider';
-import { BlurGate } from '@/components/auth/BlurGate';
 import { useTier } from '@/hooks/useTier';
+import Link from 'next/link';
 import { ConvictionBreakdownModal } from './ConvictionBreakdownModal';
 import type { ConvictionResult } from '@/lib/conviction/engine';
 import {
@@ -119,8 +119,8 @@ export function ConvictionPanel() {
         onClick={() => setModalOpen(true)}
         title="Click for full conviction breakdown"
       >
-        {/* Signal list — gated: General required for breakdown */}
-        <BlurGate requiredTier="general" featureName="Conviction Breakdown">
+        {/* Signal list — General+ sees breakdown, free sees unlock link */}
+        {canAccess('general') ? (
           <div className="flex-1">
             {data.signals.map((sig) => (
               <div key={sig.key} className="flex items-center justify-between py-0.5">
@@ -137,7 +137,23 @@ export function ConvictionPanel() {
               </div>
             ))}
           </div>
-        </BlurGate>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <Link
+              href="/support"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                letterSpacing: '0.1em',
+                color: 'var(--accent-primary)',
+                textDecoration: 'none',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              UNLOCK →
+            </Link>
+          </div>
+        )}
 
         {/* Gauge */}
         <div className="shrink-0 text-center">
