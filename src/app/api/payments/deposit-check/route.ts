@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
               activatedAt: new Date(),
             },
           });
-          console.log(`[payments/deposit-check] Recorded LNURL donation: ${latest.amount} sats from ${user.email}`);
+          console.log(`[payments/deposit-check] Recorded LNURL donation: ${latest.amount} sats`);
         }
       }
 
