@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
@@ -309,11 +309,12 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const userTier = (session.user.tier as Tier) ?? 'free';
+  const admin = isAdmin(session.user.email);
 
   // Determine which cron-generated cache to read
   let tierPanelId: string;
-  if (hasAccess(userTier, 'vip')) {
-    // VIP can also read their own cached analysis via GET
+  if (admin || hasAccess(userTier, 'vip')) {
+    // VIP / admin can also read their own cached analysis via GET
     tierPanelId = PANEL_ID;
   } else if (hasAccess(userTier, 'members')) {
     tierPanelId = 'macro-deep-analysis-members';
@@ -348,7 +349,8 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'vip')) {
+  const admin = isAdmin(session.user.email);
+  if (!admin && !hasAccess(userTier, 'vip')) {
     return NextResponse.json({ error: 'VIP access required' }, { status: 403 });
   }
 
