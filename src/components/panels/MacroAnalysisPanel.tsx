@@ -1,21 +1,26 @@
 'use client';
 
 /**
- * MacroAnalysisPanel — tiered Grok-3 macro analysis
+ * MacroAnalysisPanel — tiered Grok macro analysis
  *
- * General:  auto-loads cron-generated basic analysis + upsell to Members
- * Members:  auto-loads cron-generated detailed analysis + upsell to VIP
- * VIP:      on-demand full analysis via ANALYSE button (unchanged)
+ * All tiers (general/members/vip) see an ANALYSE button.
+ * Each tier gets a different depth of analysis and cache window:
+ *   General: simple overview, 24h refresh, grok-mini-fast
+ *   Members: moderate depth, 12h refresh, grok-3
+ *   VIP:     full deep-dive with historical precedents, 6h refresh, grok-3
  */
 
 import { useState, useEffect } from 'react';
 import { useTier } from '@/hooks/useTier';
 
 interface AnalysisResponse {
-  analysis: string;
-  cachedAt: string;
-  expiresAt: string;
-  fromCache: boolean;
+  analysis: string | null;
+  tier: string;
+  ttlHours: number;
+  cachedAt?: string;
+  expiresAt?: string;
+  fromCache?: boolean;
+  pending?: boolean;
 }
 
 const TIER_BADGE: Record<string, { label: string; color: string }> = {
@@ -24,39 +29,74 @@ const TIER_BADGE: Record<string, { label: string; color: string }> = {
   vip: { label: 'VIP', color: '#a855f7' },
 };
 
+const MODEL_LABEL: Record<string, string> = {
+  general: 'GROK-MINI',
+  members: 'GROK-3',
+  vip: 'GROK-3',
+};
+
 export function MacroAnalysisPanel() {
   const { canAccess, userTier } = useTier();
-  const isVip = canAccess('vip');
   const [data, setData] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
-  // ── Auto-fetch for general/members (cron-generated, via GET) ────────────
+  // Determine display tier (admin gets VIP)
+  const displayTier = canAccess('vip') ? 'vip' : canAccess('members') ? 'members' : 'general';
+
+  // ── Auto-fetch cached analysis on mount (via GET) ──────────────────────
   useEffect(() => {
-    if (!canAccess('general') || isVip) return;
+    if (!canAccess('general')) return;
     setLoading(true);
     fetch('/api/ai/macro-analysis')
       .then((res) => {
-        if (res.status === 403) {
-          setError('Access restricted');
-          return null;
-        }
+        if (res.status === 403) { setError('Access restricted'); return null; }
         if (!res.ok) throw new Error('Failed');
         return res.json();
       })
-      .then((json) => {
+      .then((json: AnalysisResponse | null) => {
         if (!json) return;
         if (json.analysis) {
           setData(json);
-          setPending(false);
         } else {
-          setPending(true);
+          // No cache yet — store tier/ttl info for display
+          setData(json);
         }
       })
       .catch(() => setError('Analysis unavailable'))
       .finally(() => setLoading(false));
   }, [userTier]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Generate analysis (POST) ───────────────────────────────────────────
+  const fetchAnalysis = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/ai/macro-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          setError(`Daily AI limit reached. Resets at ${new Date(body.resetAt).toLocaleTimeString()}`);
+          return;
+        }
+        if (res.status === 403) {
+          setError('General access required');
+          return;
+        }
+        throw new Error('Request failed');
+      }
+      const json = await res.json();
+      setData(json);
+    } catch {
+      setError('Analysis unavailable — try again later');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ── Locked for free/non-logged-in users ─────────────────────────────────
   if (!canAccess('general')) {
@@ -77,60 +117,25 @@ export function MacroAnalysisPanel() {
     );
   }
 
-  // ── VIP: on-demand POST fetch ───────────────────────────────────────────
-  const fetchAnalysis = async (force = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const url = force
-        ? '/api/ai/macro-analysis?force=true'
-        : '/api/ai/macro-analysis';
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 429) {
-          setError(
-            `Daily AI limit reached. Resets at ${new Date(body.resetAt).toLocaleTimeString()}`,
-          );
-          return;
-        }
-        if (res.status === 403) {
-          setError('VIP access required');
-          return;
-        }
-        throw new Error('Request failed');
-      }
-      const json = await res.json();
-      setData(json);
-    } catch {
-      setError('Analysis unavailable — try again later');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ── Derived state ───────────────────────────────────────────────────────
+  const hasAnalysis = data?.analysis != null;
+  const ttlHours = data?.ttlHours ?? (displayTier === 'vip' ? 6 : displayTier === 'members' ? 12 : 24);
   const timeUntilRefresh = data?.expiresAt
     ? Math.max(0, new Date(data.expiresAt).getTime() - Date.now())
     : 0;
   const hoursLeft = Math.floor(timeUntilRefresh / (1000 * 60 * 60));
-  const minsLeft = Math.floor(
-    (timeUntilRefresh % (1000 * 60 * 60)) / (1000 * 60),
-  );
-  const canRefresh = !data || timeUntilRefresh <= 0;
+  const minsLeft = Math.floor((timeUntilRefresh % (1000 * 60 * 60)) / (1000 * 60));
+  const canRefresh = !hasAnalysis || timeUntilRefresh <= 0;
 
-  const badge = TIER_BADGE[userTier] || TIER_BADGE.general;
+  const badge = TIER_BADGE[displayTier] || TIER_BADGE.general;
+  const modelLabel = MODEL_LABEL[displayTier] || 'GROK';
 
-  // Upsell configuration
-  const upsell = isVip
+  // Upsell
+  const upsell = displayTier === 'vip'
     ? null
-    : canAccess('members')
-      ? { text: 'Unlock on-demand AI analysis', tier: 'VIP' }
-      : { text: 'Unlock deeper macro analysis', tier: 'Members' };
+    : displayTier === 'members'
+      ? { text: 'Unlock VIP deep-dive with historical precedents', tier: 'VIP', refresh: '6h' }
+      : { text: 'Unlock deeper analysis with more frequent updates', tier: 'Members', refresh: '12h' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
@@ -143,7 +148,7 @@ export function MacroAnalysisPanel() {
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}>
-          Macro Deep Analysis &middot; Grok-3
+          Macro Deep Analysis &middot; {modelLabel}
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)',
@@ -158,45 +163,45 @@ export function MacroAnalysisPanel() {
         </span>
       </div>
 
-      {/* VIP action buttons */}
-      {isVip && (
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-          <button
-            onClick={() => fetchAnalysis(!canRefresh ? false : true)}
-            disabled={loading}
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              padding: '5px 12px',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-primary)',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              letterSpacing: '0.05em',
-            }}
-          >
-            {data
+      {/* Action button — all tiers */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+        <button
+          onClick={fetchAnalysis}
+          disabled={loading || (!canRefresh && hasAnalysis)}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            padding: '5px 12px',
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: '4px',
+            cursor: loading || (!canRefresh && hasAnalysis) ? 'not-allowed' : 'pointer',
+            opacity: loading || (!canRefresh && hasAnalysis) ? 0.6 : 1,
+            letterSpacing: '0.05em',
+          }}
+        >
+          {loading
+            ? 'ANALYSING...'
+            : hasAnalysis
               ? canRefresh
                 ? 'REFRESH ANALYSIS'
-                : 'VIEW ANALYSIS'
+                : 'CACHED'
               : 'ANALYSE MACRO'}
-          </button>
-          {data && !canRefresh && (
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-            }}>
-              Next refresh in {hoursLeft}h {minsLeft}m
-            </span>
-          )}
-        </div>
-      )}
+        </button>
+        {hasAnalysis && !canRefresh && (
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            color: 'var(--text-muted)',
+          }}>
+            Next refresh in {hoursLeft}h {minsLeft}m
+          </span>
+        )}
+      </div>
 
       {/* Loading */}
-      {loading && (
+      {loading && !hasAnalysis && (
         <div style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '11px',
@@ -204,7 +209,7 @@ export function MacroAnalysisPanel() {
           padding: '8px 0',
           flexShrink: 0,
         }}>
-          {isVip ? 'Analysing macro indicators...' : 'Loading analysis...'}
+          Analysing macro indicators...
         </div>
       )}
 
@@ -221,27 +226,8 @@ export function MacroAnalysisPanel() {
         </div>
       )}
 
-      {/* Pending — cron hasn't generated yet */}
-      {pending && !loading && !data && (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          textAlign: 'center',
-          lineHeight: 1.6,
-          padding: '0 20px',
-        }}>
-          Analysis is generated every 6 hours.<br />
-          Check back shortly.
-        </div>
-      )}
-
       {/* Result */}
-      {data && !loading && (
+      {hasAnalysis && !loading && (
         <div
           style={{
             flex: 1,
@@ -253,12 +239,12 @@ export function MacroAnalysisPanel() {
             whiteSpace: 'pre-wrap',
           }}
         >
-          {data.analysis}
+          {data!.analysis}
         </div>
       )}
 
-      {/* Empty state — VIP only, haven't clicked analyse yet */}
-      {isVip && !data && !loading && !error && (
+      {/* Empty state — haven't clicked analyse yet */}
+      {!hasAnalysis && !loading && !error && (
         <div style={{
           flex: 1,
           display: 'flex',
@@ -271,13 +257,13 @@ export function MacroAnalysisPanel() {
           lineHeight: 1.6,
           padding: '0 20px',
         }}>
-          Grok-3 deep dive analysis of all macro indicators.<br />
+          AI analysis of all macro indicators.<br />
           Press Analyse Macro to begin.
         </div>
       )}
 
-      {/* Upsell — non-VIP tiers */}
-      {upsell && data && !loading && (
+      {/* Upsell */}
+      {upsell && hasAnalysis && !loading && (
         <div style={{
           flexShrink: 0,
           borderTop: '1px solid var(--border-subtle)',
@@ -292,7 +278,7 @@ export function MacroAnalysisPanel() {
             fontSize: '9px',
             color: 'var(--text-muted)',
           }}>
-            {upsell.text} with {upsell.tier} tier.
+            {upsell.text} ({upsell.refresh} refresh).
           </span>
           <a
             href="/support"
@@ -303,13 +289,13 @@ export function MacroAnalysisPanel() {
               textDecoration: 'none',
             }}
           >
-            Learn more &rarr;
+            Upgrade to {upsell.tier} &rarr;
           </a>
         </div>
       )}
 
       {/* Footer */}
-      {data && !loading && (
+      {hasAnalysis && !loading && (
         <div style={{
           flexShrink: 0,
           borderTop: upsell ? 'none' : '1px solid var(--border-subtle)',
@@ -321,8 +307,8 @@ export function MacroAnalysisPanel() {
               fontSize: '9px',
               color: 'var(--text-muted)',
             }}>
-              {data.fromCache ? 'Cached' : 'Generated'}:{' '}
-              {new Date(data.cachedAt).toLocaleString()}
+              {data?.fromCache ? 'Cached' : 'Generated'}:{' '}
+              {data?.cachedAt ? new Date(data.cachedAt).toLocaleString() : '—'}
             </span>
             <span style={{
               fontFamily: 'var(--font-mono)',
@@ -333,22 +319,20 @@ export function MacroAnalysisPanel() {
               padding: '1px 5px',
               letterSpacing: '0.06em',
             }}>
-              GROK-3
+              {modelLabel}
             </span>
           </div>
-          {isVip && (
-            <div style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-              marginTop: '3px',
-            }}>
-              6-hour analysis window &middot;{' '}
-              {canRefresh
-                ? 'Refresh available'
-                : `Next refresh: ${hoursLeft}h ${minsLeft}m`}
-            </div>
-          )}
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            color: 'var(--text-muted)',
+            marginTop: '3px',
+          }}>
+            {ttlHours}h analysis window &middot;{' '}
+            {canRefresh
+              ? 'Refresh available'
+              : `Next refresh: ${hoursLeft}h ${minsLeft}m`}
+          </div>
         </div>
       )}
     </div>

@@ -130,6 +130,8 @@ const smallValueStyle: React.CSSProperties = {
 // Based on xAI pricing (Apr 2026):
 //   grok-4.20 multi-agent (Responses API): $3.00/M in, $15.00/M out + $5/1K web searches
 //   grok-4-1-fast-non-reasoning:           $0.20/M in, $0.50/M out
+//   grok-3:                                $3.00/M in, $15.00/M out
+//   grok-3-mini-fast:                      ~$0.10/M in, $0.40/M out
 
 interface AiUsageRow {
   feature: string;
@@ -147,6 +149,7 @@ const MODEL_COLORS: Record<string, string> = {
   'grok-4.20': '#7c5cbf',
   'grok-4-1-fast': '#00c9a7',
   'grok-3': '#f0a500',
+  'grok-3-mini-fast': '#4a9eff',
 };
 
 const AI_USAGE_DATA: AiUsageRow[] = [
@@ -274,9 +277,21 @@ const AI_USAGE_DATA: AiUsageRow[] = [
     est30dCost: 0.14,
   },
   {
-    feature: 'On-Chain Deep Analysis',
+    feature: 'On-Chain Analysis (Members)',
     model: 'grok-3',
-    trigger: 'On-demand (VIP only)',
+    trigger: 'On-demand (Members, 12h cache)',
+    inputTokens: 2_500,
+    outputTokens: 900,
+    callsPerDay: 6,  // ~10 members × ~0.6 calls/day (12h window)
+    // (2500 × $3/M) + (900 × $15/M) = $0.0075 + $0.0135 = $0.021
+    costPerCall: 0.021,
+    est7dCost: 0.88,
+    est30dCost: 3.78,
+  },
+  {
+    feature: 'On-Chain Analysis (VIP)',
+    model: 'grok-3',
+    trigger: 'On-demand (VIP, 6h cache)',
     inputTokens: 3_000,
     outputTokens: 1_200,
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
@@ -286,28 +301,53 @@ const AI_USAGE_DATA: AiUsageRow[] = [
     est30dCost: 3.24,
   },
   {
-    feature: 'Macro Deep Analysis',
+    feature: 'Macro Analysis (General)',
+    model: 'grok-3-mini-fast',
+    trigger: 'On-demand (General, 24h cache)',
+    inputTokens: 2_000,
+    outputTokens: 500,
+    callsPerDay: 1,  // 1 per 24h window (shared cache)
+    // grok-3-mini-fast: ~$0.10/M in, $0.40/M out
+    // (2000 × $0.10/M) + (500 × $0.40/M) = $0.0002 + $0.0002 = $0.0004
+    costPerCall: 0.0004,
+    est7dCost: 0.003,
+    est30dCost: 0.01,
+  },
+  {
+    feature: 'Macro Analysis (Members)',
     model: 'grok-3',
-    trigger: 'On-demand (VIP only)',
+    trigger: 'On-demand (Members, 12h cache)',
     inputTokens: 3_000,
-    outputTokens: 1_200,
+    outputTokens: 900,
+    callsPerDay: 2,  // 2 per 12h window (shared cache)
+    // (3000 × $3/M) + (900 × $15/M) = $0.009 + $0.0135 = $0.023
+    costPerCall: 0.023,
+    est7dCost: 0.32,
+    est30dCost: 1.38,
+  },
+  {
+    feature: 'Macro Analysis (VIP)',
+    model: 'grok-3',
+    trigger: 'On-demand (VIP, 6h cache)',
+    inputTokens: 3_500,
+    outputTokens: 1_400,
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
-    // (3000 × $3/M) + (1200 × $15/M) = $0.009 + $0.018 = $0.027
-    costPerCall: 0.027,
-    est7dCost: 0.76,
-    est30dCost: 3.24,
+    // (3500 × $3/M) + (1400 × $15/M) = $0.0105 + $0.021 = $0.032
+    costPerCall: 0.032,
+    est7dCost: 0.90,
+    est30dCost: 3.84,
   },
   {
     feature: 'Trading AI Engine',
     model: 'grok-4-1-fast',
-    trigger: '4h cron (6×/day)',
+    trigger: '1h cron (24×/day)',
     inputTokens: 2_000,
     outputTokens: 1_200,
-    callsPerDay: 6,  // 6 cycles/day × 1 Grok call per cycle
+    callsPerDay: 24,  // 24 cycles/day × 1 Grok call per cycle
     // (2000 × $0.20/M) + (1200 × $0.50/M) = $0.0004 + $0.0006 = $0.001
     costPerCall: 0.001,
-    est7dCost: 0.04,
-    est30dCost: 0.18,
+    est7dCost: 0.17,
+    est30dCost: 0.72,
   },
 ];
 
