@@ -9,10 +9,10 @@
 
 /** Impact scores added to the threat score on event arrival */
 export const TIER_IMPACT: Record<1 | 2 | 3 | 4, number> = {
-  1: 2,
-  2: 5,
-  3: 15,
-  4: 40,
+  1: 4,
+  2: 12,
+  3: 28,
+  4: 50,
 };
 
 /** Tier 2 — moderate escalation keywords */

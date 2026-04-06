@@ -138,7 +138,7 @@ class CNode {
   }
 
   dc(): number {
-    return ({ sub: 0.011, agent: 0.0045, coord: 0.003 } as Record<NodeType, number>)[this.type] || 0.01;
+    return ({ sub: 0.004, agent: 0.002, coord: 0.0012 } as Record<NodeType, number>)[this.type] || 0.004;
   }
 
   update(t: number, threatScore: number) {

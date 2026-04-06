@@ -1,7 +1,7 @@
 /**
  * SSE endpoint — streams AgentEvent objects to connected clients.
  *
- * On connect: backfill recent events (last 30 min).
+ * On connect: backfill recent events (last 2 hours).
  * Then: poll RSS every 60s, diff against sent IDs, stream new events.
  * Heartbeat every 15s to keep connection alive.
  */
@@ -28,10 +28,10 @@ async function pollForEvents(): Promise<AgentEvent[]> {
 
   try {
     const { headlines } = await fetchRSSAll();
-    const thirtyMinAgo = now - 30 * 60 * 1000;
+    const twoHoursAgo = now - 2 * 60 * 60 * 1000;
 
     const events: AgentEvent[] = headlines
-      .filter((h) => h.time * 1000 > thirtyMinAgo)
+      .filter((h) => h.time * 1000 > twoHoursAgo)
       .map((h) => classifiedToAgentEvent({
         title: h.title,
         source: h.source,
