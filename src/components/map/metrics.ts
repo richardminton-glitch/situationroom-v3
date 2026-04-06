@@ -57,4 +57,4 @@ export const METRICS: MetricDef[] = [
 export const METRIC_BY_KEY = Object.fromEntries(METRICS.map((m) => [m.key, m]));
 export const METRIC_GROUPS = [...new Set(METRICS.map((m) => m.group))] as const;
 
-export const DEFAULT_METRIC = 'hdi';
+export const DEFAULT_METRIC = 'gdpPerCap';
