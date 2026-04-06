@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 interface FundingStatus {
+  satsPerGbp: number;
   totalRevenueGBP: number;
   runningCostsGBP: number;
   coveragePct: number;
@@ -82,9 +83,9 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
         £{totalRevenueGBP.toFixed(0)} / £{runningCostsGBP} — {coveragePct}%
       </div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-        Subscriptions: £{(status.subscriptionRevenueSats / 1_900).toFixed(0)}
+        Subscriptions: £{Math.round(status.subscriptionRevenueSats / status.satsPerGbp)}
         {' · '}
-        Donations: £{(status.donationRevenueSats / 1_900).toFixed(0)}
+        Donations: £{Math.round(status.donationRevenueSats / status.satsPerGbp)}
       </div>
 
       {/* Member breakdown */}

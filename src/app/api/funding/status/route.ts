@@ -55,15 +55,30 @@ function estimateAiCostUsd(): number {
 }
 
 // ── GBP conversion ───────────────────────────────────────────────────────────
-// Rough rates — update periodically as BTC price moves
-// At BTC ~£53k: 100M sats / £53,000 ≈ 1,887 sats/GBP
-const USD_TO_GBP = 0.79;
-const SATS_PER_GBP = 1_900;
+// Fetches live BTC/GBP price from CoinGecko at request time.
+// Falls back to a reasonable estimate if the API is down.
+const FALLBACK_SATS_PER_GBP = 1_900;
 
-function computeCosts() {
+async function getLiveSatsPerGbp(): Promise<number> {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp',
+      { signal: AbortSignal.timeout(5_000), next: { revalidate: 300 } },
+    );
+    if (!res.ok) return FALLBACK_SATS_PER_GBP;
+    const data = await res.json() as { bitcoin?: { gbp?: number } };
+    const btcGbp = data.bitcoin?.gbp;
+    if (!btcGbp || btcGbp <= 0) return FALLBACK_SATS_PER_GBP;
+    return Math.round(100_000_000 / btcGbp);
+  } catch {
+    return FALLBACK_SATS_PER_GBP;
+  }
+}
+
+function computeCosts(usdToGbp: number) {
   const aiUsd = estimateAiCostUsd();
-  const aiGbp = Math.round(aiUsd * USD_TO_GBP);
-  const apiNinjasGbp = Math.round(API_NINJAS_USD * USD_TO_GBP);
+  const aiGbp = Math.round(aiUsd * usdToGbp);
+  const apiNinjasGbp = Math.round(API_NINJAS_USD * usdToGbp);
   const hostingRounded = Math.round(HOSTING_GBP);
   const domainsRounded = Math.round(DOMAINS_GBP);
 
@@ -81,7 +96,9 @@ export async function GET() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const costs = computeCosts();
+    // Live BTC/GBP for sats conversion; USD/GBP is stable enough to hardcode for costs
+    const satsPerGbp = await getLiveSatsPerGbp();
+    const costs = computeCosts(0.79);
 
     // Fetch ALL confirmed payments (for all-time totals + runway)
     const allPayments = await prisma.subscriptionPayment.findMany({
@@ -144,6 +161,7 @@ export async function GET() {
     ]);
 
     return NextResponse.json({
+      satsPerGbp,
       subscriptionRevenueSats,
       donationRevenueSats,
       totalRevenueSats: allTimeSats,
