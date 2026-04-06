@@ -11,8 +11,8 @@ import type { Tier } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_TRIGGERS = ['conviction', 'lth_supply', 'hash_ribbon', 'btc_price', 'fear_greed', 'new_briefing'] as const;
-const VALID_CONDITIONS = ['above', 'below', 'flip', 'any'] as const;
+const VALID_TRIGGERS = ['conviction', 'lth_supply', 'hash_ribbon', 'btc_price', 'fear_greed', 'new_briefing', 'bot_trade'] as const;
+const VALID_CONDITIONS = ['above', 'below', 'flip', 'any', 'long', 'short', 'bullish', 'bearish', 'neutral'] as const;
 
 type ValidTrigger = typeof VALID_TRIGGERS[number];
 type ValidCondition = typeof VALID_CONDITIONS[number];

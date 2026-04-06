@@ -2,8 +2,16 @@
  * GET /api/cron/check-alerts
  * Runs every 5 minutes. Evaluates active user alerts against current data.
  *
+ * Supported triggers:
+ *   conviction   — composite conviction score above/below threshold
+ *   btc_price    — BTC price above/below threshold
+ *   fear_greed   — Fear & Greed index above/below threshold
+ *   lth_supply   — Long-Term Holder supply % above/below threshold
+ *   hash_ribbon  — Hash ribbon signal matches condition (bullish/bearish/neutral)
+ *   bot_trade    — Trading bot opens a new position (any/long/short)
+ *   new_briefing — handled by daily-briefing cron
+ *
  * For each triggered alert:
- *   - Nostr DM if user has nostrNpub (stub — log for now)
  *   - Email via Resend if user has email
  *   - Updates lastFiredAt, deduplicates within 24hr window
  */
@@ -28,6 +36,18 @@ interface UserRow {
   email: string;
 }
 
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+
+async function fetchJSON<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
@@ -37,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Get current data
+  // Get current data from DB
   const [latestConviction, latestSnapshot] = await Promise.all([
     prisma.convictionScore.findFirst({ orderBy: { date: 'desc' } }),
     prisma.dataSnapshot.findFirst({ orderBy: { timestamp: 'desc' } }),
@@ -63,6 +83,55 @@ export async function GET(request: NextRequest) {
       OR: [{ lastFiredAt: null }, { lastFiredAt: { lt: twentyFourHoursAgo } }],
     },
   });
+
+  if (alerts.length === 0) {
+    return NextResponse.json({ ok: true, checked: 0, fired: 0, errors: [] });
+  }
+
+  // Check which trigger types are needed so we only fetch data we need
+  const triggerTypes = new Set(alerts.map((a) => a.triggerType));
+
+  // Fetch LTH and hash ribbon data only if needed
+  let lthPct: number | null = null;
+  let hashRibbonSignal: string | null = null;
+  let recentTrades: { decision: string; createdAt: Date }[] = [];
+
+  const fetches: Promise<void>[] = [];
+
+  if (triggerTypes.has('lth_supply')) {
+    fetches.push(
+      fetchJSON<{ date: string; lth: number; sth: number; lthPct: number }[]>('/api/data/lth-sth')
+        .then((data) => {
+          if (data && data.length > 0) lthPct = data[data.length - 1].lthPct;
+        }),
+    );
+  }
+
+  if (triggerTypes.has('hash_ribbon')) {
+    fetches.push(
+      fetchJSON<{ signal: string }>('/api/data/hash-ribbon')
+        .then((data) => {
+          if (data) hashRibbonSignal = data.signal;
+        }),
+    );
+  }
+
+  if (triggerTypes.has('bot_trade')) {
+    fetches.push(
+      prisma.tradingDecision.findMany({
+        where: {
+          executed: true,
+          decision: { in: ['LONG', 'SHORT'] },
+          createdAt: { gt: new Date(Date.now() - 6 * 60 * 1000) }, // last 6 min (cron is every 5)
+        },
+        select: { decision: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }).then((trades) => { recentTrades = trades; }),
+    );
+  }
+
+  await Promise.all(fetches);
 
   // Get user emails for alerts in bulk
   const userIds = [...new Set(alerts.map((a) => a.userId))];
@@ -108,6 +177,42 @@ export async function GET(request: NextRequest) {
         } else if (alert.condition === 'above' && alert.threshold != null && fearGreed > alert.threshold) {
           shouldFire = true;
           alertMessage = `Fear & Greed is ${fearGreed} — above your threshold of ${alert.threshold}`;
+        }
+        break;
+
+      case 'lth_supply':
+        if (lthPct != null) {
+          if (alert.condition === 'above' && alert.threshold != null && lthPct > alert.threshold) {
+            shouldFire = true;
+            alertMessage = `LTH supply is ${lthPct.toFixed(1)}% — above your threshold of ${alert.threshold}%`;
+          } else if (alert.condition === 'below' && alert.threshold != null && lthPct < alert.threshold) {
+            shouldFire = true;
+            alertMessage = `LTH supply is ${lthPct.toFixed(1)}% — below your threshold of ${alert.threshold}%`;
+          }
+        }
+        break;
+
+      case 'hash_ribbon':
+        if (hashRibbonSignal != null) {
+          // condition = 'equals', threshold not used — label stores the target signal
+          const targetSignal = (alert.condition || '').toLowerCase();
+          if (hashRibbonSignal.toLowerCase() === targetSignal) {
+            shouldFire = true;
+            alertMessage = `Hash Ribbon signal is ${hashRibbonSignal.toUpperCase()}`;
+          }
+        }
+        break;
+
+      case 'bot_trade':
+        if (recentTrades.length > 0) {
+          const condition = (alert.condition || 'any').toLowerCase();
+          const match = condition === 'any'
+            ? recentTrades[0]
+            : recentTrades.find((t) => t.decision.toLowerCase() === condition);
+          if (match) {
+            shouldFire = true;
+            alertMessage = `Bot opened a ${match.decision} position`;
+          }
         }
         break;
 
