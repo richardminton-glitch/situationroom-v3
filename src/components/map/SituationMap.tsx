@@ -144,7 +144,10 @@ export function SituationMap({ countries }: SituationMapProps) {
       .on('click', function (_event: MouseEvent, d: any) {
         const id = parseInt(d.id || d.properties?.id);
         const record = countryIndex.get(id);
-        if (record) setSelectedCountry(record);
+        if (record) {
+          // Toggle: clicking same country deselects
+          setSelectedCountry((prev) => prev?.countryCode === record.countryCode ? null : record);
+        }
       });
 
     // Country borders (mesh)
@@ -197,45 +200,56 @@ export function SituationMap({ countries }: SituationMapProps) {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full"
-      style={{ background: 'var(--bg-primary)', overflow: 'hidden' }}
-    >
-      <svg
-        ref={svgRef}
-        style={{ width: '100%', height: 'calc(100% - 28px)', display: 'block' }}
-        preserveAspectRatio="xMidYMid meet"
-      />
-
-      <MetricSelector activeKey={activeMetric} onChange={handleMetricChange} />
-      <ColourLegend metric={metric} panelOpen={!!selectedCountry} />
-
-      {hover && (
-        <HoverTooltip
-          name={hover.name}
-          value={hover.value}
-          metricLabel={metric?.label ?? activeMetric}
-          x={hover.x}
-          y={hover.y}
+    <div className="flex w-full h-full" style={{ background: 'var(--bg-primary)' }}>
+      {/* Map area */}
+      <div
+        ref={containerRef}
+        className="relative flex-1 h-full"
+        style={{ overflow: 'hidden' }}
+      >
+        <svg
+          ref={svgRef}
+          style={{ width: '100%', height: 'calc(100% - 28px)', display: 'block' }}
+          preserveAspectRatio="xMidYMid meet"
         />
-      )}
 
-      {selectedCountry && (
+        <MetricSelector activeKey={activeMetric} onChange={handleMetricChange} />
+        <ColourLegend metric={metric} panelOpen={false} />
+
+        {hover && (
+          <HoverTooltip
+            name={hover.name}
+            value={hover.value}
+            metricLabel={metric?.label ?? activeMetric}
+            x={hover.x}
+            y={hover.y}
+          />
+        )}
+
+        <StatusBar
+          countryCount={countries.length}
+          metricLabel={metric?.label ?? activeMetric}
+          hoverName={hover?.name ?? null}
+          hoverValue={hover?.value ?? null}
+          lastUpdated={lastUpdated}
+        />
+      </div>
+
+      {/* Permanent right sidebar */}
+      <div
+        style={{
+          width: 330,
+          minWidth: 330,
+          background: 'var(--bg-card)',
+          borderLeft: '1px solid var(--border-primary)',
+          boxShadow: '-2px 0 12px rgba(0,0,0,0.06)',
+        }}
+      >
         <CountryDetailPanel
           country={selectedCountry}
           activeMetric={activeMetric}
-          onClose={() => setSelectedCountry(null)}
         />
-      )}
-
-      <StatusBar
-        countryCount={countries.length}
-        metricLabel={metric?.label ?? activeMetric}
-        hoverName={hover?.name ?? null}
-        hoverValue={hover?.value ?? null}
-        lastUpdated={lastUpdated}
-      />
+      </div>
     </div>
   );
 }
