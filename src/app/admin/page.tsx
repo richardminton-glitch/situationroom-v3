@@ -293,12 +293,12 @@ const AI_USAGE_DATA: AiUsageRow[] = [
     model: 'grok-3',
     trigger: 'On-demand (VIP, 6h cache)',
     inputTokens: 3_000,
-    outputTokens: 1_200,
+    outputTokens: 1_400,
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
-    // (3000 × $3/M) + (1200 × $15/M) = $0.009 + $0.018 = $0.027
-    costPerCall: 0.027,
-    est7dCost: 0.76,
-    est30dCost: 3.24,
+    // (3000 × $3/M) + (1400 × $15/M) = $0.009 + $0.021 = $0.030
+    costPerCall: 0.030,
+    est7dCost: 0.84,
+    est30dCost: 3.60,
   },
   {
     feature: 'Macro Analysis (General)',

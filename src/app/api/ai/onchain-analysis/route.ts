@@ -1,13 +1,12 @@
 /**
- * GET  /api/ai/onchain-analysis — Serves cached cron-generated analysis (members)
- * POST /api/ai/onchain-analysis — VIP-only on-demand Grok-3 deep dive
+ * GET  /api/ai/onchain-analysis — Serves cached analysis for user's tier
+ * POST /api/ai/onchain-analysis — Generates fresh analysis at user's tier level
  *
- * Tiered access:
- *   Members  → cron-generated detailed analysis (onchain-deep-analysis-members)
- *   VIP      → on-demand full analysis (onchain-deep-analysis)
+ * Tiered access (members+):
+ *   Members  → moderate depth, 12h cache, grok-3, ~500 words
+ *   VIP      → full deep-dive with historical precedents, 6h cache, grok-3, ~700 words
  *
- * Cache: 6 hours. Cron runs every 6h for members.
- * VIP users can force-refresh within their 6h window.
+ * Each tier has its own panelId in signalAnnotation for separate caching.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,15 +19,82 @@ import type { Tier } from '@/types';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const PANEL_ID = 'onchain-deep-analysis';
-const TTL_HOURS = 6;
+// ── Tier Configuration ────────────────────────────────────────────────────
 
-// ── Grok-3 direct call (higher quality than grok-4-1-fast) ──────────────────
+type AnalysisTier = 'members' | 'vip';
+
+interface TierConfig {
+  panelId: string;
+  ttlHours: number;
+  maxTokens: number;
+  model: string;
+  systemPrompt: string;
+  analysisInstructions: string;
+}
+
+const TIER_CONFIG: Record<AnalysisTier, TierConfig> = {
+  members: {
+    panelId: 'onchain-analysis-members',
+    ttlHours: 12,
+    maxTokens: 900,
+    model: 'grok-3',
+    systemPrompt:
+      'You are a senior Bitcoin on-chain analyst. You combine on-chain metrics, miner behaviour, and holder dynamics to assess Bitcoin\'s current state and provide directional guidance. Be direct, quantitative, and decisive. State the facts and give clear assessments backed by the data.',
+    analysisInstructions: `Provide a detailed on-chain analysis covering:
+
+1. **MARKET REGIME** — Based on the confluence of indicators, what macro regime is Bitcoin in? (Accumulation, markup, distribution, or markdown). Support with specific data points.
+
+2. **MINER HEALTH** — Analyse the hash ribbon and Puell multiple together. Are miners healthy, stressed, or in capitulation? What does this mean for sell pressure?
+
+3. **HOLDER BEHAVIOUR** — What are LTH and STH doing? Is there net accumulation or distribution? What does CDD tell us about conviction?
+
+4. **PRICE OUTLOOK** — Based on all the above:
+   - Short-term (1-2 weeks): likely direction
+   - Medium-term (1-3 months): accumulation or distribution bias
+   - Is this a good time to accumulate, hold, or reduce exposure?
+
+Write 400-550 words. Use specific numbers from the data. Direct, intelligence-briefing style. No filler or excessive hedging.`,
+  },
+  vip: {
+    panelId: 'onchain-analysis-vip',
+    ttlHours: 6,
+    maxTokens: 1400,
+    model: 'grok-3',
+    systemPrompt:
+      'You are an elite Bitcoin on-chain strategist and cycle analyst. You combine on-chain metrics, miner behaviour, holder dynamics, supply distribution, and historical cycle precedents to build a comprehensive thesis on Bitcoin\'s position within its market cycle. Be direct, quantitative, and decisive. Draw on historical parallels where relevant — reference specific cycle phases (2017 top distribution, 2018-2019 accumulation, 2020 halving rally, 2021 double-top distribution, 2022 capitulation, 2023-2024 recovery). Never hedge excessively — give clear directional assessments backed by data and precedent.',
+    analysisInstructions: `Provide a comprehensive deep-dive analysis with historical cycle context:
+
+1. **MARKET REGIME** — Based on the confluence of all indicators, what macro regime is Bitcoin in? (Accumulation, markup, distribution, or markdown). Support your assessment with specific data points. Compare the current indicator readings to similar regimes in previous cycles (2019 accumulation, 2020 early bull, 2021 distribution, 2022 capitulation, 2023 recovery).
+
+2. **MINER HEALTH** — Analyse the hash ribbon and Puell multiple together. Are miners healthy, stressed, or in capitulation? Reference historical miner capitulation events (2018 Q4, 2020 March, 2022 Q4) and what followed for price. What does the current miner setup imply?
+
+3. **HOLDER BEHAVIOUR** — What are LTH and STH doing? Is there net accumulation or distribution? What does CDD tell us about conviction among long-term holders? Compare LTH/STH ratios to previous cycle phases — are we seeing distribution similar to late 2021, or accumulation similar to early 2023?
+
+4. **SUPPLY DYNAMICS** — Using URPD and SOPR, where are the major support/resistance zones by cost basis? What percentage of supply is underwater and what does that imply for selling pressure? Reference historical MVRV levels at cycle tops and bottoms.
+
+5. **PRICE OUTLOOK** — Based on all the above, provide tentative price movement expectations:
+   - Short-term (1-2 weeks): likely direction and key levels
+   - Medium-term (1-3 months): accumulation/distribution thesis with specific catalysts
+   - Cycle positioning: where are we in the ~4-year halving cycle? How does this compare to the same phase in previous cycles?
+   - Key invalidation levels that would change the thesis
+
+6. **ACCUMULATION GUIDANCE** — Is this a good time to accumulate? DCA aggressively, hold steady, take profit, or wait for specific conditions? Be direct and specific. Reference what the optimal strategy was at similar on-chain readings in past cycles.
+
+Write 600-800 words. Use specific numbers from the data. Reference historical precedents where they illuminate the current setup. Intelligence-briefing style with conviction.`,
+  },
+};
+
+/** Analysis tier matches actual subscription — admin bypass only prevents lockout */
+function getAnalysisTier(userTier: Tier): AnalysisTier {
+  if (hasAccess(userTier, 'vip')) return 'vip';
+  return 'members';
+}
+
+// ── xAI Grok API call ──────────────────────────────────────────────────────
 
 const GROK_URL = 'https://api.x.ai/v1/chat/completions';
-const GROK_MODEL = 'grok-3';
 
-async function callGrok3(prompt: string): Promise<string | null> {
+async function callGrok(model: string, systemPrompt: string, userPrompt: string, maxTokens: number): Promise<string | null> {
   const apiKey = process.env.GROK_API_KEY;
   if (!apiKey) return null;
 
@@ -40,30 +106,26 @@ async function callGrok3(prompt: string): Promise<string | null> {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GROK_MODEL,
+        model,
         messages: [
-          {
-            role: 'system',
-            content:
-              'You are a senior Bitcoin on-chain analyst and price analysis expert. You combine on-chain metrics, miner behaviour, holder dynamics, and supply distribution to assess Bitcoin\'s current state and provide tentative price movement and accumulation guidance. Be direct, quantitative, and decisive. Never hedge excessively — give clear directional assessments backed by the data.',
-          },
-          { role: 'user', content: prompt },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
-        max_tokens: 1200,
+        max_tokens: maxTokens,
       }),
       signal: AbortSignal.timeout(45_000),
     });
 
     if (!res.ok) {
       const err = await res.text().catch(() => '');
-      console.error(`[OnChainAnalysis] Grok-3 HTTP ${res.status}: ${err.substring(0, 300)}`);
+      console.error(`[OnChainAnalysis] Grok HTTP ${res.status}: ${err.substring(0, 300)}`);
       return null;
     }
 
     const data = await res.json();
     return data?.choices?.[0]?.message?.content?.trim() ?? null;
   } catch (err) {
-    console.error('[OnChainAnalysis] Grok-3 request failed:', err);
+    console.error('[OnChainAnalysis] Grok request failed:', err);
     return null;
   }
 }
@@ -128,14 +190,17 @@ interface URPDData {
   atLoss: number;
 }
 
-function cacheKey(): string {
-  // 6-hour windows: 00, 06, 12, 18
+// ── Cache key — tier-aware windows ──────────────────────────────────────────
+
+function cacheKey(ttlHours: number): string {
   const now = new Date();
-  const window = Math.floor(now.getUTCHours() / 6) * 6;
+  const window = Math.floor(now.getUTCHours() / ttlHours) * ttlHours;
   return `${now.toISOString().slice(0, 10)}-${String(window).padStart(2, '0')}`;
 }
 
-function buildPrompt(
+// ── Build data section (shared by all tiers) ────────────────────────────────
+
+function buildDataSection(
   hashRibbon: HashRibbonData | null,
   puell: PuellData | null,
   network: NetworkSignalsData | null,
@@ -143,7 +208,6 @@ function buildPrompt(
   lthSth: LTHSTHPoint[] | null,
   urpd: URPDData | null,
 ): string {
-  const today = new Date().toISOString().slice(0, 10);
   const sections: string[] = [];
 
   if (hashRibbon) {
@@ -200,33 +264,25 @@ function buildPrompt(
 - Supply at Loss: ${urpd.atLoss.toFixed(1)}%`);
   }
 
+  return sections.join('\n\n');
+}
+
+function buildPrompt(dataSection: string, config: TierConfig): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const dataPresent = dataSection.length > 0;
+
   return `Date: ${today}
 
 You are reviewing the COMPLETE live on-chain dashboard for Bitcoin. Below are today's readings from every on-chain indicator available.
+${dataPresent ? '' : '\n⚠ WARNING: No live data was available. Do NOT fabricate numbers — state that data is unavailable.\n'}
+${dataSection}
 
-${sections.join('\n\n')}
+${config.analysisInstructions}
 
-Provide a comprehensive deep-dive analysis covering:
-
-1. **MARKET REGIME** — Based on the confluence of all indicators, what macro regime is Bitcoin in? (Accumulation, markup, distribution, or markdown). Support your assessment with specific data points.
-
-2. **MINER HEALTH** — Analyse the hash ribbon and Puell multiple together. Are miners healthy, stressed, or in capitulation? What does this mean for sell pressure?
-
-3. **HOLDER BEHAVIOUR** — What are LTH and STH doing? Is there net accumulation or distribution? What does CDD tell us about conviction among long-term holders?
-
-4. **SUPPLY DYNAMICS** — Using URPD and SOPR, where are the major support/resistance zones by cost basis? What percentage of supply is underwater and what does that imply for selling pressure?
-
-5. **PRICE OUTLOOK** — Based on all the above, provide tentative price movement expectations:
-   - Short-term (1-2 weeks): likely direction and key levels
-   - Medium-term (1-3 months): accumulation/distribution thesis
-   - Key invalidation levels that would change the thesis
-
-6. **ACCUMULATION GUIDANCE** — Is this a good time to accumulate? DCA in, wait, or take profit? Be direct.
-
-Write in a direct, intelligence-briefing style. Use specific numbers from the data. 500-700 words. Do not pad with disclaimers.`;
+IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not invent, estimate, or assume any values. If a data point is missing, say it is unavailable rather than guessing.`;
 }
 
-// ── GET — serve cached cron-generated analysis for members ────────────────
+// ── GET — serve cached analysis for user's tier ─────────────────────────────
 
 export async function GET() {
   const session = await getSession();
@@ -235,37 +291,33 @@ export async function GET() {
   const userTier = (session.user.tier as Tier) ?? 'free';
   const admin = isAdmin(session.user.email);
 
-  // Admin bypass only for access — content tier follows actual subscription
-  let tierPanelId: string;
-  if (hasAccess(userTier, 'vip')) {
-    tierPanelId = PANEL_ID;
-  } else if (hasAccess(userTier, 'members')) {
-    tierPanelId = 'onchain-deep-analysis-members';
-  } else if (admin) {
-    // Admin can access even without members tier, but gets members-level content
-    tierPanelId = 'onchain-deep-analysis-members';
-  } else {
+  if (!admin && !hasAccess(userTier, 'members')) {
     return NextResponse.json({ error: 'Members access required' }, { status: 403 });
   }
 
-  const valueKey = cacheKey();
+  const aTier = getAnalysisTier(userTier);
+  const config = TIER_CONFIG[aTier];
+  const valueKey = cacheKey(config.ttlHours);
+
   const cached = await (prisma as any).signalAnnotation.findUnique({
-    where: { panelId_valueKey: { panelId: tierPanelId, valueKey } },
+    where: { panelId_valueKey: { panelId: config.panelId, valueKey } },
   });
 
   if (cached && (cached as { expiresAt: Date }).expiresAt > new Date()) {
     return NextResponse.json({
       analysis: cached.annotation,
+      tier: aTier,
+      ttlHours: config.ttlHours,
       cachedAt: cached.generatedAt.toISOString(),
       expiresAt: (cached as { expiresAt: Date }).expiresAt.toISOString(),
       fromCache: true,
     });
   }
 
-  return NextResponse.json({ analysis: null, pending: true });
+  return NextResponse.json({ analysis: null, tier: aTier, ttlHours: config.ttlHours, pending: true });
 }
 
-// ── POST — VIP on-demand generation ───────────────────────────────────────
+// ── POST — generate fresh analysis for user's tier ──────────────────────────
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -273,23 +325,26 @@ export async function POST(request: NextRequest) {
 
   const userTier = (session.user.tier as Tier) ?? 'free';
   const admin = isAdmin(session.user.email);
+
   // Admin bypass only for access — content tier follows actual subscription
-  if (!admin && !hasAccess(userTier, 'vip')) {
-    return NextResponse.json({ error: 'VIP access required' }, { status: 403 });
+  if (!admin && !hasAccess(userTier, 'members')) {
+    return NextResponse.json({ error: 'Members access required' }, { status: 403 });
   }
 
-  const valueKey = cacheKey();
-  const force = request.nextUrl.searchParams.get('force') === 'true';
+  const aTier = getAnalysisTier(userTier);
+  const config = TIER_CONFIG[aTier];
+  const valueKey = cacheKey(config.ttlHours);
 
-  // ── Cache check — 6-hour TTL ────────────────────────────────────────────
+  // ── Cache check ─────────────────────────────────────────────────────────
   const cached = await (prisma as any).signalAnnotation.findUnique({
-    where: { panelId_valueKey: { panelId: PANEL_ID, valueKey } },
+    where: { panelId_valueKey: { panelId: config.panelId, valueKey } },
   });
 
   if (cached && (cached as { expiresAt: Date }).expiresAt > new Date()) {
-    // Even with force=true, serve cached if within the 6h window
     return NextResponse.json({
       analysis: cached.annotation,
+      tier: aTier,
+      ttlHours: config.ttlHours,
       cachedAt: cached.generatedAt.toISOString(),
       expiresAt: (cached as { expiresAt: Date }).expiresAt.toISOString(),
       fromCache: true,
@@ -312,8 +367,12 @@ export async function POST(request: NextRequest) {
     fetchJSON<URPDData>('/api/data/urpd'),
   ]);
 
-  const prompt = buildPrompt(hashRibbon, puell, network, cddData, lthSthRaw, urpd);
-  const text = await callGrok3(prompt);
+  const dataSection = buildDataSection(hashRibbon, puell, network, cddData, lthSthRaw, urpd);
+  const prompt = buildPrompt(dataSection, config);
+
+  console.log(`[OnChainAnalysis] Generating ${aTier}-tier analysis (model: ${config.model}, ${config.maxTokens} max tokens, ${config.ttlHours}h TTL)`);
+
+  const text = await callGrok(config.model, config.systemPrompt, prompt, config.maxTokens);
 
   if (!text) {
     return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
@@ -321,17 +380,19 @@ export async function POST(request: NextRequest) {
 
   await incrementAiUsage(session.user.id);
 
-  const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + config.ttlHours * 60 * 60 * 1000);
   const generatedAt = new Date();
 
   await (prisma as any).signalAnnotation.upsert({
-    where: { panelId_valueKey: { panelId: PANEL_ID, valueKey } },
-    create: { panelId: PANEL_ID, valueKey, annotation: text, expiresAt },
+    where: { panelId_valueKey: { panelId: config.panelId, valueKey } },
+    create: { panelId: config.panelId, valueKey, annotation: text, expiresAt },
     update: { annotation: text, expiresAt, generatedAt },
   });
 
   return NextResponse.json({
     analysis: text,
+    tier: aTier,
+    ttlHours: config.ttlHours,
     cachedAt: generatedAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
     fromCache: false,

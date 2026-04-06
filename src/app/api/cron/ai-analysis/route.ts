@@ -1,13 +1,16 @@
 /**
  * GET /api/cron/ai-analysis
  *
- * Generates tier-specific AI analyses every 6 hours:
- *   - macro-deep-analysis-general  (General tier, ~300 words)
- *   - macro-deep-analysis-members  (Members tier, ~500 words)
- *   - onchain-deep-analysis-members (Members tier, ~500 words)
+ * Generates tier-specific AI analyses on a cron schedule:
+ *   - macro-analysis-general   (General, grok-3-mini-fast, 24h cache, ~300 words)
+ *   - macro-analysis-members   (Members, grok-3, 12h cache, ~500 words)
+ *   - onchain-analysis-members (Members, grok-3, 12h cache, ~500 words)
  *
  * VIP analyses remain on-demand via POST endpoints.
  * Called by system crontab at 00:05, 06:05, 12:05, 18:05 UTC.
+ *
+ * Each task uses a tier-specific cache key window so the cron output
+ * is correctly found by the GET endpoints in the route files.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,8 +20,6 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const GROK_URL = 'https://api.x.ai/v1/chat/completions';
-const GROK_MODEL = 'grok-3';
-const TTL_HOURS = 6;
 
 const BASE =
   process.env.NEXT_PUBLIC_BASE_URL ||
@@ -38,7 +39,8 @@ async function fetchJSON<T>(path: string): Promise<T | null> {
   }
 }
 
-async function callGrok3(
+async function callGrok(
+  model: string,
   systemPrompt: string,
   userPrompt: string,
   maxTokens: number,
@@ -54,7 +56,7 @@ async function callGrok3(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GROK_MODEL,
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -67,7 +69,7 @@ async function callGrok3(
     if (!res.ok) {
       const err = await res.text().catch(() => '');
       console.error(
-        `[CronAI] Grok-3 HTTP ${res.status}: ${err.substring(0, 300)}`,
+        `[CronAI] Grok HTTP ${res.status}: ${err.substring(0, 300)}`,
       );
       return null;
     }
@@ -75,21 +77,16 @@ async function callGrok3(
     const data = await res.json();
     return data?.choices?.[0]?.message?.content?.trim() ?? null;
   } catch (err) {
-    console.error('[CronAI] Grok-3 request failed:', err);
+    console.error('[CronAI] Grok request failed:', err);
     return null;
   }
 }
 
-function cacheKey(): string {
+/** Tier-aware cache key — matches the route files exactly */
+function cacheKey(ttlHours: number): string {
   const now = new Date();
-  const window = Math.floor(now.getUTCHours() / 6) * 6;
+  const window = Math.floor(now.getUTCHours() / ttlHours) * ttlHours;
   return `${now.toISOString().slice(0, 10)}-${String(window).padStart(2, '0')}`;
-}
-
-function ha(n: number): string {
-  return Math.floor(Math.min(255, Math.max(0, n)))
-    .toString(16)
-    .padStart(2, '0');
 }
 
 // ── Types (matching what the data endpoints actually return) ────────────────
@@ -438,76 +435,119 @@ function buildOnchainDataSections(
   return sections.join('\n\n');
 }
 
-// ── Tier-specific prompt builders ───────────────────────────────────────────
+// ── Task definitions — must match panelIds & cache keys from route files ────
 
-const MACRO_SYSTEM =
-  'You are a senior macro-economic analyst and Bitcoin strategist. You combine central bank policy, bond yields, equity indices, commodities, FX movements, inflation data, and global money supply to assess how the macro environment affects Bitcoin. Be direct, quantitative, and decisive. Never hedge excessively — give clear directional assessments backed by the data.';
-
-const ONCHAIN_SYSTEM =
-  "You are a senior Bitcoin on-chain analyst and price analysis expert. You combine on-chain metrics, miner behaviour, holder dynamics, and supply distribution to assess Bitcoin's current state and provide tentative price movement and accumulation guidance. Be direct, quantitative, and decisive. Never hedge excessively — give clear directional assessments backed by the data.";
-
-function macroGeneralPrompt(dataSections: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `Date: ${today}
-
-You are reviewing live macro data for Bitcoin. Below are today's readings.
-${!dataSections ? '\nWARNING: No live data was available. State that data is unavailable.\n' : ''}
-${dataSections}
-
-Provide a concise macro briefing:
-
-1. **MARKET OVERVIEW** — Key moves across rates, equities, commodities, and FX. What is the dominant macro narrative today?
-
-2. **BITCOIN POSITION** — How do current macro conditions affect Bitcoin? Is the environment broadly supportive or hostile for risk assets?
-
-3. **KEY WATCH** — The single most important macro development to monitor in the near term.
-
-IMPORTANT: Use ONLY the specific numbers provided. Do not invent data. 200-300 words. Direct intelligence-briefing style. No disclaimers.`;
+interface CronTask {
+  panelId: string;
+  ttlHours: number;
+  model: string;
+  maxTokens: number;
+  systemPrompt: string;
+  buildPrompt: (macroData: string, onchainData: string) => string;
 }
 
-function macroMembersPrompt(dataSections: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `Date: ${today}
+const MACRO_SYSTEM_GENERAL =
+  'You are a macro-economic analyst providing concise Bitcoin market context for a general audience. Be direct, plain-spoken, and avoid jargon. State the facts and give a clear bottom-line assessment.';
+
+const MACRO_SYSTEM_MEMBERS =
+  'You are a senior macro-economic analyst covering Bitcoin and risk assets. Combine central bank policy, bond yields, equity indices, commodities, and money supply data to assess how the macro environment affects Bitcoin. Be quantitative and decisive. Provide context but stay focused.';
+
+const ONCHAIN_SYSTEM_MEMBERS =
+  "You are a senior Bitcoin on-chain analyst. You combine on-chain metrics, miner behaviour, and holder dynamics to assess Bitcoin's current state and provide directional guidance. Be direct, quantitative, and decisive. State the facts and give clear assessments backed by the data.";
+
+const TASKS: CronTask[] = [
+  {
+    panelId: 'macro-analysis-general',
+    ttlHours: 24,
+    model: 'grok-3-mini-fast',
+    maxTokens: 500,
+    systemPrompt: MACRO_SYSTEM_GENERAL,
+    buildPrompt: (macroData) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return `Date: ${today}
+
+You are reviewing live macro data for Bitcoin. Below are today's readings.
+${!macroData ? '\nWARNING: No live data was available. State that data is unavailable.\n' : ''}
+${macroData}
+
+Provide a simple, to-the-point macro overview in 3 short sections:
+
+1. **MARKET SNAPSHOT** — Where is BTC right now? How are major risk assets (stocks, gold, dollar) behaving? State the key numbers.
+
+2. **MACRO STANCE** — In plain terms: are global financial conditions helping or hurting Bitcoin right now? Are central banks loosening or tightening? Is the mood risk-on or risk-off?
+
+3. **BOTTOM LINE** — Simple directional call. Is the macro environment bullish, bearish, or neutral for Bitcoin over the next couple of weeks? One clear sentence.
+
+Write 200-300 words total. Keep it simple and direct. No jargon, no hedging. Use the numbers provided.
+
+IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not invent, estimate, or assume any values. If a data point is missing, say it is unavailable rather than guessing.`;
+    },
+  },
+  {
+    panelId: 'macro-analysis-members',
+    ttlHours: 12,
+    model: 'grok-3',
+    maxTokens: 900,
+    systemPrompt: MACRO_SYSTEM_MEMBERS,
+    buildPrompt: (macroData) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return `Date: ${today}
 
 You are reviewing the live macro dashboard for Bitcoin. Below are today's readings from every macro indicator available.
-${!dataSections ? '\nWARNING: No live data was available. State that data is unavailable.\n' : ''}
-${dataSections}
+${!macroData ? '\nWARNING: No live data was available. State that data is unavailable.\n' : ''}
+${macroData}
 
 Provide a detailed macro analysis covering:
 
-1. **MONETARY POLICY** — Global central bank stance. Are they tightening, pausing, or easing? How do balance sheet trends and rate paths affect liquidity?
+1. **MONETARY POLICY** — Central bank stance (Fed, ECB, BOJ, BOE). Rate path direction and what this means for liquidity into risk assets and Bitcoin.
 
-2. **LIQUIDITY & M2** — Money supply trends. Is M2 expanding or contracting? Implications for Bitcoin's liquidity correlation.
+2. **RISK ENVIRONMENT** — Using equity indices, VIX, Fear & Greed, and the dollar together, paint a picture of the current risk environment. Is capital flowing into or out of risk assets?
 
-3. **RISK APPETITE** — Equity indices, VIX, and Fear & Greed. Risk-on or risk-off? How does this position Bitcoin?
+3. **DOLLAR, YIELDS & COMMODITIES** — How are DXY, US 10Y, gold, and oil positioned? What do these cross-asset signals tell us about the macro regime Bitcoin is operating in?
 
-4. **DOLLAR & YIELDS** — DXY and US 10Y yield setup. Implications for BTC.
+4. **BITCOIN OUTLOOK** — Based on the above:
+   - Short-term (1-2 weeks): directional bias and key levels to watch
+   - Medium-term (1-3 months): major catalysts or risks on the horizon
+   - Is this a favourable environment to be adding exposure?
 
-5. **BITCOIN MACRO OUTLOOK** — Short-term (1-2 weeks) and medium-term (1-3 months) directional assessment with key catalysts and risks.
+Write 400-550 words. Use specific numbers from the data. Direct, intelligence-briefing style. No filler.
 
-IMPORTANT: Use ONLY the specific numbers provided. Do not invent data. 400-500 words. Direct intelligence-briefing style. No disclaimers.`;
-}
+IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not invent, estimate, or assume any values. If a data point is missing, say it is unavailable rather than guessing.`;
+    },
+  },
+  {
+    panelId: 'onchain-analysis-members',
+    ttlHours: 12,
+    model: 'grok-3',
+    maxTokens: 900,
+    systemPrompt: ONCHAIN_SYSTEM_MEMBERS,
+    buildPrompt: (_macroData, onchainData) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return `Date: ${today}
 
-function onchainMembersPrompt(dataSections: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `Date: ${today}
-
-You are reviewing the live on-chain dashboard for Bitcoin. Below are today's readings from every on-chain indicator available.
-
-${dataSections}
+You are reviewing the COMPLETE live on-chain dashboard for Bitcoin. Below are today's readings from every on-chain indicator available.
+${!onchainData ? '\nWARNING: No live data was available. State that data is unavailable.\n' : ''}
+${onchainData}
 
 Provide a detailed on-chain analysis covering:
 
-1. **MARKET REGIME** — Based on the confluence of indicators, what regime is Bitcoin in? (Accumulation, markup, distribution, or markdown). Support with specific data.
+1. **MARKET REGIME** — Based on the confluence of indicators, what macro regime is Bitcoin in? (Accumulation, markup, distribution, or markdown). Support with specific data points.
 
-2. **MINER HEALTH** — Hash ribbon and Puell multiple assessment. Capitulation, stress, or healthy? Sell-pressure implications.
+2. **MINER HEALTH** — Analyse the hash ribbon and Puell multiple together. Are miners healthy, stressed, or in capitulation? What does this mean for sell pressure?
 
-3. **HOLDER BEHAVIOUR** — LTH/STH dynamics and CDD conviction signals. Net accumulation or distribution?
+3. **HOLDER BEHAVIOUR** — What are LTH and STH doing? Is there net accumulation or distribution? What does CDD tell us about conviction?
 
-4. **SUPPLY & PRICE OUTLOOK** — URPD cost basis zones, SOPR. Short-term (1-2 weeks) and medium-term (1-3 months) directional assessment with key levels.
+4. **PRICE OUTLOOK** — Based on all the above:
+   - Short-term (1-2 weeks): likely direction
+   - Medium-term (1-3 months): accumulation or distribution bias
+   - Is this a good time to accumulate, hold, or reduce exposure?
 
-IMPORTANT: Use ONLY the specific numbers provided. Do not invent data. 400-500 words. Direct intelligence-briefing style. No disclaimers.`;
-}
+Write 400-550 words. Use specific numbers from the data. Direct, intelligence-briefing style. No filler or excessive hedging.
+
+IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not invent, estimate, or assume any values. If a data point is missing, say it is unavailable rather than guessing.`;
+    },
+  },
+];
 
 // ── Main handler ────────────────────────────────────────────────────────────
 
@@ -520,41 +560,49 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const valueKey = cacheKey();
-  const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000);
-
-  // Skip if already generated for this window
-  const existing = await (prisma as any).signalAnnotation.findUnique({
-    where: {
-      panelId_valueKey: {
-        panelId: 'macro-deep-analysis-general',
-        valueKey,
+  // Check which tasks actually need generating this cycle
+  const tasksToRun: CronTask[] = [];
+  for (const task of TASKS) {
+    const valueKey = cacheKey(task.ttlHours);
+    const existing = await (prisma as any).signalAnnotation.findUnique({
+      where: {
+        panelId_valueKey: { panelId: task.panelId, valueKey },
       },
-    },
-  });
-  if (existing && (existing as { expiresAt: Date }).expiresAt > new Date()) {
+    });
+    if (existing && (existing as { expiresAt: Date }).expiresAt > new Date()) {
+      console.log(`[CronAI] Skip ${task.panelId} — already cached for window ${valueKey}`);
+    } else {
+      tasksToRun.push(task);
+    }
+  }
+
+  if (tasksToRun.length === 0) {
     return NextResponse.json({
-      status: 'already_generated',
-      window: valueKey,
+      status: 'all_cached',
+      message: 'All tasks already have valid cache entries',
     });
   }
 
-  console.log(`[CronAI] Generating tier analyses for window ${valueKey}`);
+  console.log(`[CronAI] Running ${tasksToRun.length} tasks: ${tasksToRun.map(t => t.panelId).join(', ')}`);
 
-  // Fetch ALL data in parallel (macro + on-chain)
+  // Determine which data domains we need
+  const needsMacro = tasksToRun.some(t => t.panelId.startsWith('macro-'));
+  const needsOnchain = tasksToRun.some(t => t.panelId.startsWith('onchain-'));
+
+  // Fetch data in parallel (only what's needed)
   const [snapshot, cbAssets, cbRates, inflation, m2, hashRibbon, puell, network, cddData, lthSthRaw, urpd] =
     await Promise.all([
-      fetchJSON<SnapshotResponse>('/api/data/snapshot'),
-      fetchJSON<CBAssetsResponse>('/api/data/cbassets'),
-      fetchJSON<CBRatesResponse>('/api/data/cbrates'),
-      fetchJSON<InflationResponse>('/api/data/inflation'),
-      fetchJSON<M2Response>('/api/data/m2'),
-      fetchJSON<HashRibbonData>('/api/data/hash-ribbon'),
-      fetchJSON<PuellData>('/api/data/puell'),
-      fetchJSON<NetworkSignalsData>('/api/data/network-signals'),
-      fetchJSON<CDDData>('/api/data/cdd'),
-      fetchJSON<LTHSTHPoint[]>('/api/data/lth-sth'),
-      fetchJSON<URPDData>('/api/data/urpd'),
+      needsMacro ? fetchJSON<SnapshotResponse>('/api/data/snapshot') : Promise.resolve(null),
+      needsMacro ? fetchJSON<CBAssetsResponse>('/api/data/cbassets') : Promise.resolve(null),
+      needsMacro ? fetchJSON<CBRatesResponse>('/api/data/cbrates') : Promise.resolve(null),
+      needsMacro ? fetchJSON<InflationResponse>('/api/data/inflation') : Promise.resolve(null),
+      needsMacro ? fetchJSON<M2Response>('/api/data/m2') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<HashRibbonData>('/api/data/hash-ribbon') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<PuellData>('/api/data/puell') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<NetworkSignalsData>('/api/data/network-signals') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<CDDData>('/api/data/cdd') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<LTHSTHPoint[]>('/api/data/lth-sth') : Promise.resolve(null),
+      needsOnchain ? fetchJSON<URPDData>('/api/data/urpd') : Promise.resolve(null),
     ]);
 
   console.log('[CronAI] Data availability:', {
@@ -572,53 +620,31 @@ export async function GET(request: NextRequest) {
   });
 
   // Build data sections once per domain
-  const macroData = buildMacroDataSections(snapshot, cbAssets, cbRates, inflation, m2);
-  const onchainData = buildOnchainDataSections(
-    hashRibbon,
-    puell,
-    network,
-    cddData,
-    lthSthRaw,
-    urpd,
-  );
+  const macroData = needsMacro
+    ? buildMacroDataSections(snapshot, cbAssets, cbRates, inflation, m2)
+    : '';
+  const onchainData = needsOnchain
+    ? buildOnchainDataSections(hashRibbon, puell, network, cddData, lthSthRaw, urpd)
+    : '';
 
-  // Generate all 3 analyses (sequential to avoid Grok rate limits)
+  // Generate analyses sequentially to avoid Grok rate limits
   const results: Record<string, boolean> = {};
 
-  const generalMacro = await callGrok3(
-    MACRO_SYSTEM,
-    macroGeneralPrompt(macroData),
-    400,
-  );
-  results['macro-general'] = !!generalMacro;
+  for (const task of tasksToRun) {
+    const prompt = task.buildPrompt(macroData, onchainData);
+    console.log(`[CronAI] Generating ${task.panelId} (model: ${task.model}, ${task.maxTokens} max tokens)`);
 
-  const membersMacro = await callGrok3(
-    MACRO_SYSTEM,
-    macroMembersPrompt(macroData),
-    700,
-  );
-  results['macro-members'] = !!membersMacro;
+    const text = await callGrok(task.model, task.systemPrompt, prompt, task.maxTokens);
+    results[task.panelId] = !!text;
 
-  const membersOnchain = await callGrok3(
-    ONCHAIN_SYSTEM,
-    onchainMembersPrompt(onchainData),
-    700,
-  );
-  results['onchain-members'] = !!membersOnchain;
-
-  // Store all generated analyses
-  const generatedAt = new Date();
-  const stores = [
-    { panelId: 'macro-deep-analysis-general', text: generalMacro },
-    { panelId: 'macro-deep-analysis-members', text: membersMacro },
-    { panelId: 'onchain-deep-analysis-members', text: membersOnchain },
-  ];
-
-  for (const { panelId, text } of stores) {
     if (text) {
+      const valueKey = cacheKey(task.ttlHours);
+      const expiresAt = new Date(Date.now() + task.ttlHours * 60 * 60 * 1000);
+      const generatedAt = new Date();
+
       await (prisma as any).signalAnnotation.upsert({
-        where: { panelId_valueKey: { panelId, valueKey } },
-        create: { panelId, valueKey, annotation: text, expiresAt },
+        where: { panelId_valueKey: { panelId: task.panelId, valueKey } },
+        create: { panelId: task.panelId, valueKey, annotation: text, expiresAt },
         update: { annotation: text, expiresAt, generatedAt },
       });
     }
@@ -628,7 +654,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    window: valueKey,
     results,
   });
 }
