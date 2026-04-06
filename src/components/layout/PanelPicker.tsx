@@ -7,6 +7,8 @@ interface PanelPickerProps {
   currentPanels: LayoutPanelItem[];
   onAdd: (panelId: string) => void;
   onClose: () => void;
+  /** When true, hides panels flagged as adminOnly in the registry */
+  excludeAdmin?: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -14,16 +16,22 @@ const CATEGORY_LABELS: Record<string, string> = {
   macro: 'Macro',
   onchain: 'On-Chain',
   geopolitical: 'Geopolitical',
+  ai: 'AI Analysis',
   ui: 'UI Components',
 };
 
 // Display order for categories in the picker
-const CATEGORY_ORDER = ['bitcoin', 'macro', 'onchain', 'geopolitical', 'ui'];
+const CATEGORY_ORDER = ['bitcoin', 'macro', 'onchain', 'geopolitical', 'ai', 'ui'];
 
-export function PanelPicker({ currentPanels, onAdd, onClose }: PanelPickerProps) {
+export function PanelPicker({ currentPanels, onAdd, onClose, excludeAdmin }: PanelPickerProps) {
   const currentIds = new Set(currentPanels.map((p) => p.panelId));
   // UI components (separators) can be added multiple times — always show them as available
-  const available = PANEL_REGISTRY.filter((p) => p.uiComponent || !currentIds.has(p.id));
+  let available = PANEL_REGISTRY.filter((p) => p.uiComponent || !currentIds.has(p.id));
+
+  // Filter out admin-only panels when requested
+  if (excludeAdmin) {
+    available = available.filter((p) => !p.adminOnly);
+  }
 
   const grouped = available.reduce((acc, panel) => {
     const cat = panel.category;

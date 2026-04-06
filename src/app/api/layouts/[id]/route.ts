@@ -36,14 +36,18 @@ export async function PATCH(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const body = await request.json() as { name?: string; isDefault?: boolean };
+  const body = await request.json() as { name?: string; isDefault?: boolean; panels?: unknown[] };
+
+  const data: Record<string, unknown> = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.isDefault !== undefined) data.isDefault = body.isDefault;
+  if (body.panels !== undefined) data.layoutJson = JSON.stringify(body.panels);
+
   const updated = await prisma.userLayout.update({
     where: { id },
-    data: {
-      name: body.name ?? layout.name,
-      isDefault: body.isDefault ?? layout.isDefault,
-    },
+    data,
+    select: { id: true, name: true, theme: true, isDefault: true, createdAt: true, layoutJson: true },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, panels: JSON.parse(updated.layoutJson) });
 }

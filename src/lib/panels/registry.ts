@@ -11,6 +11,7 @@ export interface PanelRegistryEntry {
   resizable: boolean;
   noHeader?: boolean;     // full-width bars don't need panel chrome
   uiComponent?: boolean;  // UI-only (separators) — noHeader but NOT stretched to full-width
+  adminOnly?: boolean;    // hidden from non-admin panel pickers (future use)
   refreshInterval: number;
   dataSources: string[];
   description: string;

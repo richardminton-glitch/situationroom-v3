@@ -28,6 +28,8 @@ import {
   Lightning,
   ShieldStar,
   Robot,
+  PencilSimple,
+  Plus,
 } from '@phosphor-icons/react';
 
 // Tier requirements for each preset
@@ -62,15 +64,26 @@ const SYSTEM_ITEMS: NavItem[] = [
   { label: 'Account', href: '/account', icon: <UserCircle size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
 ];
 
+export interface CustomDashboard {
+  id: string;
+  name: string;
+  panels: LayoutPanelItem[];
+}
+
 export interface DashboardControls {
   presets: { id: string; name: string; description: string }[];
   activePreset: string;
+  activeCustomId: string | null;
   onSwitchPreset: (id: string) => void;
+  onSwitchCustom: (dashboard: CustomDashboard) => void;
   editMode: boolean;
   onToggleEdit: () => void;
-  savedLayouts?: { id: string; name: string; panels: LayoutPanelItem[] }[];
-  onLoadSavedLayout?: (layout: { id: string; name: string; panels: LayoutPanelItem[] }) => void;
-  onDeleteSavedLayout?: (id: string) => void;
+  customDashboards: CustomDashboard[];
+  canCreateDashboard: boolean;
+  maxDashboards: number;
+  onCreateDashboard: (name: string) => void;
+  onDeleteDashboard: (id: string) => void;
+  onRenameDashboard: (id: string, name: string) => void;
 }
 
 interface SidebarProps {
@@ -90,6 +103,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
   const [mounted, setMounted] = useState(false);
   const [tooltip, setTooltip] = useState<{ id: string; requiredTier: Exclude<Tier, 'free'> } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [newDashName, setNewDashName] = useState('');
+  const [showNewDash, setShowNewDash] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const { user, logout, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -204,13 +221,14 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     {!collapsed && <span>{item.label}</span>}
                   </Link>
 
-                  {/* Dashboard sub-items: presets + edit toggle (auth required) */}
+                  {/* Dashboard sub-items: presets + custom dashboards (auth required) */}
                   {item.href === '/' && active && !collapsed && dashboardControls && user && (
                     <div className="ml-7 mt-1 mb-2 space-y-1">
+                      {/* ── Preset dashboards (read-only) ── */}
                       {dashboardControls.presets.map((preset) => {
                         const lockedTier = PRESET_TIER[preset.id];
                         const isLocked = lockedTier !== null && lockedTier !== undefined && !canAccess(lockedTier);
-                        const isActive = dashboardControls.activePreset === preset.id;
+                        const isActive = dashboardControls.activeCustomId === null && dashboardControls.activePreset === preset.id;
 
                         return (
                           <button
@@ -235,97 +253,204 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                         );
                       })}
 
-                      {dashboardControls.activePreset === 'custom' && (
-                        <span className="block px-2 py-1 text-xs" style={{ color: 'var(--accent-primary)' }}>
-                          Custom
-                        </span>
-                      )}
-
-                      {/* Saved layouts — VIP only */}
-                      {canAccess('vip') && dashboardControls.savedLayouts && dashboardControls.savedLayouts.length > 0 && (
-                        <div className="mt-2 mb-1">
+                      {/* ── Custom Dashboards section — VIP only ── */}
+                      {canAccess('vip') && (
+                        <div className="mt-3 mb-1">
                           <span
                             className="block px-2 pb-1 text-xs uppercase tracking-wider"
                             style={{ color: 'var(--text-muted)', fontSize: '9px', letterSpacing: '0.08em' }}
                           >
-                            Saved
+                            Custom Dashboards
                           </span>
-                          {dashboardControls.savedLayouts.map((sl) => (
-                            <div key={sl.id} className="flex items-center group">
-                              <button
-                                onClick={() => dashboardControls.onLoadSavedLayout?.(sl)}
-                                className="flex-1 text-left px-2 py-1 rounded text-xs transition-colors"
-                                style={{
-                                  color: 'var(--text-secondary)',
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid transparent',
-                                }}
-                                title={`Load "${sl.name}"`}
-                              >
-                                {sl.name}
-                              </button>
-                              <button
-                                onClick={() => dashboardControls.onDeleteSavedLayout?.(sl.id)}
-                                className="px-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-                                title="Delete layout"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
+
+                          {dashboardControls.customDashboards.map((cd) => {
+                            const isActive = dashboardControls.activeCustomId === cd.id;
+                            const isRenaming = renamingId === cd.id;
+
+                            return (
+                              <div key={cd.id} className="flex items-center group">
+                                {isRenaming ? (
+                                  <input
+                                    value={renameValue}
+                                    onChange={(e) => setRenameValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && renameValue.trim()) {
+                                        dashboardControls.onRenameDashboard(cd.id, renameValue.trim());
+                                        setRenamingId(null);
+                                      }
+                                      if (e.key === 'Escape') setRenamingId(null);
+                                    }}
+                                    onBlur={() => {
+                                      if (renameValue.trim()) {
+                                        dashboardControls.onRenameDashboard(cd.id, renameValue.trim());
+                                      }
+                                      setRenamingId(null);
+                                    }}
+                                    className="flex-1 px-2 py-1 text-xs rounded"
+                                    style={{
+                                      backgroundColor: 'var(--bg-card)',
+                                      color: 'var(--text-primary)',
+                                      border: '1px solid var(--accent-primary)',
+                                      outline: 'none',
+                                      fontFamily: 'inherit',
+                                    }}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => dashboardControls.onSwitchCustom(cd)}
+                                      className="flex-1 text-left px-2 py-1 rounded text-xs transition-colors"
+                                      style={{
+                                        backgroundColor: isActive ? 'var(--bg-card)' : 'transparent',
+                                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                        border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                                      }}
+                                      title={cd.name}
+                                    >
+                                      {cd.name}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setRenamingId(cd.id);
+                                        setRenameValue(cd.name);
+                                      }}
+                                      className="px-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                      style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                      title="Rename"
+                                    >
+                                      <PencilSimple size={11} />
+                                    </button>
+                                    <button
+                                      onClick={() => dashboardControls.onDeleteDashboard(cd.id)}
+                                      className="px-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                      style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                      title="Delete dashboard"
+                                    >
+                                      ✕
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* + New Dashboard */}
+                          {dashboardControls.canCreateDashboard && (
+                            <>
+                              {showNewDash ? (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <input
+                                    value={newDashName}
+                                    onChange={(e) => setNewDashName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && newDashName.trim()) {
+                                        dashboardControls.onCreateDashboard(newDashName.trim());
+                                        setNewDashName('');
+                                        setShowNewDash(false);
+                                      }
+                                      if (e.key === 'Escape') {
+                                        setShowNewDash(false);
+                                        setNewDashName('');
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      setShowNewDash(false);
+                                      setNewDashName('');
+                                    }}
+                                    placeholder="Dashboard name..."
+                                    className="flex-1 px-2 py-1 text-xs rounded"
+                                    style={{
+                                      backgroundColor: 'var(--bg-card)',
+                                      color: 'var(--text-primary)',
+                                      border: '1px solid var(--border-subtle)',
+                                      outline: 'none',
+                                      fontFamily: 'inherit',
+                                      minWidth: 0,
+                                    }}
+                                    autoFocus
+                                  />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowNewDash(true)}
+                                  className="flex items-center gap-1.5 w-full text-left px-2 py-1 rounded text-xs transition-colors mt-1"
+                                  style={{
+                                    color: 'var(--accent-primary)',
+                                    backgroundColor: 'transparent',
+                                    border: '1px dashed var(--border-subtle)',
+                                    opacity: 0.8,
+                                  }}
+                                >
+                                  <Plus size={10} weight="bold" />
+                                  <span>New Dashboard ({dashboardControls.customDashboards.length}/{dashboardControls.maxDashboards})</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {!dashboardControls.canCreateDashboard && dashboardControls.customDashboards.length >= dashboardControls.maxDashboards && (
+                            <span
+                              className="block px-2 py-1 text-xs"
+                              style={{ color: 'var(--text-muted)', fontSize: '9px' }}
+                            >
+                              {dashboardControls.maxDashboards}/{dashboardControls.maxDashboards} dashboards
+                            </span>
+                          )}
                         </div>
                       )}
 
-                      {/* Edit Layout — VIP locked */}
-                      {(() => {
-                        const editLocked = !canAccess('vip');
-                        const editTooltipVisible = tooltip?.id === '__edit';
-                        return (
-                          <div>
-                            <button
-                              onClick={() => {
-                                if (editLocked) {
-                                  showLockedTooltip('__edit', 'vip');
-                                } else {
-                                  dashboardControls.onToggleEdit();
-                                }
-                              }}
-                              className="flex items-center justify-between w-full text-left px-2 py-1 rounded text-xs transition-colors mt-1"
+                      {/* VIP upsell for custom dashboards */}
+                      {!canAccess('vip') && user && (
+                        <div className="mt-2 mb-1">
+                          <button
+                            onClick={() => showLockedTooltip('__custom', 'vip')}
+                            className="flex items-center justify-between w-full text-left px-2 py-1 rounded text-xs"
+                            style={{
+                              color: 'var(--text-muted)',
+                              opacity: 0.6,
+                              border: '1px solid transparent',
+                            }}
+                          >
+                            <span>Custom Dashboards</span>
+                            <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
+                              VIP ↑
+                            </span>
+                          </button>
+                          {tooltip?.id === '__custom' && (
+                            <div
                               style={{
-                                backgroundColor: dashboardControls.editMode && !editLocked ? 'var(--accent-primary)' : 'transparent',
-                                color: editLocked ? 'var(--text-muted)' : dashboardControls.editMode ? 'var(--bg-primary)' : 'var(--text-muted)',
-                                border: dashboardControls.editMode && !editLocked ? 'none' : '1px solid var(--border-subtle)',
-                                opacity: editLocked ? 0.6 : 1,
+                                background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
+                                padding: '8px 10px', margin: '2px 0 4px',
+                                fontSize: '10px', color: 'var(--text-secondary)',
                               }}
                             >
-                              <span>{dashboardControls.editMode ? '✓ Done Editing' : 'Edit Layout'}</span>
-                              {editLocked && (
-                                <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
-                                  VIP ↑
-                                </span>
-                              )}
-                            </button>
-                            {editTooltipVisible && (
-                              <div
-                                style={{
-                                  background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
-                                  padding: '8px 10px', margin: '2px 0 4px',
-                                  fontSize: '10px', color: 'var(--text-secondary)',
-                                }}
+                              <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>Create up to 3 custom dashboards</div>
+                              <button
+                                onClick={() => goToSupport()}
+                                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
                               >
-                                <div style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>VIP required</div>
-                                <button
-                                  onClick={() => goToSupport()}
-                                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
-                                >
-                                  SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                                SUBSCRIBE <Lightning size={12} weight="fill" style={{ display: 'inline', verticalAlign: 'middle' }} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Edit Layout — only when custom dashboard is active */}
+                      {dashboardControls.activeCustomId !== null && canAccess('vip') && (
+                        <button
+                          onClick={() => dashboardControls.onToggleEdit()}
+                          className="flex items-center justify-between w-full text-left px-2 py-1 rounded text-xs transition-colors mt-1"
+                          style={{
+                            backgroundColor: dashboardControls.editMode ? 'var(--accent-primary)' : 'transparent',
+                            color: dashboardControls.editMode ? 'var(--bg-primary)' : 'var(--text-muted)',
+                            border: dashboardControls.editMode ? 'none' : '1px solid var(--border-subtle)',
+                          }}
+                        >
+                          <span>{dashboardControls.editMode ? '✓ Done Editing' : 'Edit Layout'}</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -32,6 +32,7 @@ export default function DashboardPage() {
   const { error: dataError } = useData();
   // Always start on Full Overview; restore saved preset only for logged-in users
   const [activePreset, setActivePreset] = useState<string>('default');
+  const [activeCustomId, setActiveCustomId] = useState<string | null>(null);
   const [layout, setLayout] = useState<LayoutPanelItem[]>(() => {
     return getDefaultForTheme(theme).panels;
   });
@@ -43,7 +44,11 @@ export default function DashboardPage() {
     restoredRef.current = true;
     if (!user) return; // non-logged-in → stay on Full Overview
     const saved = localStorage.getItem('sr-active-preset');
-    if (saved && saved !== 'default') {
+    const savedCustom = localStorage.getItem('sr-active-custom-id');
+    if (savedCustom) {
+      // Will be loaded when customDashboards populate
+      setActiveCustomId(savedCustom);
+    } else if (saved && saved !== 'default') {
       const preset = getPresetByIdForTheme(saved, theme);
       if (preset) {
         setActivePreset(saved);
@@ -55,29 +60,59 @@ export default function DashboardPage() {
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
-  const [showSavePrompt, setShowSavePrompt] = useState(false);
-  const [savedLayoutName, setSavedLayoutName] = useState('');
   const mainRef = useRef<HTMLElement>(null);
 
   const isVip = canAccess('vip');
-  const { layouts: savedLayouts, saveLayout, deleteLayout } = useSavedLayouts(isVip);
+  const {
+    layouts: customDashboards,
+    canCreate: canCreateDashboard,
+    maxDashboards,
+    createDashboard,
+    deleteDashboard,
+    renameDashboard,
+    savePanels,
+  } = useSavedLayouts(isVip);
   const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
 
-  // Persist active preset to localStorage (only for logged-in users)
+  // When custom dashboards load, restore the active custom dashboard
+  useEffect(() => {
+    if (activeCustomId && customDashboards.length > 0) {
+      const cd = customDashboards.find((d) => d.id === activeCustomId);
+      if (cd) {
+        setLayout(cd.panels);
+      } else {
+        // Custom dashboard was deleted — fall back to default
+        setActiveCustomId(null);
+        setActivePreset('default');
+        setLayout(getDefaultForTheme(theme).panels);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customDashboards]);
+
+  // Persist active view to localStorage (only for logged-in users)
   useEffect(() => {
     if (user) {
-      localStorage.setItem('sr-active-preset', activePreset);
+      if (activeCustomId) {
+        localStorage.setItem('sr-active-custom-id', activeCustomId);
+        localStorage.removeItem('sr-active-preset');
+      } else {
+        localStorage.setItem('sr-active-preset', activePreset);
+        localStorage.removeItem('sr-active-custom-id');
+      }
     }
-  }, [activePreset, user]);
+  }, [activePreset, activeCustomId, user]);
 
   useEffect(() => {
     if (user?.themePref && user.themePref !== theme) {
       const t = user.themePref as Theme;
       setTheme(t);
-      // Update layout in the same batch so no parchment flash occurs
-      const preset = getPresetByIdForTheme(activePreset, t) ?? getDefaultForTheme(t);
-      setLayout(preset.panels);
-      setActivePreset(preset.id);
+      // Only update layout if viewing a preset (custom dashboards are theme-independent)
+      if (!activeCustomId) {
+        const preset = getPresetByIdForTheme(activePreset, t) ?? getDefaultForTheme(t);
+        setLayout(preset.panels);
+        setActivePreset(preset.id);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.themePref]);
@@ -88,9 +123,9 @@ export default function DashboardPage() {
   const hasMounted = useRef(false);
   useEffect(() => {
     if (!hasMounted.current) { hasMounted.current = true; return; }
-    const matched = activePreset !== 'custom'
-      ? getPresetByIdForTheme(activePreset, theme)
-      : undefined;
+    // Custom dashboards don't change on theme switch
+    if (activeCustomId) return;
+    const matched = getPresetByIdForTheme(activePreset, theme);
     const next = matched ?? getDefaultForTheme(theme);
     setLayout(next.panels);
     setActivePreset(next.id);
@@ -102,13 +137,24 @@ export default function DashboardPage() {
     if (preset) {
       setLayout(preset.panels);
       setActivePreset(presetId);
+      setActiveCustomId(null);
+      setEditMode(false); // Exit edit mode when switching to a preset
     }
   }, [theme]);
 
+  const switchCustom = useCallback((dashboard: { id: string; name: string; panels: LayoutPanelItem[] }) => {
+    setLayout(dashboard.panels);
+    setActiveCustomId(dashboard.id);
+    setActivePreset('');
+  }, []);
+
+  // Layout changes — auto-save to custom dashboard if one is active
   const handleLayoutChange = useCallback((newLayout: LayoutPanelItem[]) => {
     setLayout(newLayout);
-    setActivePreset('custom');
-  }, []);
+    if (activeCustomId) {
+      savePanels(activeCustomId, newLayout);
+    }
+  }, [activeCustomId, savePanels]);
 
   const GRID_SNAP = 44;
   const addPanel = useCallback((panelId: string) => {
@@ -124,8 +170,8 @@ export default function DashboardPage() {
     const stagger = (layout.length % 4) * snap;
     const x = Math.round((scrollX + stagger) / snap) * snap + (entry.uiComponent ? 22 : 0);
     const y = Math.round((scrollY + stagger) / snap) * snap + (entry.uiComponent ? 22 : 0);
-    setLayout((prev) => [
-      ...prev,
+    const newLayout = [
+      ...layout,
       {
         panelId: instanceId,
         x,
@@ -135,9 +181,35 @@ export default function DashboardPage() {
         collapsed: false,
         resizable: entry.resizable,
       },
-    ]);
-    setActivePreset('custom');
-  }, [layout.length]);
+    ];
+    setLayout(newLayout);
+    if (activeCustomId) {
+      savePanels(activeCustomId, newLayout);
+    }
+  }, [layout.length, layout, activeCustomId, savePanels]);
+
+  // Create a new custom dashboard
+  const handleCreateDashboard = useCallback(async (name: string) => {
+    const created = await createDashboard(name, theme);
+    if (created) {
+      setLayout(created.panels);
+      setActiveCustomId(created.id);
+      setActivePreset('');
+      setEditMode(true); // Auto-enter edit mode for new dashboards
+    }
+  }, [createDashboard, theme]);
+
+  // Delete a custom dashboard
+  const handleDeleteDashboard = useCallback(async (id: string) => {
+    await deleteDashboard(id);
+    if (activeCustomId === id) {
+      // Fall back to default preset
+      setActiveCustomId(null);
+      setActivePreset('default');
+      setLayout(getDefaultForTheme(theme).panels);
+      setEditMode(false);
+    }
+  }, [deleteDashboard, activeCustomId, theme]);
 
   if (loading) {
     return (
@@ -150,15 +222,17 @@ export default function DashboardPage() {
   const dashboardControls = {
     presets: getPresetsForTheme(theme).map((p) => ({ id: p.id, name: p.name, description: p.description })),
     activePreset,
+    activeCustomId,
     onSwitchPreset: switchPreset,
+    onSwitchCustom: switchCustom,
     editMode,
     onToggleEdit: () => setEditMode((prev) => !prev),
-    savedLayouts: savedLayouts.map((l) => ({ id: l.id, name: l.name, panels: l.panels })),
-    onLoadSavedLayout: (l: { id: string; name: string; panels: LayoutPanelItem[] }) => {
-      setLayout(l.panels);
-      setActivePreset('custom');
-    },
-    onDeleteSavedLayout: deleteLayout,
+    customDashboards: customDashboards.map((l) => ({ id: l.id, name: l.name, panels: l.panels })),
+    canCreateDashboard,
+    maxDashboards,
+    onCreateDashboard: handleCreateDashboard,
+    onDeleteDashboard: handleDeleteDashboard,
+    onRenameDashboard: renameDashboard,
   };
 
   return (
@@ -172,8 +246,8 @@ export default function DashboardPage() {
           chatUnread={chatUnread}
         />
 
-        {/* Edit mode toolbar — only shows Add Panel button when editing */}
-        {editMode && (
+        {/* Edit mode toolbar — only shows when editing a custom dashboard */}
+        {editMode && activeCustomId && (
           <div
             className="flex items-center justify-end px-4 py-1.5 border-b shrink-0"
             style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-secondary)' }}
@@ -181,6 +255,15 @@ export default function DashboardPage() {
             {dataError && (
               <span className="text-xs mr-auto" style={{ color: 'var(--accent-danger)' }}>Data: {dataError}</span>
             )}
+
+            {/* Dashboard name indicator */}
+            <span
+              className="text-xs mr-auto"
+              style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
+            >
+              Editing: {customDashboards.find((d) => d.id === activeCustomId)?.name ?? 'Custom'}
+            </span>
+
             <button
               onClick={() => {
                 navigator.clipboard.writeText(JSON.stringify(layout, null, 2));
@@ -193,66 +276,8 @@ export default function DashboardPage() {
               }}
               title="Copy current layout JSON to clipboard"
             >
-              ⎘ Export Layout
+              Export
             </button>
-
-            {/* Save Layout button — VIP only */}
-            {canAccess('vip') && (
-              <>
-                {showSavePrompt ? (
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginRight: '8px' }}>
-                    <input
-                      value={savedLayoutName}
-                      onChange={(e) => setSavedLayoutName(e.target.value)}
-                      placeholder="Layout name..."
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '11px',
-                        padding: '2px 6px',
-                        border: '1px solid var(--border-primary)',
-                        backgroundColor: 'var(--bg-card)',
-                        color: 'var(--text-primary)',
-                        width: '130px',
-                      }}
-                      onKeyDown={async (e) => {
-                        if (e.key === 'Enter' && savedLayoutName.trim()) {
-                          await saveLayout(savedLayoutName.trim(), layout, theme);
-                          setSavedLayoutName('');
-                          setShowSavePrompt(false);
-                        }
-                        if (e.key === 'Escape') setShowSavePrompt(false);
-                      }}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => setShowSavePrompt(false)}
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowSavePrompt(true)}
-                    className="px-3 py-1 rounded text-xs mr-2"
-                    style={{
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    ☁ Save Layout{savedLayouts.length > 0 ? ` (${savedLayouts.length}/5)` : ''}
-                  </button>
-                )}
-              </>
-            )}
 
             <button
               onClick={() => setShowPicker(true)}
@@ -271,9 +296,9 @@ export default function DashboardPage() {
         {/* Free-floating canvas — frosted preview for locked views */}
         <main ref={mainRef} className="flex-1 overflow-auto p-0">
           {(() => {
-            const lockedView = LOCKED_VIEWS[activePreset];
+            const lockedView = activeCustomId ? null : LOCKED_VIEWS[activePreset];
             const isLocked = !user
-              ? activePreset !== 'default'
+              ? activePreset !== 'default' && !activeCustomId
               : !!lockedView && !hasAccess(userTier, lockedView.requiredTier);
 
             return (
@@ -287,7 +312,7 @@ export default function DashboardPage() {
                   <DashboardGrid
                     layout={layout}
                     onLayoutChange={handleLayoutChange}
-                    editable={editMode}
+                    editable={editMode && activeCustomId !== null}
                   />
                 </div>
                 {isLocked && (
@@ -367,6 +392,7 @@ export default function DashboardPage() {
           currentPanels={layout}
           onAdd={addPanel}
           onClose={() => setShowPicker(false)}
+          excludeAdmin
         />
       )}
 
