@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ confirmed, expired, checked: depositIds.length });
+    return NextResponse.json({ confirmed, expired, checked: pending.length });
   } catch (error) {
     console.error('Payment confirm error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

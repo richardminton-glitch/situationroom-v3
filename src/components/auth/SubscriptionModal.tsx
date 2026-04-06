@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import QRCode from 'react-qr-code';
-import { TIER_LABELS, TIER_PRICES, TIER_ORDER } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_PRICES, TIER_COLORS, TIER_ORDER } from '@/lib/auth/tier';
 import { useAuth } from '@/components/layout/AuthProvider';
 import type { Tier } from '@/types';
 
-const COUNTDOWN_SECONDS = 30 * 60; // 30 min invoice expiry
+const COUNTDOWN_SECONDS = 30 * 60;
 const POLL_INTERVAL_MS  = 5_000;
+
+const OPS_LN_ADDRESS = process.env.NEXT_PUBLIC_OPS_LN_ADDRESS || '';
 
 type Step = 'select' | 'payment' | 'success';
 
@@ -26,6 +28,7 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState<'invoice' | 'ln' | null>(null);
 
   const paidTiers = TIER_ORDER.filter((t): t is Exclude<Tier, 'free'> => t !== 'free');
 
@@ -81,150 +84,293 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
     return () => clearInterval(interval);
   }, [step, paymentId, selectedTier, refresh, onSuccess]);
 
+  // ── Escape key ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const copyText = async (text: string, type: 'invoice' | 'ln') => {
+    await navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   const mins = Math.floor(countdown / 60).toString().padStart(2, '0');
   const secs = (countdown % 60).toString().padStart(2, '0');
+
+  const tierColor = TIER_COLORS[selectedTier] || 'var(--accent-primary)';
 
   return (
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.7)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.8)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backdropFilter: 'blur(4px)',
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
-          width: '360px', maxWidth: '95vw', padding: '24px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-primary)',
+          width: '420px', maxWidth: '95vw',
+          maxHeight: '90vh', overflowY: 'auto',
           fontFamily: 'var(--font-mono)',
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <span style={{ fontSize: '12px', letterSpacing: '0.12em', color: 'var(--text-primary)' }}>
-            SUBSCRIPTION
-          </span>
+        <div style={{
+          borderBottom: '1px solid var(--border-primary)',
+          padding: '16px 20px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: '13px', letterSpacing: '0.12em', color: 'var(--text-primary)', fontWeight: 'bold' }}>
+              SUBSCRIPTION
+            </div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px', letterSpacing: '0.08em' }}>
+              Lightning payment via LNMarkets
+            </div>
+          </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}
+            style={{
+              background: 'none', border: 'none',
+              color: 'var(--text-muted)', cursor: 'pointer',
+              fontSize: '18px', lineHeight: 1, padding: '4px',
+            }}
           >
-            ×
+            x
           </button>
         </div>
 
-        {/* ── Step 1: Tier selection ───────────────────────────────────────── */}
-        {step === 'select' && (
-          <>
-            <div style={{ marginBottom: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
-              Choose your tier:
-            </div>
-            {paidTiers.map((tier) => (
+        <div style={{ padding: '20px' }}>
+
+          {/* ── Step 1: Tier selection ───────────────────────────────────── */}
+          {step === 'select' && (
+            <>
+              <div style={{
+                fontSize: '9px', letterSpacing: '0.12em',
+                color: 'var(--text-muted)', marginBottom: '12px',
+                textAlign: 'center',
+              }}>
+                SELECT YOUR TIER
+              </div>
+
+              {paidTiers.map((tier) => (
+                <button
+                  key={tier}
+                  onClick={() => setSelectedTier(tier)}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    width: '100%', padding: '12px 14px', marginBottom: '6px',
+                    background: selectedTier === tier ? 'var(--bg-primary)' : 'transparent',
+                    border: `1px solid ${selectedTier === tier ? TIER_COLORS[tier] : 'var(--border-subtle)'}`,
+                    color: selectedTier === tier ? TIER_COLORS[tier] : 'var(--text-primary)',
+                    cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  <span style={{ fontWeight: selectedTier === tier ? 'bold' : 'normal' }}>
+                    {TIER_LABELS[tier].toUpperCase()}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                    {TIER_PRICES[tier].toLocaleString()} sats/mo
+                  </span>
+                </button>
+              ))}
+
+              {error && (
+                <div style={{ fontSize: '11px', color: 'var(--accent-danger, #b84040)', marginTop: '8px', textAlign: 'center' }}>
+                  {error}
+                </div>
+              )}
+
               <button
-                key={tier}
-                onClick={() => setSelectedTier(tier)}
+                onClick={generateInvoice}
+                disabled={loading}
                 style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  width: '100%', padding: '10px 12px', marginBottom: '6px',
-                  background: selectedTier === tier ? 'var(--bg-primary)' : 'transparent',
-                  border: `1px solid ${selectedTier === tier ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                  color: selectedTier === tier ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
+                  width: '100%', marginTop: '16px', padding: '12px',
+                  background: 'var(--accent-primary)', color: 'var(--bg-primary)',
+                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-mono)', fontSize: '12px',
+                  letterSpacing: '0.1em', fontWeight: 'bold',
+                  opacity: loading ? 0.6 : 1,
+                }}
+              >
+                {loading ? 'GENERATING...' : 'GENERATE INVOICE'}
+              </button>
+            </>
+          )}
+
+          {/* ── Step 2: Payment QR ───────────────────────────────────────── */}
+          {step === 'payment' && (
+            <>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: '12px',
+              }}>
+                <div style={{ fontSize: '9px', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>
+                  SCAN TO PAY
+                </div>
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '9px',
+                  color: tierColor,
+                  border: `1px solid ${tierColor}`,
+                  borderRadius: '3px', padding: '1px 5px',
+                  letterSpacing: '0.06em',
+                }}>
+                  {TIER_LABELS[selectedTier].toUpperCase()}
+                </span>
+              </div>
+
+              <div style={{
+                textAlign: 'center', marginBottom: '10px',
+                fontSize: '13px', color: 'var(--text-primary)', fontWeight: 'bold',
+                letterSpacing: '0.05em',
+              }}>
+                {TIER_PRICES[selectedTier].toLocaleString()} sats
+              </div>
+
+              <div style={{
+                display: 'flex', justifyContent: 'center',
+                padding: '16px', background: '#ffffff',
+                marginBottom: '10px',
+              }}>
+                <QRCode value={paymentRequest} size={220} />
+              </div>
+
+              {/* Invoice string — click to copy */}
+              <div
+                onClick={() => copyText(paymentRequest, 'invoice')}
+                style={{
+                  fontSize: '9px', color: 'var(--text-muted)',
+                  wordBreak: 'break-all', cursor: 'pointer',
+                  padding: '8px', background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  textAlign: 'center',
+                }}
+                title="Click to copy invoice"
+              >
+                {copied === 'invoice' ? (
+                  <span style={{ color: 'var(--accent-primary)' }}>COPIED TO CLIPBOARD</span>
+                ) : (
+                  <>
+                    <span>{paymentRequest.slice(0, 40)}...</span>
+                    <span style={{ marginLeft: '6px', color: 'var(--accent-primary)' }}>COPY</span>
+                  </>
+                )}
+              </div>
+
+              {/* Lightning address */}
+              {OPS_LN_ADDRESS && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+                      LIGHTNING ADDRESS
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+                  </div>
+
+                  <div
+                    onClick={() => copyText(OPS_LN_ADDRESS, 'ln')}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: '8px', padding: '10px 12px',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                    }}
+                    title="Click to copy"
+                  >
+                    <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                      {OPS_LN_ADDRESS}
+                    </span>
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                      {copied === 'ln' ? 'COPIED' : 'COPY'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Expiry + waiting */}
+              <div style={{
+                fontSize: '9px', color: 'var(--text-muted)',
+                textAlign: 'center', marginTop: '12px', lineHeight: 1.5,
+              }}>
+                Waiting for payment&hellip;
+              </div>
+              <div style={{
+                fontSize: '9px',
+                color: countdown < 120 ? 'var(--accent-danger, #b84040)' : 'var(--text-muted)',
+                textAlign: 'center', marginTop: '4px',
+              }}>
+                Invoice expires in {mins}:{secs}
+              </div>
+
+              {error && (
+                <div style={{
+                  fontSize: '11px', color: 'var(--accent-danger, #b84040)',
+                  marginTop: '8px', textAlign: 'center',
+                }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={() => { setStep('select'); setError(''); }}
+                style={{
+                  width: '100%', marginTop: '14px', padding: '8px',
+                  background: 'transparent', border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-muted)', cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)', fontSize: '11px',
                   letterSpacing: '0.05em',
                 }}
               >
-                <span>{TIER_LABELS[tier].toUpperCase()}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                  {TIER_PRICES[tier].toLocaleString()} sats/mo
-                </span>
+                BACK
               </button>
-            ))}
-            {error && (
-              <div style={{ fontSize: '11px', color: 'var(--accent-danger)', marginTop: '8px' }}>{error}</div>
-            )}
-            <button
-              onClick={generateInvoice}
-              disabled={loading}
-              style={{
-                width: '100%', marginTop: '16px', padding: '10px',
-                background: 'var(--accent-primary)', color: 'var(--bg-primary)',
-                border: 'none', cursor: loading ? 'wait' : 'pointer',
-                fontFamily: 'var(--font-mono)', fontSize: '12px',
-                letterSpacing: '0.1em', fontWeight: 'bold', opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? 'GENERATING...' : 'GENERATE INVOICE ⚡'}
-            </button>
-          </>
-        )}
+            </>
+          )}
 
-        {/* ── Step 2: Payment QR ───────────────────────────────────────────── */}
-        {step === 'payment' && (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                {TIER_LABELS[selectedTier].toUpperCase()} — {TIER_PRICES[selectedTier].toLocaleString()} sats
+          {/* ── Step 3: Success ──────────────────────────────────────────── */}
+          {step === 'success' && (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#9889;</div>
+              <div style={{
+                fontSize: '14px', color: tierColor,
+                letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 'bold',
+              }}>
+                {TIER_LABELS[selectedTier].toUpperCase()} ACTIVATED
               </div>
-              <div style={{ fontSize: '11px', color: countdown < 120 ? 'var(--accent-danger)' : 'var(--text-muted)' }}>
-                Expires in {mins}:{secs}
+              <div style={{
+                fontSize: '11px', color: 'var(--text-muted)',
+                marginBottom: '24px', lineHeight: 1.6,
+              }}>
+                {TIER_PRICES[selectedTier].toLocaleString()} sats received.<br />
+                Welcome to Situation Room.
               </div>
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '10px 32px',
+                  background: 'var(--accent-primary)', color: 'var(--bg-primary)',
+                  border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)', fontSize: '12px',
+                  letterSpacing: '0.1em', fontWeight: 'bold',
+                }}
+              >
+                CONTINUE
+              </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '16px', background: '#fff', marginBottom: '12px' }}>
-              <QRCode value={paymentRequest} size={200} />
-            </div>
-            <div
-              onClick={() => navigator.clipboard.writeText(paymentRequest)}
-              style={{
-                fontSize: '9px', color: 'var(--text-muted)', wordBreak: 'break-all',
-                cursor: 'pointer', padding: '8px', background: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-              }}
-              title="Click to copy"
-            >
-              {paymentRequest.slice(0, 60)}…
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '12px' }}>
-              Waiting for payment…
-            </div>
-            {error && (
-              <div style={{ fontSize: '11px', color: 'var(--accent-danger)', marginTop: '8px', textAlign: 'center' }}>{error}</div>
-            )}
-            <button
-              onClick={() => { setStep('select'); setError(''); }}
-              style={{
-                width: '100%', marginTop: '12px', padding: '8px',
-                background: 'transparent', border: '1px solid var(--border-subtle)',
-                color: 'var(--text-muted)', cursor: 'pointer',
-                fontFamily: 'var(--font-mono)', fontSize: '11px',
-              }}
-            >
-              ← BACK
-            </button>
-          </>
-        )}
-
-        {/* ── Step 3: Success ──────────────────────────────────────────────── */}
-        {step === 'success' && (
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
-            <div style={{ fontSize: '13px', color: 'var(--accent-primary)', letterSpacing: '0.1em', marginBottom: '4px' }}>
-              {TIER_LABELS[selectedTier].toUpperCase()} ACTIVATED
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Welcome to Situation Room
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '8px 24px', background: 'var(--accent-primary)',
-                color: 'var(--bg-primary)', border: 'none', cursor: 'pointer',
-                fontFamily: 'var(--font-mono)', fontSize: '12px', letterSpacing: '0.1em',
-              }}
-            >
-              CONTINUE →
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
