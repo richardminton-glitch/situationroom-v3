@@ -167,12 +167,13 @@ async function fetchAllApiNinjas(): Promise<ApiNinjasSnapshot> {
   const idxResults = await Promise.allSettled(
     Object.entries(INDEX_TICKERS).map(([id, ticker]) => {
       callCount++;
-      return ninjaFetch<{ name: string; price: number }>(`/stockprice?ticker=${encodeURIComponent(ticker)}`).then(d => ({ id, d }));
+      return ninjaFetch<{ name: string; price: number; change_percent?: number }>(`/stockprice?ticker=${encodeURIComponent(ticker)}`).then(d => ({ id, d }));
     })
   );
   for (const r of idxResults) {
     if (r.status === 'fulfilled') {
-      indices[r.value.id] = { name: r.value.d.name || r.value.id.toUpperCase(), price: r.value.d.price, changePct: 0 };
+      const d = r.value.d;
+      indices[r.value.id] = { name: d.name || r.value.id.toUpperCase(), price: d.price, changePct: d.change_percent ?? 0 };
     }
   }
 
@@ -196,7 +197,7 @@ async function fetchAllApiNinjas(): Promise<ApiNinjasSnapshot> {
   const yieldResults = await Promise.allSettled(
     YIELD_TICKERS.map(({ id, ticker, name }) => {
       callCount++;
-      return ninjaFetch<{ price: number }>(`/stockprice?ticker=${encodeURIComponent(ticker)}`).then(d => ({ id, name, d }));
+      return ninjaFetch<{ price: number; change_percent?: number }>(`/stockprice?ticker=${encodeURIComponent(ticker)}`).then(d => ({ id, name, d }));
     })
   );
   for (const r of commResults) {
@@ -206,7 +207,8 @@ async function fetchAllApiNinjas(): Promise<ApiNinjasSnapshot> {
   }
   for (const r of yieldResults) {
     if (r.status === 'fulfilled') {
-      commodities[r.value.id] = { name: r.value.name, price: r.value.d.price, changePct: 0 };
+      const d = r.value.d;
+      commodities[r.value.id] = { name: r.value.name, price: d.price, changePct: d.change_percent ?? 0 };
     }
   }
 
@@ -247,12 +249,13 @@ async function fetchAllApiNinjas(): Promise<ApiNinjasSnapshot> {
     const eqResults = await Promise.allSettled(
       Object.entries(BTC_EQUITY_TICKERS).map(([id, ticker]) => {
         callCount++;
-        return ninjaFetch<{ name: string; price: number }>(`/stockprice?ticker=${ticker}`).then(d => ({ id, d }));
+        return ninjaFetch<{ name: string; price: number; change_percent?: number }>(`/stockprice?ticker=${ticker}`).then(d => ({ id, d }));
       })
     );
     for (const r of eqResults) {
       if (r.status === 'fulfilled') {
-        equities[r.value.id] = { name: r.value.d.name || BTC_EQUITY_TICKERS[r.value.id], price: r.value.d.price, changePct: 0 };
+        const d = r.value.d;
+        equities[r.value.id] = { name: d.name || BTC_EQUITY_TICKERS[r.value.id], price: d.price, changePct: d.change_percent ?? 0 };
       }
     }
   } else {
