@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * OnChainAnalysisPanel — VIP-only Grok-3 deep dive analysis
+ * OnChainAnalysisPanel — tiered Grok-3 on-chain analysis
  *
- * Fetches AI-generated analysis of all on-chain indicators from the
- * on-chain dashboard. Cached for 6 hours — VIP users see a refresh
- * button but within the 6h window it serves cached data.
+ * Members:  auto-loads cron-generated detailed analysis + upsell to VIP
+ * VIP:      on-demand full analysis via ANALYSE button (unchanged)
+ * Free/General: locked with upsell to Members
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTier } from '@/hooks/useTier';
 
 interface AnalysisResponse {
@@ -18,21 +18,65 @@ interface AnalysisResponse {
   fromCache: boolean;
 }
 
+const TIER_BADGE: Record<string, { label: string; color: string }> = {
+  members: { label: 'MEMBERS', color: '#4a6fa5' },
+  vip: { label: 'VIP', color: '#a855f7' },
+};
+
 export function OnChainAnalysisPanel() {
-  const { canAccess } = useTier();
+  const { canAccess, userTier } = useTier();
+  const isVip = canAccess('vip');
   const [data, setData] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  if (!canAccess('vip')) {
+  // ── Auto-fetch for members (cron-generated, via GET) ────────────────────
+  useEffect(() => {
+    if (!canAccess('members') || isVip) return;
+    setLoading(true);
+    fetch('/api/ai/onchain-analysis')
+      .then((res) => {
+        if (res.status === 403) {
+          setError('Access restricted');
+          return null;
+        }
+        if (!res.ok) throw new Error('Failed');
+        return res.json();
+      })
+      .then((json) => {
+        if (!json) return;
+        if (json.analysis) {
+          setData(json);
+          setPending(false);
+        } else {
+          setPending(true);
+        }
+      })
+      .catch(() => setError('Analysis unavailable'))
+      .finally(() => setLoading(false));
+  }, [userTier]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Locked for free/general users ───────────────────────────────────────
+  if (!canAccess('members')) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-        On-Chain Deep Analysis requires VIP access.
-        <br /><a href="/account" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Upgrade &rarr;</a>
+      <div style={{
+        padding: '20px',
+        textAlign: 'center',
+        fontFamily: 'var(--font-mono)',
+        fontSize: '11px',
+        color: 'var(--text-muted)',
+      }}>
+        On-Chain Deep Analysis requires Members access.
+        <br />
+        <a href="/support" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>
+          Upgrade &rarr;
+        </a>
       </div>
     );
   }
 
+  // ── VIP: on-demand POST fetch ───────────────────────────────────────────
   const fetchAnalysis = async (force = false) => {
     setLoading(true);
     setError(null);
@@ -48,7 +92,9 @@ export function OnChainAnalysisPanel() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         if (res.status === 429) {
-          setError(`Daily AI limit reached. Resets at ${new Date(body.resetAt).toLocaleTimeString()}`);
+          setError(
+            `Daily AI limit reached. Resets at ${new Date(body.resetAt).toLocaleTimeString()}`,
+          );
           return;
         }
         if (res.status === 403) {
@@ -66,12 +112,22 @@ export function OnChainAnalysisPanel() {
     }
   };
 
+  // ── Derived state ───────────────────────────────────────────────────────
   const timeUntilRefresh = data?.expiresAt
     ? Math.max(0, new Date(data.expiresAt).getTime() - Date.now())
     : 0;
   const hoursLeft = Math.floor(timeUntilRefresh / (1000 * 60 * 60));
-  const minsLeft = Math.floor((timeUntilRefresh % (1000 * 60 * 60)) / (1000 * 60));
+  const minsLeft = Math.floor(
+    (timeUntilRefresh % (1000 * 60 * 60)) / (1000 * 60),
+  );
   const canRefresh = !data || timeUntilRefresh <= 0;
+
+  const badge = TIER_BADGE[userTier] || TIER_BADGE.members;
+
+  // Upsell for members
+  const upsell = isVip
+    ? null
+    : { text: 'Unlock on-demand AI analysis', tier: 'VIP' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
@@ -89,46 +145,52 @@ export function OnChainAnalysisPanel() {
         <span style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '9px',
-          color: '#a855f7',
-          border: '1px solid #a855f7',
+          color: badge.color,
+          border: `1px solid ${badge.color}`,
           borderRadius: '3px',
           padding: '1px 5px',
           letterSpacing: '0.06em',
         }}>
-          VIP
+          {badge.label}
         </span>
       </div>
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-        <button
-          onClick={() => fetchAnalysis(!canRefresh ? false : true)}
-          disabled={loading}
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
-            padding: '5px 12px',
-            backgroundColor: 'var(--bg-card)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-primary)',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.6 : 1,
-            letterSpacing: '0.05em',
-          }}
-        >
-          {data ? (canRefresh ? 'REFRESH ANALYSIS' : 'VIEW ANALYSIS') : 'ANALYSE ON-CHAIN'}
-        </button>
-        {data && !canRefresh && (
-          <span style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            color: 'var(--text-muted)',
-          }}>
-            Next refresh in {hoursLeft}h {minsLeft}m
-          </span>
-        )}
-      </div>
+      {/* VIP action buttons */}
+      {isVip && (
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+          <button
+            onClick={() => fetchAnalysis(!canRefresh ? false : true)}
+            disabled={loading}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              padding: '5px 12px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              letterSpacing: '0.05em',
+            }}
+          >
+            {data
+              ? canRefresh
+                ? 'REFRESH ANALYSIS'
+                : 'VIEW ANALYSIS'
+              : 'ANALYSE ON-CHAIN'}
+          </button>
+          {data && !canRefresh && (
+            <span style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              color: 'var(--text-muted)',
+            }}>
+              Next refresh in {hoursLeft}h {minsLeft}m
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -139,7 +201,7 @@ export function OnChainAnalysisPanel() {
           padding: '8px 0',
           flexShrink: 0,
         }}>
-          Analysing on-chain indicators...
+          {isVip ? 'Analysing on-chain indicators...' : 'Loading analysis...'}
         </div>
       )}
 
@@ -153,6 +215,25 @@ export function OnChainAnalysisPanel() {
           flexShrink: 0,
         }}>
           {error}
+        </div>
+      )}
+
+      {/* Pending — cron hasn't generated yet */}
+      {pending && !loading && !data && (
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          lineHeight: 1.6,
+          padding: '0 20px',
+        }}>
+          Analysis is generated every 6 hours.<br />
+          Check back shortly.
         </div>
       )}
 
@@ -173,8 +254,8 @@ export function OnChainAnalysisPanel() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!data && !loading && !error && (
+      {/* Empty state — VIP only, haven't clicked analyse yet */}
+      {isVip && !data && !loading && !error && (
         <div style={{
           flex: 1,
           display: 'flex',
@@ -192,16 +273,53 @@ export function OnChainAnalysisPanel() {
         </div>
       )}
 
+      {/* Upsell — members tier */}
+      {upsell && data && !loading && (
+        <div style={{
+          flexShrink: 0,
+          borderTop: '1px solid var(--border-subtle)',
+          paddingTop: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+        }}>
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            color: 'var(--text-muted)',
+          }}>
+            {upsell.text} with {upsell.tier} tier.
+          </span>
+          <a
+            href="/support"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              color: 'var(--accent-primary)',
+              textDecoration: 'none',
+            }}
+          >
+            Learn more &rarr;
+          </a>
+        </div>
+      )}
+
       {/* Footer */}
       {data && !loading && (
-        <div style={{ flexShrink: 0, borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
+        <div style={{
+          flexShrink: 0,
+          borderTop: upsell ? 'none' : '1px solid var(--border-subtle)',
+          paddingTop: upsell ? '0' : '6px',
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '9px',
               color: 'var(--text-muted)',
             }}>
-              {data.fromCache ? 'Cached' : 'Generated'}: {new Date(data.cachedAt).toLocaleString()}
+              {data.fromCache ? 'Cached' : 'Generated'}:{' '}
+              {new Date(data.cachedAt).toLocaleString()}
             </span>
             <span style={{
               fontFamily: 'var(--font-mono)',
@@ -215,14 +333,19 @@ export function OnChainAnalysisPanel() {
               GROK-3
             </span>
           </div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            color: 'var(--text-muted)',
-            marginTop: '3px',
-          }}>
-            6-hour analysis window &middot; {canRefresh ? 'Refresh available' : `Next refresh: ${hoursLeft}h ${minsLeft}m`}
-          </div>
+          {isVip && (
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              color: 'var(--text-muted)',
+              marginTop: '3px',
+            }}>
+              6-hour analysis window &middot;{' '}
+              {canRefresh
+                ? 'Refresh available'
+                : `Next refresh: ${hoursLeft}h ${minsLeft}m`}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,13 +1,14 @@
 /**
- * POST /api/ai/macro-analysis
+ * GET  /api/ai/macro-analysis — Serves cached cron-generated analysis (general/members)
+ * POST /api/ai/macro-analysis — VIP-only on-demand Grok-3 deep dive
  *
- * VIP-only Grok-3 deep dive analysis of all macro indicators.
- * Fetches live data from every macro endpoint, builds a comprehensive
- * prompt, and returns an expert macro-economic analysis with Bitcoin
- * implications and accumulation guidance.
+ * Tiered access:
+ *   General  → cron-generated basic analysis (macro-deep-analysis-general)
+ *   Members  → cron-generated detailed analysis (macro-deep-analysis-members)
+ *   VIP      → on-demand full analysis (macro-deep-analysis)
  *
- * Cache: 6 hours. VIP users can force-refresh once per 6-hour window;
- * any call inside that window returns the cached version.
+ * Cache: 6 hours. Cron runs every 6h for general/members.
+ * VIP users can force-refresh within their 6h window.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -300,6 +301,47 @@ IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not inve
 
 Write in a direct, intelligence-briefing style. Use specific numbers from the data. 500-700 words. Do not pad with disclaimers.`;
 }
+
+// ── GET — serve cached cron-generated analysis for general/members ────────
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const userTier = (session.user.tier as Tier) ?? 'free';
+
+  // Determine which cron-generated cache to read
+  let tierPanelId: string;
+  if (hasAccess(userTier, 'vip')) {
+    // VIP can also read their own cached analysis via GET
+    tierPanelId = PANEL_ID;
+  } else if (hasAccess(userTier, 'members')) {
+    tierPanelId = 'macro-deep-analysis-members';
+  } else if (hasAccess(userTier, 'general')) {
+    tierPanelId = 'macro-deep-analysis-general';
+  } else {
+    return NextResponse.json({ error: 'General access required' }, { status: 403 });
+  }
+
+  const valueKey = cacheKey();
+  const cached = await (prisma as any).signalAnnotation.findUnique({
+    where: { panelId_valueKey: { panelId: tierPanelId, valueKey } },
+  });
+
+  if (cached && (cached as { expiresAt: Date }).expiresAt > new Date()) {
+    return NextResponse.json({
+      analysis: cached.annotation,
+      cachedAt: cached.generatedAt.toISOString(),
+      expiresAt: (cached as { expiresAt: Date }).expiresAt.toISOString(),
+      fromCache: true,
+    });
+  }
+
+  // No cached analysis for this window yet (cron hasn't run)
+  return NextResponse.json({ analysis: null, pending: true });
+}
+
+// ── POST — VIP on-demand generation ───────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   const session = await getSession();

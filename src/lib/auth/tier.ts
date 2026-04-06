@@ -49,6 +49,7 @@ type Feature =
   | 'briefing_full'            // full briefing detail (all sections)
   | 'briefing_archive_30d'     // 30-day briefing archive (full)
   | 'newsletter_daily'         // full daily newsletter
+  | 'macro_ai_analysis'        // Grok-3 macro analysis (cron-generated for general)
   // ── Members ──
   | 'onchain_deep_dive'
   | 'ops_room_chat_post'
@@ -56,13 +57,15 @@ type Feature =
   | 'miners_network_section'
   | 'ai_annotations'
   | 'ai_analysis_view'         // AI Analysis layout preset
+  | 'onchain_ai_analysis'      // Grok-3 on-chain analysis (cron-generated for members)
   // ── VIP ──
   | 'edit_layout'
   | 'personal_conviction'
   | 'alerts'
   | 'vip_briefing'
   | 'newsletter_vip_topics'
-  | 'onchain_ai_analysis'      // Grok-3 on-chain deep analysis
+  | 'macro_ai_analysis_vip'    // VIP on-demand macro analysis
+  | 'onchain_ai_analysis_vip'  // VIP on-demand on-chain analysis
   | 'portfolio_context';
 
 const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
@@ -80,6 +83,7 @@ const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
   briefing_full:          'general',
   briefing_archive_30d:   'general',
   newsletter_daily:       'general',
+  macro_ai_analysis:      'general',
   // Members
   onchain_deep_dive:      'members',
   ops_room_chat_post:     'members',
@@ -87,13 +91,15 @@ const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
   miners_network_section: 'members',
   ai_annotations:         'members',
   ai_analysis_view:       'members',
+  onchain_ai_analysis:    'members',
   // VIP
   edit_layout:            'vip',
   personal_conviction:    'vip',
   alerts:                 'vip',
   vip_briefing:           'vip',
   newsletter_vip_topics:  'vip',
-  onchain_ai_analysis:    'vip',
+  macro_ai_analysis_vip:  'vip',
+  onchain_ai_analysis_vip:'vip',
   portfolio_context:      'vip',
 };
 

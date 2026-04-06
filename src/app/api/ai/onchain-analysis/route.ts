@@ -1,13 +1,13 @@
 /**
- * POST /api/ai/onchain-analysis
+ * GET  /api/ai/onchain-analysis — Serves cached cron-generated analysis (members)
+ * POST /api/ai/onchain-analysis — VIP-only on-demand Grok-3 deep dive
  *
- * VIP-only Grok-3 deep dive analysis of all on-chain indicators.
- * Fetches live data from every on-chain endpoint, builds a comprehensive
- * prompt, and returns an expert Bitcoin price analysis with tentative
- * movement and accumulation guesses.
+ * Tiered access:
+ *   Members  → cron-generated detailed analysis (onchain-deep-analysis-members)
+ *   VIP      → on-demand full analysis (onchain-deep-analysis)
  *
- * Cache: 6 hours. VIP users can force-refresh once per 6-hour window;
- * any call inside that window returns the cached version.
+ * Cache: 6 hours. Cron runs every 6h for members.
+ * VIP users can force-refresh within their 6h window.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -225,6 +225,42 @@ Provide a comprehensive deep-dive analysis covering:
 
 Write in a direct, intelligence-briefing style. Use specific numbers from the data. 500-700 words. Do not pad with disclaimers.`;
 }
+
+// ── GET — serve cached cron-generated analysis for members ────────────────
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const userTier = (session.user.tier as Tier) ?? 'free';
+
+  let tierPanelId: string;
+  if (hasAccess(userTier, 'vip')) {
+    tierPanelId = PANEL_ID;
+  } else if (hasAccess(userTier, 'members')) {
+    tierPanelId = 'onchain-deep-analysis-members';
+  } else {
+    return NextResponse.json({ error: 'Members access required' }, { status: 403 });
+  }
+
+  const valueKey = cacheKey();
+  const cached = await (prisma as any).signalAnnotation.findUnique({
+    where: { panelId_valueKey: { panelId: tierPanelId, valueKey } },
+  });
+
+  if (cached && (cached as { expiresAt: Date }).expiresAt > new Date()) {
+    return NextResponse.json({
+      analysis: cached.annotation,
+      cachedAt: cached.generatedAt.toISOString(),
+      expiresAt: (cached as { expiresAt: Date }).expiresAt.toISOString(),
+      fromCache: true,
+    });
+  }
+
+  return NextResponse.json({ analysis: null, pending: true });
+}
+
+// ── POST — VIP on-demand generation ───────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
