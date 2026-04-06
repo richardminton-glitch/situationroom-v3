@@ -103,7 +103,7 @@ export function SituationMap({ countries }: SituationMapProps) {
       .attr('stroke', '#a89a85')
       .attr('stroke-width', 0.6)
       .style('cursor', 'pointer')
-      .style('transition', 'fill 0.2s, opacity 0.15s')
+      .style('transition', 'fill 0.2s')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .attr('fill', (d: any) => {
         const id = parseInt(d.id || d.properties?.id);
@@ -114,7 +114,7 @@ export function SituationMap({ countries }: SituationMapProps) {
       })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .on('mouseenter', function (_event: MouseEvent, d: any) {
-        d3.select(this).attr('opacity', 0.75);
+        d3.select(this).style('filter', 'brightness(0.85)');
         const id = parseInt(d.id || d.properties?.id);
         const name = COUNTRY_NAMES[id];
         const record = countryIndex.get(id);
@@ -137,7 +137,7 @@ export function SituationMap({ countries }: SituationMapProps) {
         setHover((prev) => prev ? { ...prev, x: _event.clientX - rect.left, y: _event.clientY - rect.top } : null);
       })
       .on('mouseleave', function () {
-        d3.select(this).attr('opacity', 1);
+        d3.select(this).style('filter', null);
         setHover(null);
       })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

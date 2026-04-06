@@ -22,13 +22,12 @@ function sleep(ms: number) {
 }
 
 // API Ninjas uses different names for some countries
+// NOTE: "Korea" returns North Korea — must use "Korea, South"
+// Taiwan is not covered by API Ninjas — all data comes from seed fallback
 const API_NAME_MAP: Record<string, string> = {
-  'South Korea': 'Korea',
+  'South Korea': 'Korea, South',
   'UAE': 'United Arab Emirates',
   'Czech Republic': 'Czechia',
-  'Iran': 'Iran',
-  'Russia': 'Russia',
-  'Turkey': 'Turkey',
 };
 
 /** Get the name to use for API Ninjas queries */
