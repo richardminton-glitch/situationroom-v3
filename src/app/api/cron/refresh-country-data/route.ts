@@ -21,6 +21,21 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// API Ninjas uses different names for some countries
+const API_NAME_MAP: Record<string, string> = {
+  'South Korea': 'Korea',
+  'UAE': 'United Arab Emirates',
+  'Czech Republic': 'Czechia',
+  'Iran': 'Iran',
+  'Russia': 'Russia',
+  'Turkey': 'Turkey',
+};
+
+/** Get the name to use for API Ninjas queries */
+function apiName(countryName: string): string {
+  return API_NAME_MAP[countryName] ?? countryName;
+}
+
 // Capital cities for AQI lookup
 const CAPITALS: Record<string, string> = {
   US: 'Washington', GB: 'London', DE: 'Berlin', FR: 'Paris', IT: 'Rome',
@@ -52,18 +67,20 @@ export async function GET(req: NextRequest) {
 
     for (const c of countries) {
       const updates: Record<string, unknown> = {};
+      const name = apiName(c.countryName);
 
       // /v1/country — returns GDP, population, urbanisation, fertility, infant mortality
+      // NOTE: API Ninjas returns population in thousands and GDP in millions USD
       try {
-        const data = await ninjaFetch(`/country?name=${encodeURIComponent(c.countryName)}`);
+        const data = await ninjaFetch(`/country?name=${encodeURIComponent(name)}`);
         const arr = data as Record<string, unknown>[];
         if (arr?.[0]) {
           const d = arr[0];
           if (d.gdp != null && d.population != null) {
-            const pop = d.population as number;
-            const gdp = d.gdp as number; // in millions USD
-            updates.gdpPerCap = Math.round((gdp * 1_000_000) / pop);
-            updates.population = BigInt(pop);
+            const popThousands = d.population as number;  // in thousands
+            const gdpMillions = d.gdp as number;          // in millions USD
+            updates.gdpPerCap = Math.round((gdpMillions * 1000) / popThousands);
+            updates.population = BigInt(Math.round(popThousands * 1000));
           }
           if (d.gdp_growth != null) updates.gdpGrowth = d.gdp_growth as number;
           if (d.urban_population != null) updates.urbanPct = d.urban_population as number;
@@ -79,7 +96,7 @@ export async function GET(req: NextRequest) {
 
       // /v1/inflation — CPI annual rate
       try {
-        const data = await ninjaFetch(`/inflation?country=${encodeURIComponent(c.countryName)}`);
+        const data = await ninjaFetch(`/inflation?country=${encodeURIComponent(name)}`);
         const arr = data as Record<string, unknown>[];
         if (arr?.[0]?.yearly_rate_pct != null) {
           updates.inflation = arr[0].yearly_rate_pct as number;
@@ -91,11 +108,12 @@ export async function GET(req: NextRequest) {
       await sleep(250);
 
       // /v1/interestrate — central bank rate
+      // API Ninjas returns { central_bank_rate: number, country: string }
       try {
-        const data = await ninjaFetch(`/interestrate?country=${encodeURIComponent(c.countryName)}`);
+        const data = await ninjaFetch(`/interestrate?country=${encodeURIComponent(name)}`);
         const arr = data as Record<string, unknown>[];
-        if (arr?.[0]?.rate_pct != null) {
-          updates.cbRate = arr[0].rate_pct as number;
+        if (arr?.[0]?.central_bank_rate != null) {
+          updates.cbRate = arr[0].central_bank_rate as number;
         }
       } catch (e) {
         errors.push({ country: c.countryCode, endpoint: '/interestrate', error: String(e) });
