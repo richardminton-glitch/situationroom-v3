@@ -45,10 +45,14 @@ function readLocalBtcHistory(days = 30): ChartPoint[] {
  * - Exchange balance 30-day
  */
 export async function GET() {
-  // Prefer local NDJSON log (hourly granularity, grows over time).
+  // Prefer local NDJSON log (15-min granularity, grows over time).
   // Fall back to CoinGecko — omitting &interval forces hourly for days<=90.
+  // Only use local data if it's fresh (most recent point within 2 hours) AND
+  // has enough points to render a useful chart.
   const localBtc = readLocalBtcHistory(30);
-  const useLocal  = localBtc.length >= 100; // need at least 100 points to be useful
+  const latestLocal = localBtc.length > 0 ? localBtc[localBtc.length - 1].time : 0;
+  const localFresh  = Date.now() - latestLocal < 2 * 60 * 60 * 1000; // within 2 hours
+  const useLocal    = localBtc.length >= 100 && localFresh;
 
   const results = await Promise.allSettled([
     // BTC price 30d — skip remote fetch if local history is rich enough
