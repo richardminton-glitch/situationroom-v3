@@ -100,8 +100,8 @@ export function SituationMap({ countries }: SituationMapProps) {
       .append('path')
       .attr('class', 'country')
       .attr('d', path)
-      .attr('stroke', 'var(--border-primary)')
-      .attr('stroke-width', 0.3)
+      .attr('stroke', '#a89a85')
+      .attr('stroke-width', 0.6)
       .style('cursor', 'pointer')
       .style('transition', 'fill 0.2s, opacity 0.15s')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -152,9 +152,9 @@ export function SituationMap({ countries }: SituationMapProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .datum(topojson.mesh(topo, topo.objects.countries, (a: any, b: any) => a !== b))
       .attr('fill', 'none')
-      .attr('stroke', 'var(--border-primary)')
-      .attr('stroke-width', 0.3)
-      .attr('stroke-opacity', 0.4)
+      .attr('stroke', '#8a7d6b')
+      .attr('stroke-width', 0.5)
+      .attr('stroke-opacity', 0.7)
       .style('pointer-events', 'none');
 
     // Sphere vignette overlay
