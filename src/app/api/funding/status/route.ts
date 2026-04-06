@@ -131,12 +131,12 @@ export async function GET() {
       if (isThisMonth) thisMonthSats += p.amountSats;
     }
 
-    const thisMonthGBP = thisMonthSats / SATS_PER_GBP;
+    const thisMonthGBP = thisMonthSats / satsPerGbp;
     const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((thisMonthGBP / costs.total) * 100)) : 0;
 
     // ── Runway calculation ──────────────────────────────────────────────────
     // Total revenue in GBP (all time)
-    const allTimeRevenueGBP = allTimeSats / SATS_PER_GBP;
+    const allTimeRevenueGBP = allTimeSats / satsPerGbp;
     // First payment date (project funding start), or fallback to now
     const firstPaymentDate = allPayments.length > 0 && allPayments[0].activatedAt
       ? allPayments[0].activatedAt
