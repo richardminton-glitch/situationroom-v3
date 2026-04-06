@@ -15,7 +15,6 @@
  * └─────────────────┴──────────────────────────┴─────────────────────┘
  */
 
-import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
@@ -71,11 +70,7 @@ export default function MembersRoom() {
   const goldAsset = data.assets.find((a) => a.key === 'gold');
   const oilAsset = data.assets.find((a) => a.key === 'oil');
 
-  // Recent headlines for threat analysis context
-  const recentHeadlines = useMemo(() =>
-    events.slice(-12).map((e) => e.headline).filter(Boolean),
-    [events],
-  );
+  // (Threat analysis now runs server-side — no client headlines needed)
 
   return (
     <div
@@ -134,9 +129,6 @@ export default function MembersRoom() {
               <ThreatAnalysisPanel
                 threatState={threat.state}
                 threatScore={threat.score}
-                stateChanged={threat.stateChanged}
-                prevState={threat.prevState}
-                recentHeadlines={recentHeadlines}
               />
             </div>
           </div>
