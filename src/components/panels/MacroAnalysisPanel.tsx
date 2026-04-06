@@ -41,8 +41,8 @@ export function MacroAnalysisPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine display tier (admin gets VIP)
-  const displayTier = canAccess('vip') ? 'vip' : canAccess('members') ? 'members' : 'general';
+  // Display tier matches actual subscription tier (admin bypass only prevents lockout)
+  const displayTier = userTier === 'vip' ? 'vip' : userTier === 'members' ? 'members' : 'general';
 
   // ── Auto-fetch cached analysis on mount (via GET) ──────────────────────
   useEffect(() => {

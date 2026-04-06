@@ -235,10 +235,14 @@ export async function GET() {
   const userTier = (session.user.tier as Tier) ?? 'free';
   const admin = isAdmin(session.user.email);
 
+  // Admin bypass only for access — content tier follows actual subscription
   let tierPanelId: string;
-  if (admin || hasAccess(userTier, 'vip')) {
+  if (hasAccess(userTier, 'vip')) {
     tierPanelId = PANEL_ID;
   } else if (hasAccess(userTier, 'members')) {
+    tierPanelId = 'onchain-deep-analysis-members';
+  } else if (admin) {
+    // Admin can access even without members tier, but gets members-level content
     tierPanelId = 'onchain-deep-analysis-members';
   } else {
     return NextResponse.json({ error: 'Members access required' }, { status: 403 });
@@ -269,6 +273,7 @@ export async function POST(request: NextRequest) {
 
   const userTier = (session.user.tier as Tier) ?? 'free';
   const admin = isAdmin(session.user.email);
+  // Admin bypass only for access — content tier follows actual subscription
   if (!admin && !hasAccess(userTier, 'vip')) {
     return NextResponse.json({ error: 'VIP access required' }, { status: 403 });
   }

@@ -102,8 +102,9 @@ Write 600-800 words. Use specific numbers. Reference historical precedents where
   },
 };
 
-function getAnalysisTier(userTier: Tier, admin: boolean): AnalysisTier {
-  if (admin || hasAccess(userTier, 'vip')) return 'vip';
+/** Analysis tier matches actual subscription — admin bypass only prevents lockout */
+function getAnalysisTier(userTier: Tier): AnalysisTier {
+  if (hasAccess(userTier, 'vip')) return 'vip';
   if (hasAccess(userTier, 'members')) return 'members';
   return 'general';
 }
@@ -371,7 +372,7 @@ export async function GET() {
     return NextResponse.json({ error: 'General access required' }, { status: 403 });
   }
 
-  const aTier = getAnalysisTier(userTier, admin);
+  const aTier = getAnalysisTier(userTier);
   const config = TIER_CONFIG[aTier];
   const valueKey = cacheKey(config.ttlHours);
 
@@ -406,7 +407,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'General access required' }, { status: 403 });
   }
 
-  const aTier = getAnalysisTier(userTier, admin);
+  const aTier = getAnalysisTier(userTier);
   const config = TIER_CONFIG[aTier];
   const valueKey = cacheKey(config.ttlHours);
 
