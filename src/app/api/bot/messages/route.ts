@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'members')) {
+  if (!isAdmin(session.user.email) && !hasAccess(userTier, 'members')) {
     return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
   }
 

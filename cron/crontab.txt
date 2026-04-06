@@ -5,8 +5,8 @@
 # All routes protected by CRON_SECRET (Authorization: Bearer $CRON_SECRET)
 # Replace https://situationroom.space with your domain if different.
 
-CRON_SECRET=your-cron-secret-here
-SITE=https://situationroom.space
+CRON_SECRET=dev-cron-secret
+SITE=https://v3.situationroom.space
 
 # Daily data refresh — UTXO age at 06:00 UTC
 0 6 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/data/utxo-age >> /opt/situationroom-v3/logs/cron.log 2>&1
