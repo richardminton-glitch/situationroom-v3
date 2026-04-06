@@ -55,9 +55,10 @@ function estimateAiCostUsd(): number {
 }
 
 // ── GBP conversion ───────────────────────────────────────────────────────────
-// USD/GBP rough rate — updated periodically
+// Rough rates — update periodically as BTC price moves
+// At BTC ~£53k: 100M sats / £53,000 ≈ 1,887 sats/GBP
 const USD_TO_GBP = 0.79;
-const SATS_PER_GBP = 120_000;
+const SATS_PER_GBP = 1_900;
 
 function computeCosts() {
   const aiUsd = estimateAiCostUsd();

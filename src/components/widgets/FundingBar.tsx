@@ -82,9 +82,9 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
         £{totalRevenueGBP.toFixed(0)} / £{runningCostsGBP} — {coveragePct}%
       </div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-        Subscriptions: £{(status.subscriptionRevenueSats / 120_000).toFixed(0)}
+        Subscriptions: £{(status.subscriptionRevenueSats / 1_900).toFixed(0)}
         {' · '}
-        Donations: £{(status.donationRevenueSats / 120_000).toFixed(0)}
+        Donations: £{(status.donationRevenueSats / 1_900).toFixed(0)}
       </div>
 
       {/* Member breakdown */}

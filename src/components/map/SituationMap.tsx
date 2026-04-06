@@ -34,6 +34,11 @@ export function SituationMap({ countries }: SituationMapProps) {
   const topoRef = useRef<unknown>(null);
   const [mapReady, setMapReady] = useState(false);
   const renderVersion = useRef(0);
+  // Ref so D3 event handlers always read the current metric (avoids stale closure)
+  const activeMetricRef = useRef(activeMetric);
+
+  // Keep ref in sync with state so D3 closures read the current metric
+  useEffect(() => { activeMetricRef.current = activeMetric; }, [activeMetric]);
 
   // Index countries by ISO numeric for O(1) lookup
   const countryIndex = useMemo(() => {
@@ -120,8 +125,9 @@ export function SituationMap({ countries }: SituationMapProps) {
         const id = parseInt(d.id || d.properties?.id);
         const name = COUNTRY_NAMES[id];
         const record = countryIndex.get(id);
-        const metric = METRIC_BY_KEY[activeMetric];
-        const val = record?.[activeMetric] as number | null;
+        const currentMetric = activeMetricRef.current;
+        const metric = METRIC_BY_KEY[currentMetric];
+        const val = record?.[currentMetric] as number | null;
         const formatted = val != null && metric ? metric.format(val) : null;
 
         if (name) {
