@@ -204,7 +204,7 @@ async function main() {
     await prisma.countryData.upsert({
       where: { countryCode: c.countryCode },
       update: { ...staticFields, ...liveFields },
-      create: { ...staticFields, ...liveFields },
+      create: { countryCode: c.countryCode, ...staticFields, ...liveFields },
     });
     process.stdout.write('.');
   }
