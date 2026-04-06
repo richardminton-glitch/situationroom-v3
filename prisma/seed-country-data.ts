@@ -1,6 +1,9 @@
 /**
- * Seed script — populates the country_data table with 52 countries.
+ * Seed script — populates the country_data table with 173 countries/territories.
  * Run: npx tsx prisma/seed-country-data.ts
+ *
+ * 52 original countries (G7, BRICS+, major economies) +
+ * 121 additional countries/territories (remaining world coverage).
  *
  * Static fields (HDI, Gini, corruption, etc.) are hardcoded from
  * World Bank / UNDP / TI open datasets. Live fields have fallback
@@ -9,6 +12,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { COUNTRIES_125, LIVE_FALLBACKS_125 } from './seed-country-data-125';
 
 const prisma = new PrismaClient();
 
@@ -160,11 +164,18 @@ const LIVE_FALLBACKS: Record<string, {
   GH: { gdpPerCap: 2400, gdpGrowth: 3.1, inflation: 23.2, unemployment: 5.5, cbRate: 29.50, urbanPct: 59, fertility: 3.58, infantMort: 32.1 },
 };
 
-async function main() {
-  console.log(`Seeding ${COUNTRIES.length} countries...`);
+// Merge both datasets
+const ALL_COUNTRIES = [...COUNTRIES, ...COUNTRIES_125];
+const ALL_FALLBACKS: Record<string, typeof LIVE_FALLBACKS[string]> = {
+  ...LIVE_FALLBACKS,
+  ...LIVE_FALLBACKS_125,
+};
 
-  for (const c of COUNTRIES) {
-    const fb = LIVE_FALLBACKS[c.countryCode];
+async function main() {
+  console.log(`Seeding ${ALL_COUNTRIES.length} countries/territories...`);
+
+  for (const c of ALL_COUNTRIES) {
+    const fb = ALL_FALLBACKS[c.countryCode];
     const staticFields = {
       countryName: c.countryName,
       isoNumeric: c.isoNumeric,
@@ -209,7 +220,7 @@ async function main() {
     process.stdout.write('.');
   }
 
-  console.log(`\n✓ ${COUNTRIES.length} countries seeded.`);
+  console.log(`\n✓ ${ALL_COUNTRIES.length} countries/territories seeded.`);
 }
 
 main()
