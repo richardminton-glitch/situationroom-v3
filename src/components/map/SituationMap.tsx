@@ -31,7 +31,9 @@ export function SituationMap({ countries }: SituationMapProps) {
   const [activeMetric, setActiveMetric] = useState(DEFAULT_METRIC);
   const [selectedCountry, setSelectedCountry] = useState<CountryRecord | null>(null);
   const [hover, setHover] = useState<{ name: string; value: string | null; x: number; y: number } | null>(null);
-  const [topoData, setTopoData] = useState<unknown>(null);
+  const topoRef = useRef<unknown>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const renderVersion = useRef(0);
 
   // Index countries by ISO numeric for O(1) lookup
   const countryIndex = useMemo(() => {
@@ -48,25 +50,32 @@ export function SituationMap({ countries }: SituationMapProps) {
     return buildColourScale(metric, values);
   }, [activeMetric, countries]);
 
-  // Load TopoJSON once
+  // Load TopoJSON once — stored in ref (not state) to avoid re-renders
   useEffect(() => {
-    d3.json(WORLD_ATLAS_URL).then(setTopoData);
+    let cancelled = false;
+    d3.json(WORLD_ATLAS_URL).then((data) => {
+      if (!cancelled) {
+        topoRef.current = data;
+        setMapReady(true);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
-  // Render / re-render map when topo, metric, or container changes
-  useEffect(() => {
-    if (!topoData || !svgRef.current || !containerRef.current) return;
+  // Build the base map (projection, paths, graticule) — only on topo load or resize
+  const buildMap = useCallback(() => {
+    if (!topoRef.current || !svgRef.current || !containerRef.current) return;
 
     const svg = d3.select(svgRef.current);
     const container = containerRef.current;
     const width = container.clientWidth;
-    const height = container.clientHeight - 28; // subtract status bar
+    const height = container.clientHeight - 28;
 
     svg.attr('viewBox', `0 0 ${width} ${height}`);
     svg.selectAll('*').remove();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const topo = topoData as any;
+    const topo = topoRef.current as any;
     const geojson = topojson.feature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection;
 
     const projection = d3.geoNaturalEarth1()
@@ -93,25 +102,18 @@ export function SituationMap({ countries }: SituationMapProps) {
       .attr('stroke-width', 0.35)
       .attr('opacity', 0.5);
 
-    // Country paths
+    // Country paths — fill set to NO_DATA initially, coloured by separate effect
     svg.selectAll('.country')
       .data(geojson.features)
       .enter()
       .append('path')
       .attr('class', 'country')
       .attr('d', path)
+      .attr('fill', NO_DATA)
       .attr('stroke', '#a89a85')
       .attr('stroke-width', 0.6)
       .style('cursor', 'pointer')
       .style('transition', 'fill 0.2s')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .attr('fill', (d: any) => {
-        const id = parseInt(d.id || d.properties?.id);
-        const record = countryIndex.get(id);
-        if (!record) return NO_DATA;
-        const val = record[activeMetric] as number | null;
-        return colourScale(val);
-      })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .on('mouseenter', function (_event: MouseEvent, d: any) {
         d3.select(this).style('filter', 'brightness(0.85)');
@@ -145,7 +147,6 @@ export function SituationMap({ countries }: SituationMapProps) {
         const id = parseInt(d.id || d.properties?.id);
         const record = countryIndex.get(id);
         if (record) {
-          // Toggle: clicking same country deselects
           setSelectedCountry((prev) => prev?.countryCode === record.countryCode ? null : record);
         }
       });
@@ -173,18 +174,57 @@ export function SituationMap({ countries }: SituationMapProps) {
       .attr('fill', 'url(#sphereVignette)')
       .style('pointer-events', 'none');
 
-  }, [topoData, activeMetric, countryIndex, colourScale]);
+    // Bump version so colour effect runs
+    renderVersion.current += 1;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countryIndex]);
 
-  // Resize handler
+  // Initial render when topo loads
+  useEffect(() => {
+    if (mapReady) buildMap();
+  }, [mapReady, buildMap]);
+
+  // Colour update — lightweight, only updates fill attributes (no DOM rebuild)
+  useEffect(() => {
+    if (!svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+
+    svg.selectAll<SVGPathElement, GeoJSON.Feature>('.country')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .attr('fill', (d: any) => {
+        const id = parseInt(d.id || d.properties?.id);
+        const record = countryIndex.get(id);
+        if (!record) return NO_DATA;
+        const val = record[activeMetric] as number | null;
+        return colourScale(val);
+      });
+  }, [activeMetric, countryIndex, colourScale]);
+
+  // Resize handler — debounced, no state feedback loop
   useEffect(() => {
     if (!containerRef.current) return;
+    let timer: ReturnType<typeof setTimeout>;
     const obs = new ResizeObserver(() => {
-      // Force re-render by updating topoData ref identity
-      if (topoData) setTopoData({ ...topoData as object });
+      clearTimeout(timer);
+      timer = setTimeout(() => buildMap(), 150);
     });
     obs.observe(containerRef.current);
-    return () => obs.disconnect();
-  }, [topoData]);
+    return () => {
+      obs.disconnect();
+      clearTimeout(timer);
+    };
+  }, [buildMap]);
+
+  // Cleanup D3 on unmount
+  useEffect(() => {
+    return () => {
+      if (svgRef.current) {
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('.country').on('.', null); // remove all D3 listeners
+        svg.selectAll('*').remove();
+      }
+    };
+  }, []);
 
   // Status bar helpers
   const metric = METRIC_BY_KEY[activeMetric];
