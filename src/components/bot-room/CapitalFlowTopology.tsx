@@ -124,7 +124,7 @@ function resolveChange(t: FlowTicker, data: any): number | null {
   if (!bucket) return null;
   const entry = (bucket as Record<string, { changePct: number }>)[t.key];
   if (!entry) return null;
-  return entry.changePct * 100;   // decimal ratio → percentage points
+  return entry.changePct;   // already in percentage points from trackChange / API Ninjas
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -380,13 +380,14 @@ export function CapitalFlowTopology() {
             : `rgba(255,107,74,${(0.3 + intensity * 0.65).toFixed(2)})`;
           ctx.fill();
         } else {
-          // BTC-equity particle
+          // BTC-equity particle — flow relative to BTC performance
           const eqIdx = p.channel - ZONE_CHANNEL_COUNT;
           const en    = btcEqNodes[eqIdx];
           if (btcNode && en) {
-            const ticker  = ZONES[2].tickers[eqIdx + 1];
-            const chg     = resolveChange(ticker, snap) ?? 0;
-            const forward = chg >= 0;
+            const ticker   = ZONES[2].tickers[eqIdx + 1];
+            const eqChg    = resolveChange(ticker, snap) ?? 0;
+            const btcChg   = resolveChange(ZONES[2].tickers[0], snap) ?? 0;
+            const forward  = (eqChg - btcChg) >= 0;  // outperforming BTC → outward flow
 
             p.t += p.speed * (forward ? 1 : -1);
             if (p.t > 1) p.t -= 1;
@@ -485,6 +486,18 @@ export function CapitalFlowTopology() {
           ctx.textAlign    = cos > 0.3 ? 'left' : cos < -0.3 ? 'right' : 'center';
           ctx.textBaseline = sin > 0.3 ? 'top'  : sin < -0.3 ? 'bottom' : 'middle';
           ctx.fillText(ticker.label, lx, ly);
+          // Change % below label
+          if (changePct !== null) {
+            const pDist = lDist + 11;
+            const px    = node.x + cos * pDist;
+            const py    = node.y + sin * pDist;
+            ctx.font      = "8px 'Courier New'";
+            ctx.fillStyle = changePct >= 0 ? C.teal + 'bb' : C.coral + 'bb';
+            ctx.fillText(
+              changePct >= 0 ? `+${changePct.toFixed(1)}%` : `${changePct.toFixed(1)}%`,
+              px, py,
+            );
+          }
         } else {
           // Column node — label to the right for left zones, left for right zones
           const rightSide = node.zone <= 1;

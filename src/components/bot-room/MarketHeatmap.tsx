@@ -58,10 +58,10 @@ const ROW2: HmTicker[] = [
 function cellColors(type: string, change: number): { bg: string; fg: string } {
   if (type === 'btc')  return { bg: HM.btc,  fg: C.btcOrange };
   if (type === 'gold') return { bg: HM.gold, fg: C.gold };
-  if (change >  0.15) return { bg: HM.posStrong, fg: C.teal };
+  if (change >  1.0)  return { bg: HM.posStrong, fg: C.teal };
   if (change >  0)    return { bg: HM.pos,       fg: C.teal };
   if (change === 0)   return { bg: HM.flat,      fg: C.textDim };
-  if (change < -0.15) return { bg: HM.negStrong, fg: C.coral };
+  if (change < -1.0)  return { bg: HM.negStrong, fg: C.coral };
   return                      { bg: HM.neg,       fg: C.coral };
 }
 
@@ -113,9 +113,8 @@ export function MarketHeatmap() {
     if (!bucket) return null;
     const entry = (bucket as Record<string, { changePct: number }>)[t.key];
     if (!entry) return null;
-    // changePct from price-tracker is a decimal ratio (0.023 = +2.3%)
-    // Convert to percentage points for display
-    return entry.changePct * 100;
+    // changePct is already in percentage points from trackChange / API Ninjas
+    return entry.changePct;
   }
 
   const ts = data?.timestamp

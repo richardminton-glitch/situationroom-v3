@@ -45,8 +45,8 @@ SITE=https://situationroom.space
 # User alert checks — every 5 minutes
 */5 * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/check-alerts >> /opt/situationroom-v3/logs/cron.log 2>&1
 
-# AI Trading — 4h cycle at 00:05, 04:05, 08:05, 12:05, 16:05, 20:05 UTC
-5 0,4,8,12,16,20 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/trading-cycle >> /opt/situationroom-v3/logs/cron.log 2>&1
+# AI Trading — hourly cycle at :05 past every hour
+5 * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/trading-cycle >> /opt/situationroom-v3/logs/cron.log 2>&1
 
 # BTC price logger — every 15 minutes, appends to NDJSON for 30-day chart
 */15 * * * * node /opt/situationroom-v3/scripts/log-btc-price.js >> /opt/situationroom-v3/logs/cron.log 2>&1
