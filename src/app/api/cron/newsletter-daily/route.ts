@@ -80,12 +80,31 @@ async function getAlertsForMember(since: Date): Promise<string[]> {
 async function getPoolStatus(): Promise<GeneralBriefingEmailProps['poolStatus'] | null> {
   try {
     const bot = getBotClient();
-    const account = await bot.getAccount();
+    const [account, openPositions, closedTrades] = await Promise.all([
+      bot.getAccount(),
+      bot.getRunningTrades().catch(() => []),
+      bot.getClosedTrades(20).catch(() => []),
+    ]);
+
+    const openPos = openPositions[0] as Record<string, unknown> | undefined;
+    const position: 'LONG' | 'SHORT' | 'FLAT' = openPos
+      ? ((openPos.side === 'buy' || openPos.side === 'b') ? 'LONG' : 'SHORT')
+      : 'FLAT';
+
+    const lastTrade = closedTrades[0] as Record<string, unknown> | undefined;
+    const lastTradePl = lastTrade ? Math.round((lastTrade.pl as number) ?? 0) : 0;
+    const lastTradeDesc = lastTrade
+      ? `${(lastTrade.side === 'buy' || lastTrade.side === 'b') ? 'LONG' : 'SHORT'} ${lastTradePl >= 0 ? '+' : ''}${lastTradePl} sats`
+      : 'No recent trades';
+
+    const wins = closedTrades.filter((t) => ((t.pl as number) ?? 0) > 0).length;
+    const winRatePct = closedTrades.length > 0 ? Math.round((wins / closedTrades.length) * 100) : 0;
+
     return {
-      balanceSats: account.balance ?? 0, // v3 returns sats natively
-      position: 'FLAT', // TODO Phase 5: pull from open positions
-      lastTradeDesc: 'No recent trades',
-      winRatePct: 0,
+      balanceSats: account.balance ?? 0,
+      position,
+      lastTradeDesc,
+      winRatePct,
     };
   } catch (err) {
     console.warn('[newsletter-daily] Could not fetch pool status:', err);
