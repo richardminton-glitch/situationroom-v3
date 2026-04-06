@@ -217,7 +217,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
 
           {/* Funding badge */}
           {funding && (
-            <Tooltip text={`Monthly funding: ${funding.coveragePct}% of running costs covered this month||${funding.runwayMonths > 0 ? `Runway: ${funding.runwayMonths} months of funding remaining` : 'No funding balance — costs exceed revenue'}||Funded by sats — subscriptions & donations`}>
+            <Tooltip text={`${funding.coveragePct}% of this month's running costs covered||Funded to ${new Date(funding.runwayEndDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${funding.runwayMonths > 0 ? ` (${funding.runwayMonths} months runway)` : ''}||Funded by sats — subscriptions & donations`}>
               <a
                 href="/support"
                 className="inline-flex items-center gap-1.5"
@@ -247,9 +247,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
                   {funding.coveragePct}%
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
-                  · {funding.runwayMonths > 0
-                    ? new Date(funding.runwayEndDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-                    : 'unfunded'}
+                  · to {new Date(funding.runwayEndDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
               </a>
             </Tooltip>

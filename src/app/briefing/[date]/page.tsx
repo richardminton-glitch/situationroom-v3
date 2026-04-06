@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { BriefingMarkdown } from '@/components/briefings/BriefingMarkdown';
 import { getCurrentUser } from '@/lib/auth';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 import Link from 'next/link';
 import { PersonalBriefingContext } from '@/components/briefing/PersonalBriefingContext';
+import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
 
 interface Props {
   params: Promise<{ date: string }>;
@@ -42,10 +43,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BriefingPage({ params }: Props) {
   const { date } = await params;
 
-  const [briefing, user] = await Promise.all([
+  const [briefing, user, satsPerGbp] = await Promise.all([
     prisma.briefing.findUnique({ where: { date: new Date(date) } }),
     getCurrentUser(),
+    getLiveSatsPerGbp(),
   ]);
+  const generalSats = gbpToSats(TIER_PRICES_GBP.general, satsPerGbp).toLocaleString();
 
   if (!briefing) notFound();
 
@@ -212,7 +215,7 @@ export default async function BriefingPage({ params }: Props) {
             href="/support"
             style={{ display: 'inline-block', padding: '10px 24px', backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textDecoration: 'none' }}
           >
-            SUBSCRIBE ⚡ 10,000 SATS
+            SUBSCRIBE ⚡ {generalSats} SATS
           </Link>
         </div>
       ) : (
@@ -238,7 +241,7 @@ export default async function BriefingPage({ params }: Props) {
               href="/support"
               style={{ display: 'inline-block', padding: '10px 24px', backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textDecoration: 'none' }}
             >
-              SUBSCRIBE ⚡ 10,000 SATS/MO
+              SUBSCRIBE ⚡ {generalSats} SATS/MO
             </Link>
           </div>
         </>

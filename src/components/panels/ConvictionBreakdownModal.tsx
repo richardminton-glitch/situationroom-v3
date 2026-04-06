@@ -12,7 +12,8 @@ import { useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useTier } from '@/hooks/useTier';
-import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import { TIER_LABELS } from '@/lib/auth/tier';
+import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import type { ConvictionResult } from '@/lib/conviction/engine';
 import {
   ChatCircleDots,
@@ -136,6 +137,7 @@ export function ConvictionBreakdownModal({
 }: ConvictionBreakdownModalProps) {
   const { theme } = useTheme();
   const { canAccess } = useTier();
+  const pricing = usePricing();
   const router = useRouter();
   const hasGeneral = canAccess('general');
   const isVip = canAccess('vip');
@@ -255,7 +257,7 @@ export function ConvictionBreakdownModal({
                 marginBottom: 6,
               }}
             >
-              {TIER_LABELS.general} — {TIER_PRICES.general.toLocaleString()} sats/mo
+              {TIER_LABELS.general} — {pricing ? formatTierPrice('general', pricing) : '...'}
             </div>
             <div
               style={{

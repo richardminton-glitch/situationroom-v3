@@ -13,7 +13,8 @@ import { getPanelById } from '@/lib/panels/registry';
 import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useTier } from '@/hooks/useTier';
 import { useSavedLayouts } from '@/hooks/useSavedLayouts';
-import { hasAccess, TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import { hasAccess, TIER_LABELS, TIER_BILLING } from '@/lib/auth/tier';
+import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import Link from 'next/link';
 import { useUnreadChat } from '@/hooks/useUnreadChat';
 import type { Theme, Tier } from '@/types';
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { userTier, canAccess } = useTier();
   const { error: dataError } = useData();
+  const pricing = usePricing();
   // Always start on Full Overview; restore saved preset only for logged-in users
   const [activePreset, setActivePreset] = useState<string>('default');
   const [activeCustomId, setActiveCustomId] = useState<string | null>(null);
@@ -368,14 +370,16 @@ export default function DashboardPage() {
                       >
                         {!user
                           ? 'SIGN IN →'
-                          : `UNLOCK ⚡ — ${TIER_PRICES[lockedView!.requiredTier].toLocaleString()} sats/mo`}
+                          : `UNLOCK ⚡ — ${pricing ? formatTierPrice(lockedView!.requiredTier as 'general' | 'members' | 'vip', pricing) : '...'}`}
                       </Link>
-                      {user && (
+                      {user && lockedView && (
                         <div style={{
                           marginTop: '12px', fontSize: '11px',
                           color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
                         }}>
-                          30-day subscription · Cancel anytime
+                          {TIER_BILLING[lockedView.requiredTier as keyof typeof TIER_BILLING] === 'lifetime'
+                            ? 'One-off payment · Lifetime access'
+                            : '30-day subscription · Cancel anytime'}
                         </div>
                       )}
                     </div>

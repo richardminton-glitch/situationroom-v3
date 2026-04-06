@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import { TIER_LABELS } from '@/lib/auth/tier';
+import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import type { Tier } from '@/types';
 
 interface UpgradePromptProps {
@@ -20,8 +21,9 @@ export function UpgradePrompt({
 }: UpgradePromptProps) {
   const [dismissed, setDismissed] = useState(false);
   const router = useRouter();
+  const pricing = usePricing();
   const tierLabel = TIER_LABELS[requiredTier];
-  const price = TIER_PRICES[requiredTier].toLocaleString();
+  const priceLabel = pricing ? formatTierPrice(requiredTier, pricing) : '...';
   const goToSupport = onUpgradeClick ?? (() => router.push('/support'));
 
   if (variant === 'inline') {
@@ -74,7 +76,7 @@ export function UpgradePrompt({
           cursor: 'pointer', padding: '4px 0', letterSpacing: '0.05em',
         }}
       >
-        ⚡ Upgrade to {tierLabel} — {price} sats/mo →
+        ⚡ Upgrade to {tierLabel} — {priceLabel} →
       </button>
     );
   }
@@ -100,7 +102,7 @@ export function UpgradePrompt({
           </div>
         )}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-primary)', marginBottom: '4px' }}>
-          {tierLabel} — {price} sats/mo
+          {tierLabel} — {priceLabel}
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           {featureName ? `Unlock ${featureName}` : `Requires ${tierLabel} tier`}

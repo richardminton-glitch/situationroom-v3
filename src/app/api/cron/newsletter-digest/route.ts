@@ -23,6 +23,8 @@ import { prisma } from '@/lib/db';
 import { getResend, FROM_ADDRESS, SITE_URL } from '@/lib/newsletter/resend';
 import { createNewsletterToken } from '@/lib/newsletter/tokens';
 import { FreeDigestEmail, freeDigestSubject } from '@/emails/FreeDigestEmail';
+import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
+import { TIER_PRICES_GBP } from '@/lib/auth/tier';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min — batch sends can be slow
@@ -103,6 +105,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ sent: 0, skipped: 0, failed: 0 });
   }
 
+  // ── Live sats price for upgrade CTA ────────────────────────────────────────
+  const satsPerGbp = await getLiveSatsPerGbp();
+  const generalSatsPrice = gbpToSats(TIER_PRICES_GBP.general, satsPerGbp).toLocaleString();
+
   // ── Send loop ─────────────────────────────────────────────────────────────
   const resend = getResend();
   let sent = 0;
@@ -134,6 +140,7 @@ export async function GET(request: NextRequest) {
         oil:         snap(ds, 'oil', '—'),
         convictionScore: score,
         convictionLabel: label,
+        generalSatsPrice,
       })
     );
 

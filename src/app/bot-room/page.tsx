@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
-import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_BILLING } from '@/lib/auth/tier';
+import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import Link from 'next/link';
 import { TopBar } from '@/components/bot-room/TopBar';
 import { StatsBar } from '@/components/bot-room/StatsBar';
@@ -19,6 +20,7 @@ import { C, FONT } from '@/components/bot-room/constants';
 export default function BotRoomPage() {
   const { user, loading } = useAuth();
   const { canAccess } = useTier();
+  const pricing = usePricing();
   const [showDonate, setShowDonate] = useState(false);
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
   const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
@@ -136,7 +138,7 @@ export default function BotRoomPage() {
                 color: C.bgPrimary, textDecoration: 'none', fontFamily: FONT,
                 fontSize: '12px', letterSpacing: '0.12em', fontWeight: 'bold',
               }}>
-                UNLOCK ⚡ — {TIER_PRICES.members.toLocaleString()} sats/mo
+                UNLOCK ⚡ — {pricing ? formatTierPrice('members', pricing) : '...'}
               </Link>
               <div style={{ marginTop: '12px', fontSize: '11px', color: C.textDim, fontFamily: FONT }}>
                 30-day subscription · Cancel anytime

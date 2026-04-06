@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import type { Tier } from '@/types';
-import { TIER_LABELS, TIER_PRICES } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_BILLING } from '@/lib/auth/tier';
+import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 
 interface LockedViewPromptProps {
   view: string;
@@ -17,9 +18,10 @@ interface LockedViewPromptProps {
  */
 export function LockedViewPrompt({ view, requiredTier, description, onUpgradeClick }: LockedViewPromptProps) {
   const router = useRouter();
+  const pricing = usePricing();
   const goToSupport = onUpgradeClick ?? (() => router.push('/support'));
   const tier = TIER_LABELS[requiredTier];
-  const price = TIER_PRICES[requiredTier].toLocaleString();
+  const priceLabel = pricing ? formatTierPrice(requiredTier, pricing) : '...';
 
   return (
     <div
@@ -52,10 +54,10 @@ export function LockedViewPrompt({ view, requiredTier, description, onUpgradeCli
           letterSpacing: '0.12em', fontWeight: 'bold',
         }}
       >
-        UNLOCK ⚡ — {price} sats/mo
+        UNLOCK ⚡ — {priceLabel}
       </button>
       <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
-        30-day subscription · Cancel anytime
+        {TIER_BILLING[requiredTier] === 'lifetime' ? 'One-off payment · Lifetime access' : '30-day subscription · Cancel anytime'}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getOpsClient, getBotClient } from '@/lib/lnm/client';
 import { parseMemo, activateTier, recordDonation, processExpiredSubscriptions } from '@/lib/lnm/payments';
+import { TIER_BILLING } from '@/lib/auth/tier';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,7 +86,11 @@ export async function POST(request: NextRequest) {
       const parsed = parseMemo(deposit.comment ?? payment.memo);
 
       if (parsed.type === 'subscription' && parsed.tier && parsed.userId) {
-        await activateTier(parsed.userId, parsed.tier, payment.id);
+        const billing = TIER_BILLING[parsed.tier as keyof typeof TIER_BILLING] ?? 'monthly';
+        await activateTier(parsed.userId, parsed.tier, payment.id, { duration: billing });
+        confirmed++;
+      } else if (parsed.type === 'trial' && parsed.tier && parsed.userId) {
+        await activateTier(parsed.userId, parsed.tier, payment.id, { duration: 'trial' });
         confirmed++;
       } else if (parsed.type === 'donation') {
         await recordDonation(payment.amountSats, payment.id);

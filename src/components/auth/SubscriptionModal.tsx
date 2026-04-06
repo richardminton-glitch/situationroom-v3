@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import QRCode from 'react-qr-code';
-import { TIER_LABELS, TIER_PRICES, TIER_COLORS, TIER_ORDER } from '@/lib/auth/tier';
+import { TIER_LABELS, TIER_COLORS, TIER_ORDER, TIER_BILLING } from '@/lib/auth/tier';
 import { useAuth } from '@/components/layout/AuthProvider';
+import { usePricing, formatSats, formatTierPrice } from '@/hooks/usePricing';
 import type { Tier } from '@/types';
 
 const COUNTDOWN_SECONDS = 30 * 60;
@@ -21,8 +22,10 @@ interface SubscriptionModalProps {
 
 export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess }: SubscriptionModalProps) {
   const { refresh } = useAuth();
+  const pricing = usePricing();
   const [step, setStep] = useState<Step>('select');
   const [selectedTier, setSelectedTier] = useState<Exclude<Tier, 'free'>>(initialTier);
+  const [isTrial, setIsTrial] = useState(false);
   const [paymentRequest, setPaymentRequest] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -37,10 +40,13 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
     setLoading(true);
     setError('');
     try {
+      const body = isTrial
+        ? { tier: 'trial', targetTier: selectedTier }
+        : { tier: selectedTier };
       const res = await fetch('/api/payments/invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: selectedTier }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error('Failed to generate invoice');
       const data = await res.json();
@@ -53,7 +59,7 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
     } finally {
       setLoading(false);
     }
-  }, [selectedTier]);
+  }, [selectedTier, isTrial]);
 
   // ── Countdown timer ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -160,28 +166,63 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
                 SELECT YOUR TIER
               </div>
 
-              {paidTiers.map((tier) => (
+              {paidTiers.map((tier) => {
+                const isSelected = selectedTier === tier && !isTrial;
+                const priceLabel = pricing
+                  ? formatTierPrice(tier, pricing)
+                  : '...';
+                return (
+                  <button
+                    key={tier}
+                    onClick={() => { setSelectedTier(tier); setIsTrial(false); }}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      width: '100%', padding: '12px 14px', marginBottom: '6px',
+                      background: isSelected ? 'var(--bg-primary)' : 'transparent',
+                      border: `1px solid ${isSelected ? TIER_COLORS[tier] : 'var(--border-subtle)'}`,
+                      color: isSelected ? TIER_COLORS[tier] : 'var(--text-primary)',
+                      cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    <span style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                      {TIER_LABELS[tier].toUpperCase()}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                      {priceLabel}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Trial option */}
+              {pricing && (
                 <button
-                  key={tier}
-                  onClick={() => setSelectedTier(tier)}
+                  onClick={() => { setIsTrial(true); if (!['general', 'members', 'vip'].includes(selectedTier)) setSelectedTier('general'); }}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     width: '100%', padding: '12px 14px', marginBottom: '6px',
-                    background: selectedTier === tier ? 'var(--bg-primary)' : 'transparent',
-                    border: `1px solid ${selectedTier === tier ? TIER_COLORS[tier] : 'var(--border-subtle)'}`,
-                    color: selectedTier === tier ? TIER_COLORS[tier] : 'var(--text-primary)',
+                    background: isTrial ? 'var(--bg-primary)' : 'transparent',
+                    border: `1px solid ${isTrial ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                    color: isTrial ? 'var(--accent-primary)' : 'var(--text-primary)',
                     cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
                     letterSpacing: '0.05em',
                   }}
                 >
-                  <span style={{ fontWeight: selectedTier === tier ? 'bold' : 'normal' }}>
-                    {TIER_LABELS[tier].toUpperCase()}
+                  <span style={{ fontWeight: isTrial ? 'bold' : 'normal' }}>
+                    TRIAL
                   </span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                    {TIER_PRICES[tier].toLocaleString()} sats/mo
+                    {formatSats(pricing.trialSats)} sats / {pricing.trialDays} days
                   </span>
                 </button>
-              ))}
+              )}
+
+              {isTrial && (
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px', textAlign: 'center', lineHeight: 1.6 }}>
+                  {pricing?.trialDays}-day access to {TIER_LABELS[selectedTier]} tier
+                </div>
+              )}
 
               {error && (
                 <div style={{ fontSize: '11px', color: 'var(--accent-danger, #b84040)', marginTop: '8px', textAlign: 'center' }}>
@@ -191,14 +232,14 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
 
               <button
                 onClick={generateInvoice}
-                disabled={loading}
+                disabled={loading || !pricing}
                 style={{
                   width: '100%', marginTop: '16px', padding: '12px',
                   background: 'var(--accent-primary)', color: 'var(--bg-primary)',
-                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                  border: 'none', cursor: (loading || !pricing) ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-mono)', fontSize: '12px',
                   letterSpacing: '0.1em', fontWeight: 'bold',
-                  opacity: loading ? 0.6 : 1,
+                  opacity: (loading || !pricing) ? 0.6 : 1,
                 }}
               >
                 {loading ? 'GENERATING...' : 'GENERATE INVOICE'}
@@ -232,7 +273,11 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
                 fontSize: '13px', color: 'var(--text-primary)', fontWeight: 'bold',
                 letterSpacing: '0.05em',
               }}>
-                {TIER_PRICES[selectedTier].toLocaleString()} sats
+                {isTrial && pricing
+                  ? `${formatSats(pricing.trialSats)} sats`
+                  : pricing
+                    ? `${formatSats(pricing.tierPricesSats[selectedTier])} sats`
+                    : '...'}
               </div>
 
               <div style={{
@@ -347,13 +392,19 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
                 fontSize: '14px', color: tierColor,
                 letterSpacing: '0.12em', marginBottom: '6px', fontWeight: 'bold',
               }}>
-                {TIER_LABELS[selectedTier].toUpperCase()} ACTIVATED
+                {TIER_LABELS[selectedTier].toUpperCase()} {isTrial ? 'TRIAL' : ''} ACTIVATED
               </div>
               <div style={{
                 fontSize: '11px', color: 'var(--text-muted)',
                 marginBottom: '24px', lineHeight: 1.6,
               }}>
-                {TIER_PRICES[selectedTier].toLocaleString()} sats received.<br />
+                Payment received.<br />
+                {isTrial
+                  ? `${pricing?.trialDays ?? 7}-day trial started.`
+                  : TIER_BILLING[selectedTier] === 'lifetime'
+                    ? 'Lifetime access unlocked.'
+                    : '30-day subscription activated.'}
+                <br />
                 Welcome to Situation Room.
               </div>
               <button

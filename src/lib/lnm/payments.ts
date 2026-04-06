@@ -21,11 +21,16 @@ const SUBSCRIPTION_TIERS = ['general', 'members', 'vip'] as const;
 type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
 
 const SUBSCRIPTION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;          // 7 days
 
 // ── Memo builders ─────────────────────────────────────────────────────────────
 
 export function buildSubscriptionMemo(tier: SubscriptionTier, userId: string): string {
   return `SITROOM-${tier.toUpperCase()}-${userId}-${Math.floor(Date.now() / 1000)}`;
+}
+
+export function buildTrialMemo(targetTier: SubscriptionTier, userId: string): string {
+  return `SITROOM-TRIAL-${targetTier.toUpperCase()}-${userId}-${Math.floor(Date.now() / 1000)}`;
 }
 
 export function buildDonationMemo(): string {
@@ -35,13 +40,22 @@ export function buildDonationMemo(): string {
 // ── Memo parser ───────────────────────────────────────────────────────────────
 
 interface ParsedMemo {
-  type: 'subscription' | 'donation' | 'pool';
+  type: 'subscription' | 'trial' | 'donation' | 'pool';
   tier?: SubscriptionTier;
   userId?: string;
 }
 
 export function parseMemo(memo: string): ParsedMemo {
   if (!memo.startsWith('SITROOM-')) return { type: 'pool' };
+
+  // Trial: SITROOM-TRIAL-TIER-USERID-TS
+  if (memo.startsWith('SITROOM-TRIAL-')) {
+    const parts = memo.split('-');
+    const tierStr = parts[2]?.toLowerCase();
+    const tier = SUBSCRIPTION_TIERS.find((t) => t === tierStr);
+    const userId = parts[3];
+    if (tier && userId) return { type: 'trial', tier, userId };
+  }
 
   for (const tier of SUBSCRIPTION_TIERS) {
     if (memo.startsWith(`SITROOM-${tier.toUpperCase()}-`)) {
@@ -61,13 +75,25 @@ export function parseMemo(memo: string): ParsedMemo {
 
 // ── Tier activation ───────────────────────────────────────────────────────────
 
+interface ActivateOptions {
+  /** Override duration. 'lifetime' sets expiresAt to null (VIP). */
+  duration?: 'monthly' | 'trial' | 'lifetime';
+}
+
 export async function activateTier(
   userId: string,
   tier: Tier,
   paymentId: string,
+  opts?: ActivateOptions,
 ): Promise<void> {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + SUBSCRIPTION_DURATION_MS);
+  const duration = opts?.duration ?? 'monthly';
+
+  const expiresAt = duration === 'lifetime'
+    ? null
+    : duration === 'trial'
+      ? new Date(now.getTime() + TRIAL_DURATION_MS)
+      : new Date(now.getTime() + SUBSCRIPTION_DURATION_MS);
 
   const updatedUser = await prisma.$transaction(async (tx) => {
     const u = await tx.user.update({
@@ -85,7 +111,8 @@ export async function activateTier(
   const npub = getActiveNpub(updatedUser);
   await syncRelayForUser(userId, npub, tier);
 
-  console.log(`[Payments] Activated ${tier} for user ${userId}, expires ${expiresAt.toISOString()}`);
+  const label = duration === 'lifetime' ? 'lifetime' : expiresAt!.toISOString();
+  console.log(`[Payments] Activated ${tier} (${duration}) for user ${userId}, expires ${label}`);
 }
 
 export async function recordDonation(amountSats: number, paymentId: string): Promise<void> {
@@ -117,6 +144,7 @@ export async function processExpiredSubscriptions(): Promise<void> {
   }
 
   // Users whose subscription has expired — downgrade to free
+  // VIP lifetime (expiresAt = null) naturally excluded — Prisma { lt: now } skips nulls
   const expired = await prisma.user.findMany({
     where: {
       tier:                  { not: 'free' },

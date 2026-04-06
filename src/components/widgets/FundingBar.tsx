@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 interface FundingStatus {
   satsPerGbp: number;
-  totalRevenueGBP: number;
+  rolling30dRevenueGBP: number;
   runningCostsGBP: number;
   coveragePct: number;
   subscriptionRevenueSats: number;
@@ -37,7 +37,7 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
 
   if (!status) return null;
 
-  const { coveragePct, totalRevenueGBP, runningCostsGBP, memberBreakdown, costsBreakdown } = status;
+  const { coveragePct, rolling30dRevenueGBP, runningCostsGBP, memberBreakdown, costsBreakdown } = status;
   const color = progressColor(coveragePct);
   const fillW = `${Math.min(100, coveragePct)}%`;
 
@@ -70,7 +70,7 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
       </div>
 
       <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-        Monthly costs: £{runningCostsGBP}
+        Monthly costs: £{runningCostsGBP} · Rolling 30 days
       </div>
 
       {/* Progress bar */}
@@ -80,7 +80,7 @@ export function FundingBar({ variant = 'compact', onSubscribeClick, onDonateClic
         />
       </div>
       <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>
-        £{totalRevenueGBP.toFixed(0)} / £{runningCostsGBP} — {coveragePct}%
+        £{rolling30dRevenueGBP.toFixed(0)} / £{runningCostsGBP} — {coveragePct}%
       </div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
         Subscriptions: £{Math.round(status.subscriptionRevenueSats / status.satsPerGbp)}

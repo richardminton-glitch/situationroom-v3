@@ -2,8 +2,9 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import { BriefingSearch } from '@/components/briefings/BriefingSearch';
+import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
 import type { Tier } from '@/types';
 
 export const metadata: Metadata = {
@@ -28,7 +29,8 @@ const THREAT_COLORS: Record<string, string> = {
 };
 
 export default async function BriefingsArchivePage() {
-  const user = await getCurrentUser();
+  const [user, satsPerGbp] = await Promise.all([getCurrentUser(), getLiveSatsPerGbp()]);
+  const generalSats = gbpToSats(TIER_PRICES_GBP.general, satsPerGbp).toLocaleString();
 
   // Unauthenticated users: redirect to sign in
   if (!user) {
@@ -158,7 +160,7 @@ export default async function BriefingsArchivePage() {
                 href="/support"
                 style={{ display: 'inline-block', padding: '9px 22px', backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textDecoration: 'none' }}
               >
-                SUBSCRIBE ⚡ 10,000 SATS/MO
+                SUBSCRIBE ⚡ {generalSats} SATS/MO
               </Link>
             </div>
           )}

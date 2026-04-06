@@ -23,8 +23,26 @@ export const TIER_COLORS: Record<Tier, string> = {
   vip:     '#7c5cbf',
 };
 
+/** GBP prices — converted to sats at invoice time using live BTC/GBP rate. */
+export const TIER_PRICES_GBP: Record<Exclude<Tier, 'free'>, number> = {
+  general: 2.99,   // £/mo — price of a coffee
+  members: 6,      // £/mo — price of a beer
+  vip:     50,     // £ one-off — lifetime access
+};
+
+export const TIER_BILLING: Record<Exclude<Tier, 'free'>, 'monthly' | 'lifetime'> = {
+  general: 'monthly',
+  members: 'monthly',
+  vip:     'lifetime',
+};
+
+/** Trial: flat sats rate, 7-day access to next tier up. */
+export const TRIAL_SATS = 2_100;
+export const TRIAL_DURATION_DAYS = 7;
+
+/** @deprecated Use TIER_PRICES_GBP + live sats conversion instead. */
 export const TIER_PRICES: Record<Exclude<Tier, 'free'>, number> = {
-  general: 10_000,  // sats/mo
+  general: 10_000,
   members: 25_000,
   vip:     50_000,
 };

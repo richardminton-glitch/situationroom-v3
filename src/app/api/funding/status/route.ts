@@ -2,12 +2,13 @@
  * GET /api/funding/status
  *
  * Returns monthly revenue vs running costs breakdown.
- * Queries subscription_payments for current calendar month.
+ * Uses a rolling 30-day window for current revenue.
  * Costs are computed dynamically from estimated API/AI usage.
  */
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getLiveSatsPerGbp } from '@/lib/lnm/rates';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,25 +56,8 @@ function estimateAiCostUsd(): number {
 }
 
 // ── GBP conversion ───────────────────────────────────────────────────────────
-// Fetches live BTC/GBP price from CoinGecko at request time.
-// Falls back to a reasonable estimate if the API is down.
-const FALLBACK_SATS_PER_GBP = 1_900;
-
-async function getLiveSatsPerGbp(): Promise<number> {
-  try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp',
-      { signal: AbortSignal.timeout(5_000), next: { revalidate: 300 } },
-    );
-    if (!res.ok) return FALLBACK_SATS_PER_GBP;
-    const data = await res.json() as { bitcoin?: { gbp?: number } };
-    const btcGbp = data.bitcoin?.gbp;
-    if (!btcGbp || btcGbp <= 0) return FALLBACK_SATS_PER_GBP;
-    return Math.round(100_000_000 / btcGbp);
-  } catch {
-    return FALLBACK_SATS_PER_GBP;
-  }
-}
+// Uses shared getLiveSatsPerGbp() from @/lib/lnm/rates
+// (CoinGecko BTC/GBP, 5-min cache, 5s timeout, fallback to 1,900 sats/GBP)
 
 function computeCosts(usdToGbp: number) {
   const aiUsd = estimateAiCostUsd();
@@ -94,7 +78,7 @@ function computeCosts(usdToGbp: number) {
 export async function GET() {
   try {
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Live BTC/GBP for sats conversion; USD/GBP is stable enough to hardcode for costs
     const satsPerGbp = await getLiveSatsPerGbp();
@@ -108,7 +92,7 @@ export async function GET() {
     });
 
     let allTimeSats = 0;
-    let thisMonthSats = 0;
+    let rolling30dSats = 0;
     let subscriptionRevenueSats = 0;
     let donationRevenueSats = 0;
     const breakdown = { general: 0, members: 0, vip: 0, donations: 0 };
@@ -116,7 +100,7 @@ export async function GET() {
     for (const p of allPayments) {
       allTimeSats += p.amountSats;
 
-      const isThisMonth = p.activatedAt && p.activatedAt >= monthStart;
+      const isRecent = p.activatedAt && p.activatedAt >= thirtyDaysAgo;
 
       if (p.tier === 'donation') {
         donationRevenueSats += p.amountSats;
@@ -128,11 +112,11 @@ export async function GET() {
         }
       }
 
-      if (isThisMonth) thisMonthSats += p.amountSats;
+      if (isRecent) rolling30dSats += p.amountSats;
     }
 
-    const thisMonthGBP = thisMonthSats / satsPerGbp;
-    const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((thisMonthGBP / costs.total) * 100)) : 0;
+    const rolling30dGBP = rolling30dSats / satsPerGbp;
+    const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((rolling30dGBP / costs.total) * 100)) : 0;
 
     // ── Runway calculation ──────────────────────────────────────────────────
     // Total revenue in GBP (all time)
@@ -166,7 +150,7 @@ export async function GET() {
       donationRevenueSats,
       totalRevenueSats: allTimeSats,
       totalRevenueGBP:  Math.round(allTimeRevenueGBP * 100) / 100,
-      thisMonthRevenueGBP: Math.round(thisMonthGBP * 100) / 100,
+      rolling30dRevenueGBP: Math.round(rolling30dGBP * 100) / 100,
       runningCostsGBP:  costs.total,
       costsBreakdown:   costs,
       coveragePct,

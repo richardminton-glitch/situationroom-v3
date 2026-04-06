@@ -31,6 +31,8 @@ export interface FreeDigestEmailProps {
   oil: string;
   convictionScore: number;
   convictionLabel: string;
+  /** Live sats price for General tier, e.g. "5,681" */
+  generalSatsPrice?: string;
 }
 
 // Parchment palette — must use inline hex, no CSS variables in emails
@@ -69,6 +71,7 @@ export function FreeDigestEmail({
   oil,
   convictionScore,
   convictionLabel,
+  generalSatsPrice,
 }: FreeDigestEmailProps) {
   return (
     <Html lang="en">
@@ -203,7 +206,7 @@ export function FreeDigestEmail({
             <Text style={{ fontFamily: font.serif, fontSize: '12px', color: C.muted, lineHeight: '1.6', margin: '0 0 12px' }}>
               5-agent analysis · All data · Daily delivery
               <br />
-              Available from General — 10,000 sats/mo
+              Available from General — {generalSatsPrice || '~5,700'} sats/mo
             </Text>
             <Link
               href="https://situationroom.space/support"
