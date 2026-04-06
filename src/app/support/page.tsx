@@ -41,37 +41,43 @@ export default function SupportPage() {
         </div>
         {[
           { tier: 'Free', price: 'Free', color: '#8b7355', subtitle: '', features: [
-            'Newsletter signup — daily or weekly',
-            'Daily letter: outlook section only',
-            'Weekly letter: outlook + price & metric summary',
             'Full Overview & Full Data dashboards',
-            'Briefing outlook section (dashboard + archive)',
-            '7-day briefing archive',
+            'Situation Map — global intelligence view',
+            'Briefing outlook section + 7-day archive',
+            'Newsletter signup — daily or weekly digest',
+            'Live BTC price, conviction score & threat level',
+            'Fear & Greed, hash rate, MVRV & macro data',
           ], cta: 'SIGN UP' },
           { tier: 'General', price: pricing ? `${formatSats(pricing.tierPricesSats.general)} sats/mo` : '...', color: '#8b6914', subtitle: 'Price of a coffee', features: [
             'Everything in Free',
-            'Full briefings — all 5 agent sections',
+            'Full 5-agent briefings — Market, Network, Geopolitical, Macro, Outlook',
+            '30-day briefing archive with search',
             'Macro Focus dashboard',
-            'Conviction score breakdown',
-            '30-day briefing archive',
-            'Full daily newsletter',
+            'Conviction score breakdown — all 5 signals',
+            'AI macro analysis (Grok-powered)',
+            'Full daily newsletter delivery',
             'Dark mode',
           ], cta: 'SUBSCRIBE' },
           { tier: 'Members', price: pricing ? `${formatSats(pricing.tierPricesSats.members)} sats/mo` : '...', color: '#4a6fa5', subtitle: 'Price of a beer', features: [
             'Everything in General',
-            'Ops Room — member chat',
-            'Trading pool view + bot signals',
+            'Bot Room — autonomous trading terminal',
+            'Ops Room — live member chat via Nostr',
+            'Trading pool view + capital flow topology',
             'On-Chain Deep Dive dashboard',
-            'AI Analysis dashboard',
-            'AI "Why Bitcoin" annotations',
+            'AI Analysis dashboard — 8 specialist agents',
+            'AI "Why Bitcoin" annotations on data',
+            'On-chain AI analysis (Grok-powered)',
+            'Miners & network health section',
           ], cta: 'SUBSCRIBE' },
           { tier: 'VIP', price: pricing ? `${formatSats(pricing.tierPricesSats.vip)} sats (lifetime)` : '...', color: '#7c5cbf', subtitle: 'One-off payment · Lifetime access', features: [
             'Everything in Members',
-            'Custom dashboard layouts',
-            'Personal conviction score',
-            'Grok-3 on-chain deep analysis',
-            'Personalised briefings by topic',
+            'Custom dashboard layouts — save & switch',
+            'Personal conviction score with portfolio context',
+            'On-demand Grok macro & on-chain deep analysis',
+            'Personalised VIP briefings by topic',
             'Threshold alerts via Nostr DM',
+            'VIP newsletter topics',
+            'Lifetime access — pay once, never expires',
           ], cta: 'SUBSCRIBE' },
         ].map(({ tier, price, color, subtitle, features, cta }) => (
           <div
@@ -116,13 +122,13 @@ export default function SupportPage() {
               <span style={{ fontSize: '12px', color: 'var(--accent-primary)', letterSpacing: '0.08em', fontWeight: 'bold' }}>TRIAL</span>
               <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{formatSats(pricing.trialSats)} sats / {pricing.trialDays} days</span>
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '10px' }}>Try any paid tier for one week</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '10px' }}>Try any paid tier for one week · Once per tier</div>
             <ul style={{ margin: 0, padding: '0 0 0 12px', listStyle: 'none' }}>
               <li style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                ▸ {pricing.trialDays}-day access to any tier
+                ▸ {pricing.trialDays}-day full access to chosen tier
               </li>
               <li style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                ▸ Full features of the chosen tier
+                ▸ One trial available per tier, per account
               </li>
               <li style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '3px' }}>
                 ▸ Upgrade to full subscription anytime

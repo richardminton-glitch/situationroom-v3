@@ -26,6 +26,7 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
   const [step, setStep] = useState<Step>('select');
   const [selectedTier, setSelectedTier] = useState<Exclude<Tier, 'free'>>(initialTier);
   const [isTrial, setIsTrial] = useState(false);
+  const [usedTrials, setUsedTrials] = useState<string[]>([]);
   const [paymentRequest, setPaymentRequest] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -34,6 +35,15 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
   const [copied, setCopied] = useState<'invoice' | 'ln' | null>(null);
 
   const paidTiers = TIER_ORDER.filter((t): t is Exclude<Tier, 'free'> => t !== 'free');
+  const allTrialsUsed = usedTrials.length >= 3 || paidTiers.every((t) => usedTrials.includes(t));
+
+  // ── Fetch trial eligibility ────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/payments/trial-status')
+      .then((r) => r.json())
+      .then((data) => { if (data.usedTiers) setUsedTrials(data.usedTiers); })
+      .catch(() => {});
+  }, []);
 
   // ── Generate invoice ───────────────────────────────────────────────────────
   const generateInvoice = useCallback(async () => {
@@ -48,14 +58,17 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('Failed to generate invoice');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || 'Failed to generate invoice');
+      }
       const data = await res.json();
       setPaymentRequest(data.paymentRequest);
       setPaymentId(data.paymentId);
       setCountdown(COUNTDOWN_SECONDS);
       setStep('payment');
-    } catch {
-      setError('Could not generate invoice. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not generate invoice. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -196,9 +209,14 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
               })}
 
               {/* Trial option */}
-              {pricing && (
+              {pricing && !allTrialsUsed && (
                 <button
-                  onClick={() => { setIsTrial(true); if (!['general', 'members', 'vip'].includes(selectedTier)) setSelectedTier('general'); }}
+                  onClick={() => {
+                    setIsTrial(true);
+                    // Auto-select first available trial tier
+                    const available = paidTiers.find((t) => !usedTrials.includes(t));
+                    if (available) setSelectedTier(available);
+                  }}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     width: '100%', padding: '12px 14px', marginBottom: '6px',
@@ -219,8 +237,37 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
               )}
 
               {isTrial && (
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '8px', textAlign: 'center', lineHeight: 1.6 }}>
-                  {pricing?.trialDays}-day access to {TIER_LABELS[selectedTier]} tier
+                <div style={{ marginTop: '4px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.6 }}>
+                    Select tier to trial ({pricing?.trialDays ?? 7} days, once per tier)
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {paidTiers.map((t) => {
+                      const used = usedTrials.includes(t);
+                      const active = selectedTier === t && !used;
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => !used && setSelectedTier(t)}
+                          disabled={used}
+                          style={{
+                            flex: 1, padding: '6px 4px',
+                            fontSize: '10px', fontFamily: 'var(--font-mono)',
+                            letterSpacing: '0.04em',
+                            background: active ? 'var(--bg-primary)' : 'transparent',
+                            border: `1px solid ${active ? TIER_COLORS[t] : used ? 'var(--border-subtle)' : 'var(--border-subtle)'}`,
+                            color: used ? 'var(--text-muted)' : active ? TIER_COLORS[t] : 'var(--text-secondary)',
+                            cursor: used ? 'not-allowed' : 'pointer',
+                            opacity: used ? 0.5 : 1,
+                            textDecoration: used ? 'line-through' : 'none',
+                          }}
+                        >
+                          {TIER_LABELS[t].toUpperCase()}
+                          {used && ' \u2713'}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

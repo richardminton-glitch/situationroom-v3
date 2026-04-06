@@ -45,6 +45,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid trial target tier' }, { status: 400 });
     }
 
+    // ── Trial eligibility: once per tier, once per email/nostr identity ──────
+    if (isTrial) {
+      // Find all user IDs sharing this email or nostr npub
+      const identityFilter: { OR: Array<Record<string, string>> } = {
+        OR: [{ email: user.email }],
+      };
+      if (user.nostrNpub) identityFilter.OR.push({ nostrNpub: user.nostrNpub });
+
+      const relatedUsers = await prisma.user.findMany({
+        where: identityFilter,
+        select: { id: true },
+      });
+      const relatedIds = relatedUsers.map((u) => u.id);
+
+      // Check for any confirmed or pending trial for this target tier
+      const existingTrial = await prisma.subscriptionPayment.findFirst({
+        where: {
+          userId: { in: relatedIds },
+          tier: 'trial',
+          status: { in: ['confirmed', 'pending'] },
+          memo: { contains: `TRIAL-${trialTarget!.toUpperCase()}` },
+        },
+      });
+
+      if (existingTrial) {
+        return NextResponse.json(
+          { error: `Trial already used for ${trialTarget}. Each trial is available once per tier.` },
+          { status: 409 },
+        );
+      }
+    }
+
     // Calculate sats amount
     let sats: number;
     if (isDonation) {
