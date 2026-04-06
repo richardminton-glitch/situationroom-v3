@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 const NINJAS_KEY = process.env.API_NINJAS_KEY || '';
@@ -28,6 +28,15 @@ const API_NAME_MAP: Record<string, string> = {
   'South Korea': 'Korea, South',
   'UAE': 'United Arab Emirates',
   'Czech Republic': 'Czechia',
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'Central African Rep.': 'Central African Republic',
+  "Cote d'Ivoire": 'Ivory Coast',
+  'Dem. Rep. Congo': 'DR Congo',
+  'Dominican Rep.': 'Dominican Republic',
+  'Eq. Guinea': 'Equatorial Guinea',
+  'eSwatini': 'Eswatini',
+  'Falkland Is.': 'Falkland Islands',
+  'North Korea': 'Korea, North',
 };
 
 /** Get the name to use for API Ninjas queries */
@@ -35,8 +44,9 @@ function apiName(countryName: string): string {
   return API_NAME_MAP[countryName] ?? countryName;
 }
 
-// Capital cities for AQI lookup
+// Capital cities for AQI lookup (173 countries/territories)
 const CAPITALS: Record<string, string> = {
+  // ── Original 52 ──
   US: 'Washington', GB: 'London', DE: 'Berlin', FR: 'Paris', IT: 'Rome',
   CA: 'Ottawa', JP: 'Tokyo', CN: 'Beijing', IN: 'New Delhi', RU: 'Moscow',
   BR: 'Brasilia', ZA: 'Pretoria', SA: 'Riyadh', AE: 'Abu Dhabi', EG: 'Cairo',
@@ -48,6 +58,32 @@ const CAPITALS: Record<string, string> = {
   IL: 'Jerusalem', TW: 'Taipei', NZ: 'Wellington', IE: 'Dublin', DK: 'Copenhagen',
   BE: 'Brussels', AT: 'Vienna', CZ: 'Prague', GR: 'Athens', PT: 'Lisbon',
   KE: 'Nairobi', GH: 'Accra',
+  // ── New 121 (seed-country-data-125) ──
+  AF: 'Kabul', AL: 'Tirana', DZ: 'Algiers', AO: 'Luanda', AM: 'Yerevan',
+  AZ: 'Baku', BS: 'Nassau', BY: 'Minsk', BZ: 'Belmopan', BJ: 'Porto-Novo',
+  BT: 'Thimphu', BO: 'Sucre', BA: 'Sarajevo', BW: 'Gaborone', BN: 'Bandar Seri Begawan',
+  BG: 'Sofia', BF: 'Ouagadougou', BI: 'Gitega', KH: 'Phnom Penh', CM: 'Yaounde',
+  CF: 'Bangui', CG: 'Brazzaville', CR: 'San Jose', CI: 'Yamoussoukro', HR: 'Zagreb',
+  CU: 'Havana', CY: 'Nicosia', CD: 'Kinshasa', DJ: 'Djibouti', DO: 'Santo Domingo',
+  EC: 'Quito', SV: 'San Salvador', GQ: 'Malabo', ER: 'Asmara', EE: 'Tallinn',
+  SZ: 'Mbabane', FJ: 'Suva', FI: 'Helsinki', GA: 'Libreville', GM: 'Banjul',
+  GE: 'Tbilisi', GT: 'Guatemala City', GN: 'Conakry', GW: 'Bissau', GY: 'Georgetown',
+  HT: 'Port-au-Prince', HN: 'Tegucigalpa', HU: 'Budapest', IS: 'Reykjavik', IQ: 'Baghdad',
+  JM: 'Kingston', JO: 'Amman', KZ: 'Astana', KW: 'Kuwait City', KG: 'Bishkek',
+  LA: 'Vientiane', LV: 'Riga', LB: 'Beirut', LS: 'Maseru', LR: 'Monrovia',
+  LY: 'Tripoli', LT: 'Vilnius', LU: 'Luxembourg', MK: 'Skopje', MG: 'Antananarivo',
+  MW: 'Lilongwe', ML: 'Bamako', MR: 'Nouakchott', MD: 'Chisinau', MN: 'Ulaanbaatar',
+  ME: 'Podgorica', MA: 'Rabat', MZ: 'Maputo', MM: 'Naypyidaw', NA: 'Windhoek',
+  NP: 'Kathmandu', NI: 'Managua', NE: 'Niamey', KP: 'Pyongyang', OM: 'Muscat',
+  PA: 'Panama City', PG: 'Port Moresby', PY: 'Asuncion', QA: 'Doha', RO: 'Bucharest',
+  RW: 'Kigali', SS: 'Juba', SN: 'Dakar', RS: 'Belgrade', SL: 'Freetown',
+  SK: 'Bratislava', SI: 'Ljubljana', SB: 'Honiara', SO: 'Mogadishu', LK: 'Colombo',
+  SD: 'Khartoum', SR: 'Paramaribo', SY: 'Damascus', TJ: 'Dushanbe', TZ: 'Dodoma',
+  TL: 'Dili', TG: 'Lome', TT: 'Port of Spain', TN: 'Tunis', TM: 'Ashgabat',
+  UG: 'Kampala', UA: 'Kyiv', UY: 'Montevideo', UZ: 'Tashkent', VU: 'Port Vila',
+  VE: 'Caracas', ZM: 'Lusaka', ZW: 'Harare', PS: 'Ramallah', GL: 'Nuuk',
+  NC: 'Noumea', PR: 'San Juan', FK: 'Stanley', EH: 'Laayoune',
+  TD: "N'Djamena",
 };
 
 export async function GET(req: NextRequest) {
