@@ -532,3 +532,50 @@ model ClassificationCache {
   @@index([expiresAt])
   @@map("classification_cache")
 }
+
+// ── Country Data (Global Situation Map) ──────────────────────────────────────
+
+model CountryData {
+  id            String   @id @default(cuid())
+  countryCode   String   @unique @map("country_code")    // ISO 3166-1 alpha-2 ("US", "DE")
+  countryName   String   @map("country_name")
+  isoNumeric    Int      @unique @map("iso_numeric")     // matches TopoJSON feature IDs
+
+  // Static — seeded once
+  capital       String?
+  region        String?
+  areaKm2       Int?     @map("area_km2")
+  currency      String?
+  language      String?
+  debtPct       Float?   @map("debt_pct")
+  freedomScore  Float?   @map("freedom_score")
+  giniIndex     Float?   @map("gini_index")
+  hdi           Float?
+  lifeExp       Float?   @map("life_exp")
+  homicideRate  Float?   @map("homicide_rate")
+  corruption    Int?
+  peaceRank     Int?     @map("peace_rank")
+  pressRank     Int?     @map("press_rank")
+  democracy     Float?
+  co2PerCap     Float?   @map("co2_per_cap")
+  forestPct     Float?   @map("forest_pct")
+  medianAge     Float?   @map("median_age")
+  trivia        String?
+
+  // Live — updated monthly via cron
+  population    BigInt?
+  gdpPerCap     Float?   @map("gdp_per_cap")
+  gdpGrowth     Float?   @map("gdp_growth")
+  unemployment  Float?
+  inflation     Float?
+  cbRate        Float?   @map("cb_rate")
+  urbanPct      Float?   @map("urban_pct")
+  fertility     Float?
+  infantMort    Float?   @map("infant_mort")
+  aqi           Int?
+  aqiLabel      String?  @map("aqi_label")
+
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("country_data")
+}

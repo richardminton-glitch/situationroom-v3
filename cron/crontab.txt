@@ -50,3 +50,6 @@ SITE=https://situationroom.space
 
 # Position sync — every 60s, detects TP/SL hits and liquidations
 * * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/position-sync >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Country data refresh — 1st of every month at 03:00 UTC
+0 3 1 * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/refresh-country-data >> /opt/situationroom-v3/logs/cron.log 2>&1
