@@ -278,23 +278,18 @@ export function useOpsRoom() {
         setData((prev) => ({ ...prev, flashTraffic: flashCandidate }));
       }
 
-      // Threat level from headlines
-      const threatKeywords = ['war', 'attack', 'missile', 'bomb', 'invasion', 'casualties', 'killed', 'nuclear', 'sanctions'];
-      let threatScore = 0;
-      for (const a of articles.slice(0, 20)) {
-        const lower = a.title.toLowerCase();
-        for (const kw of threatKeywords) {
-          if (lower.includes(kw)) { threatScore += 2; break; }
+      // Fetch unified threat level from API (same algorithm as Members Room)
+      try {
+        const threatRes = await fetch('/api/data/threat-score');
+        if (threatRes.ok) {
+          const { state } = await threatRes.json();
+          setData((prev) => ({ ...prev, articles, eventMarkers, threatLevel: state }));
+        } else {
+          setData((prev) => ({ ...prev, articles, eventMarkers }));
         }
+      } catch {
+        setData((prev) => ({ ...prev, articles, eventMarkers }));
       }
-      let threatLevel = 'LOW';
-      if (threatScore >= 16) threatLevel = 'CRITICAL';
-      else if (threatScore >= 12) threatLevel = 'SEVERE';
-      else if (threatScore >= 8) threatLevel = 'HIGH';
-      else if (threatScore >= 4) threatLevel = 'ELEVATED';
-      else if (threatScore >= 2) threatLevel = 'GUARDED';
-
-      setData((prev) => ({ ...prev, articles, eventMarkers, threatLevel }));
     } catch { /* non-critical */ }
   }, []);
 

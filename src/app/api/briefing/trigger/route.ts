@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateBriefing } from '@/lib/grok/pipeline';
-import { computeThreatLevel } from '@/lib/grok/quality';
+import { classifiedToAgentEvent } from '@/lib/room/eventMapper';
+import { computeDecayedScore } from '@/lib/room/threatEngine';
 import { calculateConviction } from '@/lib/conviction/engine';
 import type { DashboardSnapshot } from '@/lib/grok/prompts';
 import {
@@ -52,7 +53,24 @@ export async function POST() {
     const comm = commodities.status === 'fulfilled' ? commodities.value : null;
     const headlineItems = headlines.status === 'fulfilled' ? headlines.value : [];
 
-    const threat = computeThreatLevel(headlineItems.map((h) => h.title));
+    // Compute threat level using Members Room algorithm (exponential decay scoring)
+    const now = Date.now();
+    const twoHoursAgo = now - 2 * 60 * 60 * 1000;
+    const agentEvents = headlineItems
+      .filter((h) => h.time * 1000 > twoHoursAgo)
+      .map((h) => classifiedToAgentEvent({
+        title: h.title,
+        source: h.source,
+        link: h.link,
+        time: h.time,
+        primaryCategory: h.primaryCategory,
+        secondaryCategories: h.secondaryCategories || [],
+        relevanceToBitcoin: h.relevanceToBitcoin,
+        classificationConfidence: h.classificationConfidence,
+        description: h.description || '',
+      }));
+    const threatResult = computeDecayedScore(agentEvents, now);
+    const threat = { level: threatResult.state, score: threatResult.score };
 
     // Compute conviction score from live 5-signal engine
     let fedRate: number | null = null;

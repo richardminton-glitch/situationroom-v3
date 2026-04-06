@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useData } from './DataProvider';
 import { useTheme } from './ThemeProvider';
-import { computeThreatLevel } from '@/lib/grok/quality';
+import type { ThreatState } from '@/lib/room/threatEngine';
 import { CaretRight, Diamond } from '@phosphor-icons/react';
 
 // ── Tooltip system ──
@@ -68,14 +68,14 @@ function fgColor(val: number): string {
   return '#2a6e2a';
 }
 
-// ── Threat level colors per theme ──
-const THREAT_COLORS_PARCHMENT: Record<string, string> = {
-  LOW: '#2a6e2a', GUARDED: '#5a7e2a', ELEVATED: '#b8860b',
-  HIGH: '#b85020', SEVERE: '#8b2020', CRITICAL: '#5a0000',
+// ── Threat level colors per theme (aligned with Members Room states) ──
+const THREAT_COLORS_PARCHMENT: Record<ThreatState, string> = {
+  QUIET: '#2a6e2a', MONITORING: '#5a7e2a', ELEVATED: '#b8860b',
+  ALERT: '#b85020', CRITICAL: '#5a0000',
 };
-const THREAT_COLORS_DARK: Record<string, string> = {
-  LOW: '#2dd4bf', GUARDED: '#0aa89e', ELEVATED: '#c4885a',
-  HIGH: '#d06050', SEVERE: '#c04040', CRITICAL: '#ff4444',
+const THREAT_COLORS_DARK: Record<ThreatState, string> = {
+  QUIET: '#2dd4bf', MONITORING: '#0aa89e', ELEVATED: '#c4885a',
+  ALERT: '#d06050', CRITICAL: '#ff4444',
 };
 
 interface DashboardHeaderProps {
@@ -90,7 +90,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
   const [utcTime, setUtcTime] = useState('--:--:-- UTC');
   const [lastRefresh, setLastRefresh] = useState('--');
   const [viewers, setViewers] = useState<number | null>(null);
-  const [threat, setThreat] = useState<{ level: string; score: number }>({ level: 'LOW', score: 0 });
+  const [threat, setThreat] = useState<{ level: ThreatState; score: number }>({ level: 'QUIET', score: 0 });
   const [funding, setFunding] = useState<{ coveragePct: number; runwayEndDate: string; runwayMonths: number } | null>(null);
 
   // UTC clock — updates every second
@@ -118,22 +118,19 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
     }
   }, [data?.timestamp]);
 
-  // Compute threat from RSS headlines
+  // Fetch threat score (same algorithm as Members Room)
   useEffect(() => {
     async function loadThreat() {
       try {
-        const res = await fetch('/api/data/rss');
+        const res = await fetch('/api/data/threat-score');
         if (res.ok) {
-          const { headlines } = await res.json();
-          if (headlines?.length) {
-            const result = computeThreatLevel(headlines.map((h: { title: string }) => h.title));
-            setThreat(result);
-          }
+          const { score, state } = await res.json();
+          setThreat({ level: state, score });
         }
       } catch { /* */ }
     }
     loadThreat();
-    const interval = setInterval(loadThreat, 300_000);
+    const interval = setInterval(loadThreat, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -284,7 +281,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
         {/* Right wing */}
         <div className="flex items-center gap-3">
           {/* Threat gauge */}
-          <Tooltip text="Composite threat score calculated from live news headlines.||Weights conflict severity keywords (missile strikes, casualties, war escalation) with recency bias.||Updates every 5 minutes with the news feed.||Scale: Low · Guarded · Elevated · High · Severe · Critical">
+          <Tooltip text="Threat Posture Model — same algorithm as the Members Room.||Five domain agents (Geopolitical, Economic, Bitcoin, Disaster, Political) classify live news events by severity tier.||Each event decays exponentially with a 3-hour half-life. Score is the sum of all decayed impacts, capped at 100.||Scale: Quiet (0–15) · Monitoring (16–35) · Elevated (36–55) · Alert (56–75) · Critical (76–100)">
             <span className="inline-flex items-center gap-1.5">
               <span style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                 THREAT

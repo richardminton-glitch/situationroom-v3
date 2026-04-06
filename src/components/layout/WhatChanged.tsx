@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useData } from './DataProvider';
 import { formatPrice, formatPct, pctColor } from '@/components/panels/shared';
 
@@ -31,6 +31,7 @@ export function WhatChanged() {
   const [lastSnapshot, setLastSnapshot] = useState<LastSnapshot | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [timeAway, setTimeAway] = useState('');
+  const threatRef = useRef('LOW');
 
   // Load last snapshot on mount
   useEffect(() => {
@@ -47,6 +48,20 @@ export function WhatChanged() {
     } catch { /* no stored data */ }
   }, []);
 
+  // Fetch threat level (same algorithm as Members Room)
+  useEffect(() => {
+    async function loadThreat() {
+      try {
+        const res = await fetch('/api/data/threat-score');
+        if (res.ok) {
+          const { state } = await res.json();
+          threatRef.current = state;
+        }
+      } catch { /* */ }
+    }
+    loadThreat();
+  }, []);
+
   // Save current snapshot on every data update
   useEffect(() => {
     if (!data?.btcMarket) return;
@@ -54,7 +69,7 @@ export function WhatChanged() {
       btcPrice: data.btcMarket.price,
       fearGreed: data.fearGreed?.value ?? 0,
       hashrateEH: data.btcNetwork?.hashrateEH ?? 0,
-      threatLevel: 'GUARDED', // TODO: wire from live threat computation
+      threatLevel: threatRef.current,
       timestamp: Date.now(),
     };
     try {

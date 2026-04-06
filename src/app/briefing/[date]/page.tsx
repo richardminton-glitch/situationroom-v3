@@ -13,12 +13,17 @@ interface Props {
 }
 
 const THREAT_COLORS: Record<string, string> = {
-  LOW:      '#2a6e2a',
-  GUARDED:  '#5a7e2a',
-  ELEVATED: '#b8860b',
-  HIGH:     '#b85020',
-  SEVERE:   '#c04040',
-  CRITICAL: '#ff4444',
+  // Current unified states (Members Room algorithm)
+  QUIET:      '#2a6e2a',
+  MONITORING: '#5a7e2a',
+  ELEVATED:   '#b8860b',
+  ALERT:      '#b85020',
+  CRITICAL:   '#ff4444',
+  // Legacy states (historical briefings in DB)
+  LOW:        '#2a6e2a',
+  GUARDED:    '#5a7e2a',
+  HIGH:       '#b85020',
+  SEVERE:     '#c04040',
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

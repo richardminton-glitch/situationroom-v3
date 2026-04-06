@@ -13,12 +13,17 @@ interface OpsHeaderProps {
 }
 
 const THREAT_COLORS: Record<string, string> = {
-  LOW: '#00d4aa',
-  GUARDED: '#d4a017',
-  ELEVATED: '#cc7722',
-  HIGH: '#cc4444',
-  SEVERE: '#cc4444',
-  CRITICAL: '#cc4444',
+  // Current unified states (Members Room algorithm)
+  QUIET:      '#00d4aa',
+  MONITORING: '#00d4aa',
+  ELEVATED:   '#cc7722',
+  ALERT:      '#cc4444',
+  CRITICAL:   '#cc4444',
+  // Legacy states
+  LOW:        '#00d4aa',
+  GUARDED:    '#d4a017',
+  HIGH:       '#cc4444',
+  SEVERE:     '#cc4444',
 };
 
 function formatUTCClock(): string {
