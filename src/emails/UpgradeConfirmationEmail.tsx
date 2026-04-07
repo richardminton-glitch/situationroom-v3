@@ -12,6 +12,14 @@ import {
 
 export interface UpgradeConfirmationEmailProps {
   tierLabel: string;          // e.g. "General", "Members", "VIP"
+  /** Tier-distinct welcome headline, e.g. "Welcome to the inner circle." */
+  headline: string;
+  /** 1-2 sentence welcoming intro tailored to the tier. */
+  intro: string;
+  /** Tier-distinct kicker mono header above the feature list, e.g. "WHAT'S NEW FOR YOU". */
+  unlockedHeader: string;
+  /** Friendly closing sentence pointing the user to their first action. */
+  nextStep: string;
   durationLabel: string;      // e.g. "30 days", "7-day trial", "lifetime"
   expiresLabel: string | null; // e.g. "5 May 2026" — null for lifetime
   amountSats: number;
@@ -38,6 +46,10 @@ const font = {
 
 export function UpgradeConfirmationEmail({
   tierLabel,
+  headline,
+  intro,
+  unlockedHeader,
+  nextStep,
   durationLabel,
   expiresLabel,
   amountSats,
@@ -58,10 +70,13 @@ export function UpgradeConfirmationEmail({
               SITUATION ROOM
             </Text>
             <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, margin: '0 0 12px' }}>
-              PAYMENT CONFIRMED
+              PAYMENT CONFIRMED · {tierLabel.toUpperCase()} ACTIVE
             </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '20px', color: C.text, margin: '0', letterSpacing: '0.02em' }}>
-              {tierLabel} access activated.
+            <Text style={{ fontFamily: font.serif, fontSize: '22px', color: C.text, margin: '0 0 14px', letterSpacing: '0.02em', lineHeight: '1.3' }}>
+              {headline}
+            </Text>
+            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, margin: '0', lineHeight: '1.7' }}>
+              {intro}
             </Text>
           </Section>
 
@@ -91,7 +106,7 @@ export function UpgradeConfirmationEmail({
           {/* Unlocked features */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '0 28px 4px' }}>
             <Text style={{ fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 8px' }}>
-              YOU&apos;VE UNLOCKED
+              {unlockedHeader}
             </Text>
             {unlockedFeatures.map((feat, i) => (
               <Text
@@ -114,6 +129,9 @@ export function UpgradeConfirmationEmail({
 
           {/* CTA */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '0 28px 24px', textAlign: 'center' }}>
+            <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, margin: '0 0 14px', lineHeight: '1.6', textAlign: 'left' }}>
+              {nextStep}
+            </Text>
             <Link
               href={accountUrl}
               style={{

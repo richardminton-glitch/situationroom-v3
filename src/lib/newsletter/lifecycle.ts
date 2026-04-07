@@ -69,26 +69,61 @@ export async function sendWelcomeEmail(userId: string, email: string): Promise<b
 
 // ── Upgrade confirmation ───────────────────────────────────────────────────────
 
-const TIER_FEATURES: Record<Tier, string[]> = {
-  free: [],
-  general: [
-    'Daily 5-section briefings (delivered by email or in-app)',
-    'Dark mode theme + 30-day briefing archive',
-    'Macro Focus view with full conviction breakdown',
-    'AI Intelligence panel for daily on-chain interpretation',
-  ],
-  members: [
-    'Everything in General',
-    'Ops Room chat — post messages, see alerts in real time',
-    'On-chain Deep Dive + Pool view + Miners Network section',
-    'AI annotations on every metric panel',
-  ],
-  vip: [
-    'Everything in Members',
-    'Custom alerts on conviction, LTH supply, hash ribbon, prices',
-    'Personalised VIP briefing — topic-weighted by your interests',
-    'Layout editing, portfolio context, personal conviction',
-  ],
+interface TierCopy {
+  headline: string;
+  intro: string;
+  unlockedHeader: string;
+  nextStep: string;
+  features: string[];
+}
+
+const TIER_COPY: Record<Tier, TierCopy> = {
+  free: {
+    headline: '',
+    intro: '',
+    unlockedHeader: '',
+    nextStep: '',
+    features: [],
+  },
+  general: {
+    headline: 'Welcome to General.',
+    intro: 'You\u2019re now on the full daily briefing. From tomorrow morning, the complete five-section intelligence digest \u2014 market, network, geopolitical, macro, and outlook \u2014 lands in your inbox before the open.',
+    unlockedHeader: 'WHAT GENERAL UNLOCKS',
+    nextStep: 'First thing: head to your account page and switch newsletter delivery from weekly to daily. Then explore the Macro Focus view \u2014 it\u2019s where the full conviction breakdown lives.',
+    features: [
+      'Daily 5-section briefings delivered by email at 06:15 UTC',
+      'Dark mode theme + 30-day full briefing archive',
+      'Macro Focus dashboard view with full conviction breakdown',
+      'AI Intelligence panel \u2014 fresh on-chain interpretation every day',
+    ],
+  },
+  members: {
+    headline: 'Welcome to the inner circle.',
+    intro: 'Members get the briefing with the operational layer attached. You can now post in the Ops Room, see live bot alerts, and dig into the on-chain detail that General users only see summarised.',
+    unlockedHeader: 'WHAT MEMBERS UNLOCKS',
+    nextStep: 'Drop into the Ops Room first \u2014 it\u2019s the live chat where alerts and trade signals fire in real time. Your daily briefing email also picks up the Pool Status block from tomorrow.',
+    features: [
+      'Everything in General \u2014 still included',
+      'Ops Room chat \u2014 post messages, watch live bot alerts and trade signals',
+      'On-chain Deep Dive view + Pool view + Miners Network section',
+      'AI annotations on every metric panel \u2014 hover for AI commentary',
+      'Daily briefing email now carries Pool Status + recent alerts',
+    ],
+  },
+  vip: {
+    headline: 'Welcome to VIP.',
+    intro: 'VIP is the briefing rebuilt around you. From tomorrow, your daily email is rewritten by AI to weight your selected topics, with a paragraph of personal context if you\u2019ve shared portfolio info. Custom alerts and dashboard layouts are now yours to configure.',
+    unlockedHeader: 'WHAT VIP UNLOCKS',
+    nextStep: 'Two things to set up first: pick up to 3 briefing topics on your account page (these reweight tomorrow\u2019s VIP briefing), and add your portfolio cost basis if you want personalised market-impact context in every email.',
+    features: [
+      'Everything in Members \u2014 still included',
+      'Personalised VIP briefing \u2014 each section AI-rewritten around your topics',
+      'Custom alerts on conviction, LTH supply, hash ribbon, BTC price, fear/greed',
+      'Layout editing \u2014 build your own dashboard from any panel',
+      'Portfolio context block \u2014 your cost basis informs the AI commentary',
+      'Lifetime access \u2014 no renewals, ever',
+    ],
+  },
 };
 
 interface UpgradeOpts {
@@ -106,6 +141,7 @@ export async function sendUpgradeConfirmationEmail(
   if (tier === 'free') return false;
 
   const tierLabel = TIER_LABELS[tier];
+  const copy      = TIER_COPY[tier];
   const durationLabel =
     opts.duration === 'lifetime' ? 'Lifetime'
     : opts.duration === 'trial'  ? '7-day trial'
@@ -116,10 +152,14 @@ export async function sendUpgradeConfirmationEmail(
     const html = await render(
       UpgradeConfirmationEmail({
         tierLabel,
+        headline:         copy.headline,
+        intro:            copy.intro,
+        unlockedHeader:   copy.unlockedHeader,
+        nextStep:         copy.nextStep,
         durationLabel,
         expiresLabel,
         amountSats:       opts.amountSats,
-        unlockedFeatures: TIER_FEATURES[tier],
+        unlockedFeatures: copy.features,
         accountUrl:       `${SITE_URL}/account`,
         unsubscribeUrl:   `${SITE_URL}/account`, // lifecycle email — manage prefs in account
         siteUrl:          SITE_URL,
