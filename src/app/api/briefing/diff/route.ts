@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,9 +46,11 @@ export async function GET(request: NextRequest) {
       diff.priceTo = currentSnap.btcPrice;
       diff.priceChange = currentSnap.btcPrice - previousSnap.btcPrice;
       diff.priceChangePct = previousSnap.btcPrice ? ((currentSnap.btcPrice - previousSnap.btcPrice) / previousSnap.btcPrice) * 100 : 0;
-      diff.threatFrom = previous.threatLevel;
-      diff.threatTo = current.threatLevel;
-      diff.threatChanged = previous.threatLevel !== current.threatLevel;
+      const prevThreat = normaliseThreatState(previous.threatLevel);
+      const currThreat = normaliseThreatState(current.threatLevel);
+      diff.threatFrom = prevThreat;
+      diff.threatTo = currThreat;
+      diff.threatChanged = prevThreat !== currThreat;
       diff.fearGreedFrom = previousSnap.fearGreed;
       diff.fearGreedTo = currentSnap.fearGreed;
       diff.fearGreedChange = currentSnap.fearGreed - previousSnap.fearGreed;
@@ -61,13 +64,13 @@ export async function GET(request: NextRequest) {
       current: {
         date: current.date.toISOString().split('T')[0],
         headline: current.headline,
-        threatLevel: current.threatLevel,
+        threatLevel: normaliseThreatState(current.threatLevel),
         convictionScore: current.convictionScore,
       },
       previous: previous ? {
         date: previous.date.toISOString().split('T')[0],
         headline: previous.headline,
-        threatLevel: previous.threatLevel,
+        threatLevel: normaliseThreatState(previous.threatLevel),
         convictionScore: previous.convictionScore,
       } : null,
       diff,

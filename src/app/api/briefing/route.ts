@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       briefings: briefings.map((b: any) => ({
         date: new Date(b.date).toISOString().split('T')[0],
         headline: b.headline,
-        threatLevel: b.threatLevel,
+        threatLevel: normaliseThreatState(b.threatLevel),
         convictionScore: b.convictionScore,
         generatedAt: new Date(b.generatedAt).toISOString(),
       })),
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     date: briefing.date.toISOString().split('T')[0],
     headline: briefing.headline,
-    threatLevel: briefing.threatLevel,
+    threatLevel: normaliseThreatState(briefing.threatLevel),
     convictionScore: briefing.convictionScore,
     generatedAt: briefing.generatedAt.toISOString(),
     sections: {

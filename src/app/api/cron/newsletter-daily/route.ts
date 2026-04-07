@@ -30,6 +30,7 @@ import {
   VipBriefingEmail,
   vipBriefingSubject,
 } from '@/emails/VipBriefingEmail';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -228,7 +229,7 @@ export async function GET(request: NextRequest) {
           VipBriefingEmail({
             date: dateFormatted,
             headline: vipBriefing.headline,
-            threatLevel: briefing.threatLevel,
+            threatLevel: normaliseThreatState(briefing.threatLevel),
             convictionScore: score,
             sourcesCount,
             sections: {
@@ -247,14 +248,14 @@ export async function GET(request: NextRequest) {
             alerts: includeAlerts ? memberAlerts : undefined,
           })
         );
-        subject = vipBriefingSubject(dateFormatted, briefing.threatLevel, vipTopics);
+        subject = vipBriefingSubject(dateFormatted, normaliseThreatState(briefing.threatLevel), vipTopics);
       } else {
         // VIP briefing not ready — fall back to general template
         emailHtml = await render(
           GeneralBriefingEmail({
             date: dateFormatted,
             headline: briefing.headline,
-            threatLevel: briefing.threatLevel,
+            threatLevel: normaliseThreatState(briefing.threatLevel),
             convictionScore: score,
             sourcesCount,
             sections: {
@@ -272,7 +273,7 @@ export async function GET(request: NextRequest) {
             alerts: includeAlerts ? memberAlerts : undefined,
           })
         );
-        subject = generalBriefingSubject(dateFormatted, briefing.threatLevel, briefing.headline);
+        subject = generalBriefingSubject(dateFormatted, normaliseThreatState(briefing.threatLevel), briefing.headline);
       }
     } else {
       // ── General / Members: standard template ───────────────────────────
@@ -280,7 +281,7 @@ export async function GET(request: NextRequest) {
         GeneralBriefingEmail({
           date: dateFormatted,
           headline: briefing.headline,
-          threatLevel: briefing.threatLevel,
+          threatLevel: normaliseThreatState(briefing.threatLevel),
           convictionScore: score,
           sourcesCount,
           sections: {

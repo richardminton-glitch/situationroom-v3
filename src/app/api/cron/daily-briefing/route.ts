@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleNewBriefing } from '@/lib/chat/bot';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Auto-post into chat on successful briefing generation
     if (res.ok && data.success && data.headline && data.date) {
       try {
-        await handleNewBriefing(data.headline, data.date, data.threatLevel ?? 'UNKNOWN');
+        await handleNewBriefing(data.headline, data.date, normaliseThreatState(data.threatLevel));
       } catch (botErr) {
         console.warn('[daily-briefing] Bot post failed (non-fatal):', botErr);
       }

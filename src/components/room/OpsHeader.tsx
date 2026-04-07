@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 interface OpsHeaderProps {
   threatLevel: string;
@@ -12,18 +13,13 @@ interface OpsHeaderProps {
   onResetLayout?: () => void;
 }
 
+// Unified ThreatState colours — legacy values are normalised at display time.
 const THREAT_COLORS: Record<string, string> = {
-  // Current unified states (Members Room algorithm)
   QUIET:      '#00d4aa',
   MONITORING: '#00d4aa',
   ELEVATED:   '#cc7722',
   ALERT:      '#cc4444',
   CRITICAL:   '#cc4444',
-  // Legacy states
-  LOW:        '#00d4aa',
-  GUARDED:    '#d4a017',
-  HIGH:       '#cc4444',
-  SEVERE:     '#cc4444',
 };
 
 function formatUTCClock(): string {
@@ -44,7 +40,7 @@ export default function OpsHeader({ threatLevel, operatorCount, isAdmin, editMod
     return () => clearInterval(interval);
   }, []);
 
-  const level = threatLevel.toUpperCase();
+  const level = normaliseThreatState(threatLevel);
   const threatColor = THREAT_COLORS[level] || '#4a6060';
   const isCritical = level === 'CRITICAL';
 

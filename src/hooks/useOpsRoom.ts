@@ -126,7 +126,7 @@ export interface OpsRoomData {
 
 export function useOpsRoom() {
   const [data, setData] = useState<OpsRoomData>({
-    threatLevel: 'LOW',
+    threatLevel: 'QUIET',
     operatorCount: 0,
     assets: [],
     network: null,

@@ -56,41 +56,13 @@ export function extractHeadline(outlookContent: string): { headline: string; cle
 }
 
 /**
- * Compute threat level from news headlines using keyword severity matching.
+ * Legacy keyword-based threat level computation.
+ *
+ * @deprecated Replaced by the unified Members Room decay algorithm.
+ *   See `computeDecayedScore` in `@/lib/room/threatEngine`. This function is
+ *   retained only for historical reference and is no longer called anywhere
+ *   in the runtime.
  */
-const SEVERITY_RULES = [
-  { level: 'critical', regex: /\b(nuclear|wmd|chemical weapon|biological weapon|world war|nato.*attack|invaded|mass casualty|genocide)\b/i, score: 10 },
-  { level: 'severe', regex: /\b(missile attack|airstrike|bombing|troops deployed|war escalat|invasion|blockade|martial law|state of emergency)\b/i, score: 7 },
-  { level: 'high', regex: /\b(killed|dead|death toll|casualties|strike|drone strike|assassination|hostage|siege|artillery)\b/i, score: 5 },
-  { level: 'elevated', regex: /\b(threaten|ultimatum|mobiliz|sanctions|retaliat|provocation|incursion|clash|skirmish|ceasefire.*broke)\b/i, score: 3 },
-  { level: 'guarded', regex: /\b(tension|standoff|dispute|warning|protest|unrest|crisis|emergency)\b/i, score: 1.5 },
-];
-
-export function computeThreatLevel(headlines: string[]): { level: string; score: number } {
-  let totalScore = 0;
-  const items = headlines.slice(0, 50);
-
-  for (let i = 0; i < items.length; i++) {
-    const recencyWeight = 1 - (i / items.length) * 0.5;
-    const title = items[i];
-
-    for (const rule of SEVERITY_RULES) {
-      if (rule.regex.test(title)) {
-        totalScore += rule.score * recencyWeight;
-        break; // Only count highest severity match per headline
-      }
-    }
-  }
-
-  const normalized = Math.min(100, Math.round(totalScore * 1.2));
-
-  let level: string;
-  if (normalized <= 15) level = 'LOW';
-  else if (normalized <= 30) level = 'GUARDED';
-  else if (normalized <= 50) level = 'ELEVATED';
-  else if (normalized <= 70) level = 'HIGH';
-  else if (normalized <= 85) level = 'SEVERE';
-  else level = 'CRITICAL';
-
-  return { level, score: normalized };
+export function computeThreatLevel(): { level: string; score: number } {
+  return { level: 'QUIET', score: 0 };
 }

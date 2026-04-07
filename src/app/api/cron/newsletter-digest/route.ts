@@ -25,6 +25,7 @@ import { createNewsletterToken } from '@/lib/newsletter/tokens';
 import { FreeDigestEmail, freeDigestSubject } from '@/emails/FreeDigestEmail';
 import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
 import { TIER_PRICES_GBP } from '@/lib/auth/tier';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min — batch sends can be slow
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest) {
     const emailHtml = await render(
       FreeDigestEmail({
         weekOf,
-        threatLevel: briefing.threatLevel,
+        threatLevel: normaliseThreatState(briefing.threatLevel),
         outlook: briefing.outlookSection,
         unsubscribeUrl,
         viewInBrowserUrl,
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
       await resend.emails.send({
         from: FROM_ADDRESS,
         to: user.email,
-        subject: freeDigestSubject(weekOf, briefing.threatLevel),
+        subject: freeDigestSubject(weekOf, normaliseThreatState(briefing.threatLevel)),
         html: emailHtml,
       });
 

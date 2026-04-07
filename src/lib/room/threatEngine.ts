@@ -42,6 +42,33 @@ export function getStateForScore(score: number): ThreatState {
   return 'QUIET';
 }
 
+/**
+ * Normalise any historical or legacy threat-state string into the current
+ * unified ThreatState vocabulary used across the site (Members Room algorithm).
+ *
+ * Legacy briefings stored in the DB may carry the older keyword-based labels
+ * (LOW / GUARDED / ELEVATED / HIGH / SEVERE / CRITICAL). This helper maps them
+ * to the current decay-based states so every surface displays consistent
+ * vocabulary.
+ */
+const LEGACY_STATE_MAP: Record<string, ThreatState> = {
+  LOW:        'QUIET',
+  GUARDED:    'MONITORING',
+  ELEVATED:   'ELEVATED',
+  HIGH:       'ALERT',
+  SEVERE:     'ALERT',
+  CRITICAL:   'CRITICAL',
+  QUIET:      'QUIET',
+  MONITORING: 'MONITORING',
+  ALERT:      'ALERT',
+};
+
+export function normaliseThreatState(raw: string | null | undefined): ThreatState {
+  if (!raw) return 'QUIET';
+  const upper = raw.toUpperCase();
+  return LEGACY_STATE_MAP[upper] ?? 'QUIET';
+}
+
 /** State-to-colour mapping */
 export const STATE_COLORS: Record<ThreatState, string> = {
   QUIET: '#00e5c8',

@@ -31,7 +31,7 @@ export function WhatChanged() {
   const [lastSnapshot, setLastSnapshot] = useState<LastSnapshot | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [timeAway, setTimeAway] = useState('');
-  const threatRef = useRef('LOW');
+  const threatRef = useRef('QUIET');
 
   // Load last snapshot on mount
   useEffect(() => {

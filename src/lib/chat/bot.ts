@@ -5,6 +5,7 @@
 
 import { prisma } from '@/lib/db';
 import { callGrokAnalysis } from '@/lib/grok/analysis';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 const BOT_NPUB = 'sitroom-ai';
 const BOT_DISPLAY = 'SitRoom AI';
@@ -102,7 +103,8 @@ export async function handleNewBriefing(headline: string, date: string, threatLe
   if (await isDuplicate('new_briefing', eventKey)) return;
 
   const url = `${SITE_URL}/briefing/${date}`;
-  await postBotMessage(`Today's briefing: ${headline} [THREAT: ${threatLevel}] \u2192 ${url}`, 'new_briefing');
+  const normalisedThreat = normaliseThreatState(threatLevel);
+  await postBotMessage(`Today's briefing: ${headline} [THREAT: ${normalisedThreat}] \u2192 ${url}`, 'new_briefing');
 }
 
 export async function handleWhaleTx(amountBtc: number, direction: string): Promise<void> {

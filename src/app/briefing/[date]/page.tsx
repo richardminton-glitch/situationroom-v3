@@ -8,23 +8,19 @@ import type { Tier } from '@/types';
 import Link from 'next/link';
 import { PersonalBriefingContext } from '@/components/briefing/PersonalBriefingContext';
 import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 interface Props {
   params: Promise<{ date: string }>;
 }
 
+// Unified ThreatState colours — legacy values are normalised at display time.
 const THREAT_COLORS: Record<string, string> = {
-  // Current unified states (Members Room algorithm)
   QUIET:      '#2a6e2a',
   MONITORING: '#5a7e2a',
   ELEVATED:   '#b8860b',
   ALERT:      '#b85020',
   CRITICAL:   '#ff4444',
-  // Legacy states (historical briefings in DB)
-  LOW:        '#2a6e2a',
-  GUARDED:    '#5a7e2a',
-  HIGH:       '#b85020',
-  SEVERE:     '#c04040',
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -36,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!briefing) return { title: 'Briefing Not Found — Situation Room' };
   return {
     title: `${briefing.headline} — Situation Room`,
-    description: `Daily Bitcoin & Macro Intelligence Briefing for ${date}. Threat: ${briefing.threatLevel}. Conviction: ${Math.round(briefing.convictionScore)}/100.`,
+    description: `Daily Bitcoin & Macro Intelligence Briefing for ${date}. Threat: ${normaliseThreatState(briefing.threatLevel)}. Conviction: ${Math.round(briefing.convictionScore)}/100.`,
   };
 }
 
@@ -106,7 +102,8 @@ export default async function BriefingPage({ params }: Props) {
     { key: 'outlook', title: 'V. Outlook',              content: briefing.outlookSection },
   ];
 
-  const threatColor   = THREAT_COLORS[briefing.threatLevel] || 'var(--text-muted)';
+  const normalisedThreat = normaliseThreatState(briefing.threatLevel);
+  const threatColor   = THREAT_COLORS[normalisedThreat] || 'var(--text-muted)';
   const generatedTime = new Date(briefing.generatedAt).toLocaleTimeString('en-GB', {
     hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
   });
@@ -146,7 +143,7 @@ export default async function BriefingPage({ params }: Props) {
       {/* Badges — always visible */}
       <div className="flex items-center gap-3 flex-wrap mb-2">
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: threatColor, border: `1px solid ${threatColor}`, padding: '2px 8px' }}>
-          Threat: {briefing.threatLevel}
+          Threat: {normalisedThreat}
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)', padding: '2px 8px' }}>
           Conviction: {Math.round(briefing.convictionScore)}/100

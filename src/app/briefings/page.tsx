@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import { BriefingSearch } from '@/components/briefings/BriefingSearch';
 import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
+import { normaliseThreatState } from '@/lib/room/threatEngine';
 import type { Tier } from '@/types';
 
 export const metadata: Metadata = {
@@ -14,18 +15,13 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
+// Unified ThreatState colours — legacy values are normalised at display time.
 const THREAT_COLORS: Record<string, string> = {
-  // Current unified states (Members Room algorithm)
   QUIET:      '#2a6e2a',
   MONITORING: '#5a7e2a',
   ELEVATED:   '#b8860b',
   ALERT:      '#b85020',
   CRITICAL:   '#ff4444',
-  // Legacy states (historical briefings in DB)
-  LOW:        '#2a6e2a',
-  GUARDED:    '#5a7e2a',
-  HIGH:       '#b85020',
-  SEVERE:     '#c04040',
 };
 
 export default async function BriefingsArchivePage() {
@@ -103,7 +99,8 @@ export default async function BriefingsArchivePage() {
           {briefings.map((b, i) => {
             const dateStr = b.date.toISOString().split('T')[0];
             const isToday = dateStr === today;
-            const threatColor = THREAT_COLORS[b.threatLevel] || 'var(--text-muted)';
+            const normalisedThreat = normaliseThreatState(b.threatLevel);
+            const threatColor = THREAT_COLORS[normalisedThreat] || 'var(--text-muted)';
 
             return (
               <Link key={dateStr} href={`/briefing/${dateStr}`} style={{ display: 'block', textDecoration: 'none' }} className="group">
@@ -120,7 +117,7 @@ export default async function BriefingsArchivePage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: threatColor }}>
-                          {b.threatLevel}
+                          {normalisedThreat}
                         </span>
                         <span style={{ color: 'var(--border-primary)', fontSize: '8px' }}>·</span>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
