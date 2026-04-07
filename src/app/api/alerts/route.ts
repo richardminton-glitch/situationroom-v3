@@ -5,7 +5,7 @@
  */
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
 
@@ -21,7 +21,7 @@ export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'vip')) return NextResponse.json({ error: 'VIP required' }, { status: 403 });
+  if (!isAdmin(session.user.email) && !hasAccess(userTier, 'vip')) return NextResponse.json({ error: 'VIP required' }, { status: 403 });
 
   const alerts = await (prisma as any).userAlert.findMany({
     where: { userId: session.user.id },
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'vip')) return NextResponse.json({ error: 'VIP required' }, { status: 403 });
+  if (!isAdmin(session.user.email) && !hasAccess(userTier, 'vip')) return NextResponse.json({ error: 'VIP required' }, { status: 403 });
 
   const count = await (prisma as any).userAlert.count({ where: { userId: session.user.id } });
   if (count >= 10) return NextResponse.json({ error: 'Maximum 10 alerts' }, { status: 400 });

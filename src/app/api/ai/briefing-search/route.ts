@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { prisma } from '@/lib/db';
 import { callGrokAnalysis } from '@/lib/grok/analysis';
 import type { Tier } from '@/types';
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
 
   const userTier = (user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'vip')) {
+  if (!isAdmin(user.email) && !hasAccess(userTier, 'vip')) {
     return NextResponse.json({ error: 'VIP tier required' }, { status: 403 });
   }
 

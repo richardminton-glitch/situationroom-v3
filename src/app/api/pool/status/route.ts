@@ -8,7 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { hasAccess } from '@/lib/auth/tier';
+import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { getBotClient, LnmV3Client } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
@@ -35,8 +35,9 @@ export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Admins bypass tier gate regardless of their tier value
   const userTier = (session.user.tier as Tier) ?? 'free';
-  if (!hasAccess(userTier, 'members')) {
+  if (!isAdmin(session.user.email) && !hasAccess(userTier, 'members')) {
     return NextResponse.json({ error: 'Members tier required' }, { status: 403 });
   }
 
