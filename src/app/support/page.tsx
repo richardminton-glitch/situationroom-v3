@@ -44,7 +44,7 @@ export default function SupportPage() {
             'Full Overview & Full Data dashboards',
             'Situation Map — global intelligence view',
             'Briefing outlook section + 7-day archive',
-            'Newsletter signup — daily or weekly digest',
+            'Weekly newsletter digest (Sundays)',
             'Live BTC price, conviction score & threat level',
             'Fear & Greed, hash rate, MVRV & macro data',
           ], cta: 'SIGN UP' },
