@@ -371,61 +371,78 @@ interface ApiUsageRow {
 const API_USAGE_DATA: ApiUsageRow[] = [
   {
     service: 'API-Ninjas',
-    endpoints: '31 (indices, commodities, FX, equities, yields, rates)',
-    refresh: '30m–6h (market-aware)',
-    // ~32 calls/cycle. ~24 cycles/day (market hrs) + ~6 cycles/day (off hrs) = ~16 avg/day
-    // ~16 cycles × 32 = 512/day avg
-    est7d: 3_580,
-    est30d: 15_360,
+    endpoints: '32 batch (indices, commodities, FX, equities, yields, rates) + monthly country refresh',
+    refresh: '30m / 2h / 6h batch (market-aware) + 1× monthly cron',
+    // Batch manager: ~32 calls/cycle, market-aware TTL.
+    //   Mon–Fri market hours (6.5 h, 30 min TTL):  13 cycles × 32 = 416/day
+    //   Mon–Fri other      (17.5 h, 2 h TTL):     ~9 cycles × 32 = 280/day
+    //   Sat–Sun            (24 h, 6 h TTL):        4 cycles × 31 = 124/day (no equities)
+    // Weekday avg ≈ 696/day, weekend ≈ 124/day
+    // Weekly batch ≈ (696 × 5) + (124 × 2) = 3,728
+    // Monthly batch ≈ 3,728 × 4.345 ≈ 16,200
+    // + Country refresh cron: 4 endpoints × 173 countries = ~692 calls, runs 1×/month
+    // Total monthly ≈ 16,200 + 692 ≈ 16,900 (~17% of 100K budget)
+    est7d: 3_900,
+    est30d: 16_900,
     monthlyLimit: 100_000,
     envVar: 'API_NINJAS_KEY',
   },
   {
     service: 'CoinGecko',
-    endpoints: '1 (BTC market)',
-    refresh: '60s cache',
-    // 1 call per 60s = 1440/day
-    est7d: 10_080,
-    est30d: 43_200,
+    endpoints: '3 (BTC market, 30d chart, BTC/GBP rate)',
+    refresh: '90s / 30m / 5m cache',
+    // BTC market 90 s TTL = 960/day
+    // 30d chart   30 min TTL = 48/day
+    // BTC/GBP      5 min TTL = 288/day
+    // Total ≈ 1,296/day = 38,880/month
+    est7d: 9_072,
+    est30d: 38_880,
     monthlyLimit: null,
     envVar: null,
   },
   {
     service: 'Mempool.space',
-    endpoints: '9 (fees, hashrate, mempool, blocks, lightning)',
-    refresh: '30–120s cache',
-    // ~9 endpoints avg 60s = 9 × 1440 = 12,960/day
-    est7d: 90_720,
-    est30d: 388_800,
+    endpoints: '9 (fees, hashrate, mempool, blocks, lightning, whale)',
+    refresh: '60s–10m cache (extended)',
+    // 3 endpoints × 60 s   = 4,320/day  (tip, fees, mempool)
+    // 2 endpoints × 5 min  =   576/day  (hashrate, difficulty)
+    // 1 endpoint  × 10 min =   144/day  (lightning stats)
+    // 1 endpoint  × 5 min  =   288/day  (whale)
+    // 2 endpoints × 5 min  =   576/day  (latest blocks fallback, block txs)
+    // 1 endpoint  × 30 min =    48/day  (chart hashrate)
+    // Total ≈ 5,952/day = ~178K/month
+    est7d: 41_664,
+    est30d: 178_560,
     monthlyLimit: null,
     envVar: null,
   },
   {
     service: 'CoinMetrics',
-    endpoints: '2 (MVRV, exchange flows)',
-    refresh: '15min cache',
-    // 2 × 96/day = 192/day
-    est7d: 1_344,
-    est30d: 5_760,
+    endpoints: '4 (MVRV, exchange flows, chart MVRV, chart exchange)',
+    refresh: '1h cache (extended from 15m)',
+    // 4 series × 24 refreshes/day = 96/day = 2,880/month
+    est7d: 672,
+    est30d: 2_880,
     monthlyLimit: null,
     envVar: null,
   },
   {
     service: 'BRK / Bitview',
     endpoints: '8 routes (CDD, hash ribbon, LTH/STH, URPD, Puell, UTXO, signals)',
-    refresh: '1h cache + daily cron',
-    // 8 routes × 24/day = 192/day (each route may bulk-fetch multiple series)
-    est7d: 1_344,
-    est30d: 5_760,
+    refresh: '1h file cache + daily cron',
+    // 8 routes × ~2 calls × 24 refreshes = 384/day worst case (continuous traffic)
+    // Realistic with intermittent traffic ≈ 200/day
+    est7d: 2_352,
+    est30d: 10_080,
     monthlyLimit: null,
     envVar: null,
   },
   {
     service: 'FRED',
     endpoints: '11 series (CB assets, rates, M2)',
-    refresh: '7d cache, weekly cron',
-    // ~11 calls/week for CB data, ~4 calls/week for M2
-    est7d: 15,
+    refresh: '7d cache + weekly cron',
+    // ~11 calls/week worst case, mostly served from 7-day file cache
+    est7d: 14,
     est30d: 60,
     monthlyLimit: null,
     envVar: 'FRED_API_KEY',
@@ -433,8 +450,8 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   {
     service: 'RSS Feeds',
     endpoints: '17 feeds (Reuters, BBC, BTC Mag, CoinDesk, etc.)',
-    refresh: '5min cache',
-    // 17 feeds × 288/day = 4,896/day
+    refresh: '5min module cache',
+    // 12 cache refreshes/hr × 24 h × 17 feeds = 4,896/day = ~147K/month (free)
     est7d: 34_272,
     est30d: 146_880,
     monthlyLimit: null,
@@ -443,50 +460,59 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   {
     service: 'Alternative.me',
     endpoints: '1 (Fear & Greed)',
-    refresh: '5min cache',
-    // 288/day
-    est7d: 2_016,
-    est30d: 8_640,
+    refresh: '1h cache (extended from 5m)',
+    // F&G publishes once per day; 1 call/hr = 24/day = 720/month
+    est7d: 168,
+    est30d: 720,
     monthlyLimit: null,
     envVar: null,
   },
   {
     service: 'Grok (xAI)',
-    endpoints: '12 (briefing, classification, 9 analysis routes, trading AI)',
-    refresh: 'Daily cron + on-demand + 4h trading',
-    // Daily briefing: 1/day, VIP: 1/day, classifications: ~50/day, analysis: ~5/day, trading: 6/day
-    est7d: 442,
-    est30d: 1_890,
+    endpoints: '12 (briefing, classification, analysis routes, trading AI)',
+    refresh: 'Daily cron + on-demand + hourly trading + RSS classifier',
+    // Daily briefing 1, VIP briefings ~30, RSS classifier ~10,
+    // macro/onchain analysis ~12, trading bot 24, on-demand chat ~5
+    // ≈ 80/day = 2,400/month
+    est7d: 560,
+    est30d: 2_400,
     monthlyLimit: null,
     envVar: 'GROK_API_KEY',
   },
   {
     service: 'Resend',
     endpoints: '1 (email delivery)',
-    refresh: 'Daily + weekly cron',
-    // Depends on subscriber count. Estimate ~20 emails/day
-    est7d: 140,
-    est30d: 600,
+    refresh: 'Daily newsletter + weekly digest + transactional',
+    // Daily newsletter to ~320 paid users + weekly digest ~180 free + ~5/day txn
+    // ≈ 320 + 25 + 5 = 350/day = ~10,500/month (subscriber-dependent)
+    est7d: 2_450,
+    est30d: 10_500,
     monthlyLimit: null,
     envVar: 'RESEND_API_KEY',
   },
   {
     service: 'LNMarkets',
-    endpoints: '7 (invoices, pool status, trading, position sync, ticker)',
-    refresh: 'On-demand + 60s poll + 4h trading + 60s sync',
-    // Pool status: 1440/day, invoices: ~5/day, trading cycle: ~24/day, position sync: ~720/day avg
-    est7d: 15_323,
-    est30d: 65_670,
+    endpoints: '7 (invoices, pool, trading, position sync, ticker)',
+    refresh: 'On-demand + 60s position-sync cron + hourly trading',
+    // Position sync runs every 60 s but only calls LNM if running trades exist (else 0 calls)
+    // Worst case (always running): 1,440/day = 43,200/month
+    // Realistic with intermittent positions ≈ 800/day = 24,000/month
+    // + Trading cycle (hourly): ~5 calls × 24 = 120/day
+    // + Pool status (newsletter cron): 3/day
+    // + Invoices: ~10/month
+    est7d: 6_500,
+    est30d: 28_000,
     monthlyLimit: null,
     envVar: 'LNM_OPS_KEY',
   },
   {
     service: 'Open-Notify',
     endpoints: '1 (ISS position)',
-    refresh: '5s cache',
-    // 17,280/day
-    est7d: 120_960,
-    est30d: 518_400,
+    refresh: '30s server cache (was 5s, no server cache)',
+    // Single in-memory cache, max 2,880 upstream calls/day regardless of viewers
+    // Realistic with continuous globe viewers ≈ 86,400/month
+    est7d: 20_160,
+    est30d: 86_400,
     monthlyLimit: null,
     envVar: null,
   },
@@ -1092,9 +1118,13 @@ export default function AdminPage() {
         </div>
 
         <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
-          Estimates assume continuous uptime with at least one active user refreshing caches.
-          API-Ninjas calls reduce outside US market hours (2-hour TTL) and on weekends (6-hour TTL).
-          BRK and RSS scale with active users but are bounded by server-side caching.
+          Estimates assume continuous uptime with at least one active user keeping caches warm.
+          All external calls go through server-side in-memory caches with TTLs tuned to each
+          source&apos;s natural update cadence — multiple users share one upstream call per TTL window.
+          API-Ninjas uses a market-aware batch manager (30 min during US market hours, 2 h off-hours,
+          6 h weekends) plus a hard stop at 95% of the 100K monthly budget. Position-sync hits LN Markets
+          only when an open trade exists. ISS uses a 30 s server cache so the upstream is hit at most
+          ~2.9K times/day regardless of viewer count.
         </p>
       </div>
 

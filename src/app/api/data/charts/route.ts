@@ -55,27 +55,28 @@ export async function GET() {
   const useLocal    = localBtc.length >= 100 && localFresh;
 
   const results = await Promise.allSettled([
-    // BTC price 30d — skip remote fetch if local history is rich enough
+    // BTC price 30d — skip remote fetch if local history is rich enough.
+    // Chart is rendered statically; 30 min cache is plenty.
     useLocal
       ? Promise.resolve({ prices: localBtc.map((p) => [p.time, p.value] as [number, number]), total_volumes: [] as [number,number][] })
       : fetchJSON<{ prices: [number, number][]; total_volumes: [number, number][] }>(
           'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30',
-          { cacheKey: 'chart-btc30d', cacheDuration: 600_000 }
+          { cacheKey: 'chart-btc30d', cacheDuration: 1_800_000 }
         ),
-    // Hashrate 30d from Mempool.space
+    // Hashrate 30d from Mempool.space — slow-moving series
     fetchJSON<{ hashrates: { avgHashrate: number; timestamp: number }[] }>(
       'https://mempool.space/api/v1/mining/hashrate/1m',
-      { cacheKey: 'chart-hashrate', cacheDuration: 600_000 }
+      { cacheKey: 'chart-hashrate', cacheDuration: 1_800_000 }
     ),
-    // MVRV 90d from CoinMetrics
+    // MVRV 90d from CoinMetrics — daily-frequency data, 1 hour cache
     fetchJSON<{ data: { time: string; CapMVRVCur?: string }[] }>(
       `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=CapMVRVCur&start_time=${new Date(Date.now() - 90 * 86400_000).toISOString().split('T')[0]}&frequency=1d`,
-      { cacheKey: 'chart-mvrv', cacheDuration: 900_000, timeout: 30_000 }
+      { cacheKey: 'chart-mvrv', cacheDuration: 3_600_000, timeout: 30_000 }
     ),
-    // Exchange balance 30d from CoinMetrics
+    // Exchange balance 30d from CoinMetrics — daily-frequency, 1 hour cache
     fetchJSON<{ data: { time: string; SplyExNtv?: string }[] }>(
       `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyExNtv&start_time=${new Date(Date.now() - 30 * 86400_000).toISOString().split('T')[0]}&frequency=1d`,
-      { cacheKey: 'chart-exchange', cacheDuration: 900_000, timeout: 30_000 }
+      { cacheKey: 'chart-exchange', cacheDuration: 3_600_000, timeout: 30_000 }
     ),
   ]);
 

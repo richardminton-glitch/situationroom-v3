@@ -547,7 +547,8 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
     }
 
     fetchISS();
-    const issTimer = setInterval(fetchISS, 10_000);
+    // Server-side cache TTL is 30s — match it to avoid wasted requests.
+    const issTimer = setInterval(fetchISS, 30_000);
 
     return () => {
       cancelAnimationFrame(celestialRaf);

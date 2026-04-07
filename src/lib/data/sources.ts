@@ -24,9 +24,11 @@ export interface BtcMarketData {
 }
 
 export async function fetchBtcMarket(): Promise<BtcMarketData> {
+  // CoinGecko free tier is rate-limited; 90s cache (≈40/h) is well within budget
+  // and matches the natural update cadence of their underlying feed.
   const raw = await fetchJSON<{ market_data: Record<string, Record<string, number>> }>(
     'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false',
-    { cacheKey: 'btcMarket', cacheDuration: 60_000 }
+    { cacheKey: 'btcMarket', cacheDuration: 90_000 }
   );
   const md = raw.market_data;
   return {
@@ -68,23 +70,27 @@ export interface BtcNetworkData {
 }
 
 export async function fetchBtcNetwork(): Promise<BtcNetworkData> {
+  // Cache durations chosen to align with on-chain reality:
+  // - Block height / fees / mempool refresh on each new block (~10 min avg);
+  //   60s cache is enough to catch new blocks while halving polling load.
+  // - Hashrate / difficulty change very slowly; 5 min cache.
   const [tip, fees, mempool, hashrate, diff] = await Promise.all([
-    fetchJSON<number>('https://mempool.space/api/blocks/tip/height', { cacheKey: 'tip', cacheDuration: 30_000 }),
+    fetchJSON<number>('https://mempool.space/api/blocks/tip/height', { cacheKey: 'tip', cacheDuration: 60_000 }),
     fetchJSON<{ fastestFee: number; halfHourFee: number; hourFee: number; economyFee: number; minimumFee: number }>(
       'https://mempool.space/api/v1/fees/recommended',
-      { cacheKey: 'fees', cacheDuration: 30_000 }
+      { cacheKey: 'fees', cacheDuration: 60_000 }
     ),
     fetchJSON<{ vsize: number; count: number; total_fee: number }>(
       'https://mempool.space/api/mempool',
-      { cacheKey: 'mempool', cacheDuration: 30_000 }
+      { cacheKey: 'mempool', cacheDuration: 60_000 }
     ),
     fetchJSON<{ currentHashrate: number; currentDifficulty: number }>(
       'https://mempool.space/api/v1/mining/hashrate/1m',
-      { cacheKey: 'hashrate', cacheDuration: 60_000 }
+      { cacheKey: 'hashrate', cacheDuration: 300_000 }
     ),
     fetchJSON<{ difficultyChange: number; progressPercent: number; remainingBlocks: number; estimatedRetargetDate: number }>(
       'https://mempool.space/api/v1/difficulty-adjustment',
-      { cacheKey: 'diff', cacheDuration: 60_000 }
+      { cacheKey: 'diff', cacheDuration: 300_000 }
     ),
   ]);
 
@@ -132,6 +138,7 @@ export interface LightningData {
 }
 
 export async function fetchLightning(): Promise<LightningData> {
+  // Lightning network stats change very slowly — 10 min cache is plenty.
   const raw = await fetchJSON<{
     latest: {
       channel_count: number; total_capacity: number; node_count: number;
@@ -140,7 +147,7 @@ export async function fetchLightning(): Promise<LightningData> {
     }
   }>(
     'https://mempool.space/api/v1/lightning/statistics/latest',
-    { cacheKey: 'lightning', cacheDuration: 60_000 }
+    { cacheKey: 'lightning', cacheDuration: 600_000 }
   );
   const ln = raw.latest;
   const capBTC = ln.total_capacity / 1e8;
@@ -167,9 +174,11 @@ export interface FearGreedData {
 }
 
 export async function fetchFearGreed(): Promise<FearGreedData> {
+  // Fear & Greed index publishes ONCE per day. 1 hr cache is conservative
+  // and reduces calls from 288/day to 24/day per process.
   const raw = await fetchJSON<{ data: { value: string; value_classification: string }[] }>(
     'https://api.alternative.me/fng/?limit=1&format=json',
-    { cacheKey: 'fearGreed', cacheDuration: 300_000 }
+    { cacheKey: 'fearGreed', cacheDuration: 3_600_000 }
   );
   return {
     value: parseInt(raw.data[0].value, 10),
@@ -195,14 +204,15 @@ export async function fetchOnChain(): Promise<OnChainData> {
   const end = new Date().toISOString().split('T')[0];
   const start = new Date(Date.now() - 3 * 86400_000).toISOString().split('T')[0];
 
+  // CoinMetrics community API is daily-frequency — cache for 1 hour.
   const [flows, mvrv] = await Promise.all([
     fetchJSON<{ data: { FlowInExNtv?: string; FlowOutExNtv?: string; SplyExNtv?: string }[] }>(
       `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=FlowInExNtv,FlowOutExNtv,SplyExNtv&start_time=${start}&end_time=${end}&frequency=1d`,
-      { cacheKey: 'onchainFlows', cacheDuration: 900_000, timeout: 30_000 }
+      { cacheKey: 'onchainFlows', cacheDuration: 3_600_000, timeout: 30_000 }
     ),
     fetchJSON<{ data: { CapMVRVCur?: string }[] }>(
       `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=CapMVRVCur&start_time=${start}&end_time=${end}&frequency=1d`,
-      { cacheKey: 'onchainMvrv', cacheDuration: 900_000, timeout: 30_000 }
+      { cacheKey: 'onchainMvrv', cacheDuration: 3_600_000, timeout: 30_000 }
     ),
   ]);
 
@@ -334,9 +344,10 @@ export async function fetchWhaleTransactions(btcPrice: number): Promise<WhaleTra
   const THRESHOLD_SATS = 10_000_000_000; // 100 BTC
 
   try {
+    // 5 min cache — whale tx feed is shown but not time-critical.
     const recent = await fetchJSON<{ txid: string; value: number; time?: number }[]>(
       'https://mempool.space/api/mempool/recent',
-      { cacheKey: 'whaleMempool', cacheDuration: 120_000 }
+      { cacheKey: 'whaleMempool', cacheDuration: 300_000 }
     );
 
     const whales = recent
@@ -358,13 +369,13 @@ export async function fetchWhaleTransactions(btcPrice: number): Promise<WhaleTra
   try {
     const blocks = await fetchJSON<{ id: string }[]>(
       'https://mempool.space/api/v1/blocks',
-      { cacheKey: 'latestBlocks', cacheDuration: 60_000 }
+      { cacheKey: 'latestBlocks', cacheDuration: 300_000 }
     );
 
     if (blocks.length > 0) {
       const txs = await fetchJSON<{ txid: string; vout: { value: number }[] }[]>(
         `https://mempool.space/api/block/${blocks[0].id}/txs`,
-        { cacheKey: 'blockTxs', cacheDuration: 60_000 }
+        { cacheKey: 'blockTxs', cacheDuration: 300_000 }
       );
 
       return txs
