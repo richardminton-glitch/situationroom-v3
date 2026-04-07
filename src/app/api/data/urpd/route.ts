@@ -24,7 +24,6 @@ export const dynamic = 'force-dynamic';
 
 const ONE_HOUR   = 60 * 60 * 1000;
 const CACHE_FILE = join(process.cwd(), 'data', 'urpd-cache.json');
-const GENESIS_MS = Date.UTC(2009, 0, 3);
 const BIN_SIZE   = 2_500;   // USD per bucket
 const MAX_PRICE  = 135_000; // cap — above current ATH, captures extreme outliers
 

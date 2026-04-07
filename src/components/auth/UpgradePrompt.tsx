@@ -19,7 +19,7 @@ export function UpgradePrompt({
   variant,
   onUpgradeClick,
 }: UpgradePromptProps) {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed] = useState(false);
   const router = useRouter();
   const pricing = usePricing();
   const tierLabel = TIER_LABELS[requiredTier];

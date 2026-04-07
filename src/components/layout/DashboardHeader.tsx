@@ -85,7 +85,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }: DashboardHeaderProps) {
-  const { data, loading } = useData();
+  const { data } = useData();
   const { theme } = useTheme();
   const [utcTime, setUtcTime] = useState('--:--:-- UTC');
   const [lastRefresh, setLastRefresh] = useState('--');

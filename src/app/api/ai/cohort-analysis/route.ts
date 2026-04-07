@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
@@ -64,7 +64,7 @@ Output ONLY valid JSON:
 { "analysis": "2-3 sentence analysis", "dominantCohort": "e.g. 1-2 year holders", "implication": "accumulation|distribution|hodling|capitulation", "confidence": "low|medium|high" }`;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

@@ -5,7 +5,6 @@
  * Slides in from the left over the graph area.
  */
 
-import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";

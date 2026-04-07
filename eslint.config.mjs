@@ -20,6 +20,14 @@ const eslintConfig = defineConfig([
       // Downgrade to warn so the build doesn't fail.
       "@typescript-eslint/no-explicit-any": "warn",
 
+      // Allow `_`-prefixed unused vars/args for intentional placeholders.
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+      }],
+
       // The React Compiler experimental rules below flag idiomatic patterns we
       // use intentionally (initial fetches in effects, ref-as-mailbox, useCallback
       // closures). Downgrade to warn — they remain visible in editors but don't

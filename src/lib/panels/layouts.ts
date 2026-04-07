@@ -24,35 +24,6 @@ export interface DashboardLayout {
   panels: LayoutPanelItem[];
 }
 
-const GAP = 0;
-
-function stack(startX: number, startY: number, panels: { id: string; w: number; h: number; resizable?: boolean }[]): LayoutPanelItem[] {
-  let y = startY;
-  return panels.map((p) => {
-    const item: LayoutPanelItem = {
-      panelId: p.id,
-      x: startX,
-      y,
-      w: p.w,
-      h: p.h,
-      collapsed: false,
-      resizable: p.resizable ?? false,
-    };
-    y += p.h + GAP;
-    return item;
-  });
-}
-
-// ══════════════════════════════════════════════════════════
-// GRID CONSTANTS — all multiples of 44
-// ══════════════════════════════════════════════════════════
-const G = 44;           // grid unit
-const W = G * 6;        // 264px — data column width
-const CW = G * 18;      // 792px — centre column (minimal preset)
-const L = 0;             // left column x
-const C = W;             // centre x = 264
-const R = C + CW;        // right column x = 1056
-
 // ══════════════════════════════════════════════════════════
 // SHARED PRESETS (identical in both themes)
 // ══════════════════════════════════════════════════════════

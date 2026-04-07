@@ -154,7 +154,7 @@ class CNode {
     this.act = Math.max(0, this.act - this.dc());
   }
 
-  draw(ctx: CanvasRenderingContext2D, t: number, threatScore: number, threatState: ThreatState) {
+  draw(ctx: CanvasRenderingContext2D, t: number, threatScore: number, _threatState: ThreatState) {
     const { x, y, r, col, act, phase, type, label } = this;
     const pulseHz = type === 'coord' ? THREAT_SCORE_MAP.coordPulseHz(threatScore) : 0.9;
     const pulse = Math.sin(t * pulseHz * 0.002 + phase) * 0.5 + 0.5;

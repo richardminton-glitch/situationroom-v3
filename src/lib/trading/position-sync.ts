@@ -9,10 +9,6 @@ import { getBotClient } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import { announceExternalClose } from './bot-messages';
 
-function isLong(side: unknown): boolean {
-  return side === 'buy' || side === 'b';
-}
-
 export async function syncPositions(): Promise<{
   synced: number;
   errors: string[];

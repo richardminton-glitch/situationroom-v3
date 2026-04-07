@@ -37,8 +37,6 @@ export default function ThreatAnalysisPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
   const [entries, setEntries] = useState<AnalysisEntry[]>([]);
-  const [serverState, setServerState] = useState<string>('QUIET');
-  const [serverScore, setServerScore] = useState(0);
   const prevCountRef = useRef(0);
 
   // Auto-scroll when not hovered and new entries arrive
@@ -56,8 +54,6 @@ export default function ThreatAnalysisPanel({
       if (!res.ok) return;
       const data = await res.json();
       if (data.analyses) setEntries(data.analyses);
-      if (data.state) setServerState(data.state);
-      if (data.score != null) setServerScore(data.score);
     } catch { /* ignore */ }
   }, []);
 

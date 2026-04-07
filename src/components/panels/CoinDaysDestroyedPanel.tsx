@@ -27,7 +27,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';

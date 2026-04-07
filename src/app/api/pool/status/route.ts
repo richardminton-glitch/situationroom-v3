@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess, isAdmin } from '@/lib/auth/tier';
-import { getBotClient, LnmV3Client } from '@/lib/lnm/client';
+import { getBotClient } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
 

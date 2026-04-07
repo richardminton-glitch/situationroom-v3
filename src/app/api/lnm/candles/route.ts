@@ -17,7 +17,6 @@ let cache: { data: unknown; expiresAt: number } | null = null;
 export async function GET(request: NextRequest) {
   const interval = request.nextUrl.searchParams.get('interval') || '5';
   const limit = request.nextUrl.searchParams.get('limit') || '96';
-  const cacheKey = `${interval}-${limit}`;
 
   if (cache && cache.expiresAt > Date.now()) {
     return NextResponse.json(cache.data, { headers: { 'X-Cache': 'HIT' } });

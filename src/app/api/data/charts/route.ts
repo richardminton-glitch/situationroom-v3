@@ -11,7 +11,6 @@ interface ChartPoint {
 }
 
 const HIST_FILE = path.join(process.cwd(), 'data', 'btc-price-history.ndjson');
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Read BTC price history from the local NDJSON log file.

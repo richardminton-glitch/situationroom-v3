@@ -15,7 +15,7 @@
  * remounting the globe.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DarkGlobe } from '@/components/panels/globes/DarkGlobe';
 import type { SignalArticle } from '@/hooks/useOpsRoom';
 
@@ -23,7 +23,8 @@ type GlobeMode = 'LIVE' | 'MACRO' | 'NETWORK';
 
 interface GlobalTheatreProps {
   eventMarkers: SignalArticle[];
-  flashGeoRef: string | null;
+  /** Optional flash highlight from incoming OpsRoom data — currently unused. */
+  flashGeoRef?: string | null;
 }
 
 // Country → coords lookup (loaded once)
@@ -37,19 +38,6 @@ async function getCountryCoords(): Promise<Record<string, { lat: number; lon: nu
     countryCoords = {};
   }
   return countryCoords!;
-}
-
-// Bitcoin adoption data
-let adoptionData: Record<string, number> | null = null;
-async function getBitcoinAdoption(): Promise<Record<string, number>> {
-  if (adoptionData) return adoptionData;
-  try {
-    const res = await fetch('/geo/bitcoin-adoption.json');
-    adoptionData = await res.json();
-  } catch {
-    adoptionData = {};
-  }
-  return adoptionData!;
 }
 
 // CPI color bands
@@ -113,7 +101,7 @@ const ADOPTION_COORDS: Record<string, { lat: number; lon: number }> = {
   UA: { lat: 50.4, lon: 30.5 }, VE: { lat: 10.5, lon: -66.9 },
 };
 
-export default function GlobalTheatre({ eventMarkers, flashGeoRef }: GlobalTheatreProps) {
+export default function GlobalTheatre({ eventMarkers }: GlobalTheatreProps) {
   const [mode, setMode] = useState<GlobeMode>('LIVE');
   const [liveFlash, setLiveFlash] = useState(false);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);

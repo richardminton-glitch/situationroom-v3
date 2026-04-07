@@ -52,7 +52,7 @@ export default function MembersRoom() {
   const { data, sendMessage } = useOpsRoom();
 
   // Agent event system
-  const { events, connected, lastEventTime } = useAgentEvents();
+  const { events, connected } = useAgentEvents();
   const threat = useThreatScore(events);
   const { entries: logEntries } = useAgentLog(events, threat.state);
 

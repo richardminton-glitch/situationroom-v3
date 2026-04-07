@@ -54,19 +54,6 @@ export function DashboardGrid({ layout, onLayoutChange, editable = false }: Dash
     [layout, onLayoutChange]
   );
 
-  const toggleCollapse = useCallback(
-    (panelId: string) => {
-      const panel = layout.find((p) => p.panelId === panelId);
-      if (!panel || !onLayoutChange) return;
-      onLayoutChange(
-        layout.map((p) =>
-          p.panelId === panelId ? { ...p, collapsed: !p.collapsed, h: p.collapsed ? (getPanelById(panelId)?.defaultH ?? 200) : 44 } : p
-        )
-      );
-    },
-    [layout, onLayoutChange]
-  );
-
   return (
     <div
       ref={canvasRef}

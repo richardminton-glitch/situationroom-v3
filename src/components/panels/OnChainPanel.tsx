@@ -1,7 +1,7 @@
 'use client';
 
 import { useData } from '@/components/layout/DataProvider';
-import { DataRow, formatPrice, formatLargeNumber, pctColor, PanelLoading } from './shared';
+import { DataRow, formatPrice, formatLargeNumber, PanelLoading } from './shared';
 
 export function OnChainPanel() {
   const { data, loading } = useData();

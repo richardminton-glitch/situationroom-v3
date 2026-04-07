@@ -9,7 +9,7 @@ interface SignalInterpreterResponse {
 }
 
 export function SignalInterpreterPanel() {
-  const { userTier, canAccess } = useTier();
+  const { canAccess } = useTier();
   const [data, setData] = useState<SignalInterpreterResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

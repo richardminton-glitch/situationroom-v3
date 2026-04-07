@@ -10,7 +10,7 @@
  * Theme: parchment / dark via useTheme() + chartColors() + CSS variable fonts
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   BarChart,
   Bar,
@@ -18,7 +18,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
@@ -129,7 +128,7 @@ function CustomTooltip({ active, payload, label, isDark, colors }: CustomTooltip
       {/* Reverse so longest-held is at top */}
       {[...(payload as unknown as { name: string; value: number; dataKey: string }[])]
         .reverse()
-        .map((p, i, arr) => {
+        .map((p, i) => {
           const colorIndex = BAND_LABELS.length - 1 - i;
           const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : '0.0';
           return (

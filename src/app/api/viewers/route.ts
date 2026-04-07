@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth/session';
 
@@ -39,7 +39,7 @@ function countMembers(): number {
 }
 
 // POST /api/viewers — register heartbeat, return current counts
-export async function POST(_req: NextRequest) {
+export async function POST() {
   const headersList = await headers();
   const ip = headersList.get('x-real-ip')
     ?? headersList.get('x-forwarded-for')?.split(',')[0].trim()

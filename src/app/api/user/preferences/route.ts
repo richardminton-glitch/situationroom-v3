@@ -24,7 +24,6 @@ export async function GET() {
 }
 
 const ALLOWED_FIELDS = ['displayName', 'timezone', 'currencyPref', 'themePref', 'isPublic', 'tvChartState'] as const;
-type AllowedField = typeof ALLOWED_FIELDS[number];
 
 export async function PATCH(request: NextRequest) {
   try {

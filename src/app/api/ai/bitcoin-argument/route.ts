@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
@@ -9,7 +9,7 @@ import type { Tier } from '@/types';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userTier = (session.user.tier as Tier) ?? 'free';

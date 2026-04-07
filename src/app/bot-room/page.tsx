@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
-import { TIER_LABELS, TIER_BILLING } from '@/lib/auth/tier';
+import { TIER_LABELS } from '@/lib/auth/tier';
 import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import Link from 'next/link';
 import { TopBar } from '@/components/bot-room/TopBar';

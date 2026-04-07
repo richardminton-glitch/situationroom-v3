@@ -36,10 +36,6 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function countBaselines(): number {
-  return PRICE_CATEGORIES.reduce((s, c) => s + Object.keys(prevDayPrices[c]).length, 0);
-}
-
 /** Debounced save — batches multiple new baselines into one DB write */
 function scheduleSave() {
   if (saveTimer) return;

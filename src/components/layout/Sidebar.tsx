@@ -16,7 +16,6 @@ import {
   Newspaper,
   MapTrifold,
   Crosshair,
-  ChartLineUp,
   UserCircle,
   Heart,
   GearSix,

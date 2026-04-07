@@ -206,11 +206,6 @@ export function URPDPanel() {
     fill:       C.axisTick,
   } as const;
 
-  // Today's date for header
-  const todayLabel = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
-  });
-
   return (
     <div
       style={{

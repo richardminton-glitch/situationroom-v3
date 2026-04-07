@@ -11,7 +11,6 @@ import crypto from 'crypto';
 import { generateSecretKey, getPublicKey } from 'nostr-tools';
 
 const ALGO = 'aes-256-gcm';
-const KEY_LEN = 32;
 const IV_LEN = 12;
 
 function getEncryptionKey(): Buffer {

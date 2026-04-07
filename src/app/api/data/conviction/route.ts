@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { calculateConviction, type ConvictionInputs } from '@/lib/conviction/engine';
-import { fetchBtcMarket, fetchFearGreed, fetchOnChain, fetchBtcNetwork, fetchCentralBankRates } from '@/lib/data/sources';
+import { fetchBtcMarket, fetchFearGreed, fetchOnChain, fetchCentralBankRates } from '@/lib/data/sources';
 import { fetchJSON } from '@/lib/data/fetcher';
 
 export const dynamic = 'force-dynamic';

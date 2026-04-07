@@ -128,9 +128,9 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
     svgRef.current = svg.node();
     const g = svg.append('g');
     // Night terminator layer — between countries and markers
-    const nightLayer = svg.append('g').attr('class', 'night-layer').style('pointer-events', 'none');
+    svg.append('g').attr('class', 'night-layer').style('pointer-events', 'none');
     // Markers group — on top of everything
-    const markersGroup = svg.append('g').attr('class', 'markers-layer');
+    svg.append('g').attr('class', 'markers-layer');
 
     const projection = d3.geoOrthographic()
       .scale(radius)
@@ -516,10 +516,6 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
       moonG.select('.moon-shadow').attr('cx', 3 * phase.phase);
       moonG.select('.moon-label').text(`☽ ${phase.name}`);
     }
-
-    // Hook into the existing redraw
-    const origRedraw = redraw;
-    const wrappedRedraw = () => { origRedraw(); repositionCelestial(); };
 
     // Patch the auto-rotate spin to call our reposition
     // We do this by running reposition on a fast interval synced to animation

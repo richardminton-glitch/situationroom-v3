@@ -9,7 +9,7 @@
  * Each tier has its own panelId in signalAnnotation for separate caching.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { hasAccess, isAdmin } from '@/lib/auth/tier';
 import { checkAiRateLimit, incrementAiUsage } from '@/lib/auth/rate-limit';
@@ -319,7 +319,7 @@ export async function GET() {
 
 // ── POST — generate fresh analysis for user's tier ──────────────────────────
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

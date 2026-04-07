@@ -10,7 +10,6 @@ import { prisma } from '@/lib/db';
 import {
   announceTradeOpen,
   announceTradeClose,
-  announceGuardrailBlock,
 } from './bot-messages';
 import type { AIDecision, PoolState, ExecutionResult } from './types';
 

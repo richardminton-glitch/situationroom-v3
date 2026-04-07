@@ -144,7 +144,7 @@ export function GeneralBriefingEmail({
               [hashrate, 'MVRV', mvrv, 'BLOCK HEIGHT', blockHeight],
               [sp500,    'VIX', vix, 'GOLD', gold],
               [dxy,      'US 10Y', us10y, 'OIL', oil],
-            ].map(([v1, l2, v2, l3, v3], ri) => {
+            ].map(([v1, , v2, , v3], ri) => {
               const labels = ri === 0
                 ? ['BTC PRICE', '24H CHANGE', 'FEAR & GREED']
                 : ri === 1
