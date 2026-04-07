@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyPin } from '@/lib/auth/pin';
 import { createSession } from '@/lib/auth/session';
+import { sendWelcomeEmail, isRealEmail } from '@/lib/newsletter/lifecycle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +29,19 @@ export async function POST(request: NextRequest) {
     }
 
     await createSession(user.id);
+
+    // First successful verification — send the welcome / newsletter confirm email.
+    // Only fires once per user (gated by welcomeEmailSentAt) and only for real
+    // email addresses (not the `nostr:{hex}` placeholder).
+    if (!user.welcomeEmailSentAt && isRealEmail(user.email)) {
+      const sent = await sendWelcomeEmail(user.id, user.email);
+      if (sent) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data:  { welcomeEmailSentAt: new Date() },
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

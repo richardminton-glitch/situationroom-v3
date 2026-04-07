@@ -59,7 +59,7 @@ export default function AccountPage() {
 
   // Newsletter state
   const [newsletterEnabled, setNewsletterEnabled] = useState(true);
-  const [frequency, setFrequency] = useState('daily');
+  const [frequency, setFrequency] = useState('weekly');
   const [nlLoading, setNlLoading] = useState(false);
   const [nlSaved, setNlSaved] = useState(false);
 
@@ -105,7 +105,7 @@ export default function AccountPage() {
       .then((data) => {
         if (data) {
           setNewsletterEnabled(data.newsletterEnabled ?? true);
-          setFrequency(data.newsletterFrequency ?? 'daily');
+          setFrequency(data.newsletterFrequency ?? 'weekly');
           setVipTopics(data.newsletterVipTopics ?? []);
         }
       })
@@ -458,8 +458,13 @@ export default function AccountPage() {
       {/* ── Newsletter ── */}
       <div style={sectionStyle}>
         <span style={labelStyle}>Newsletter</span>
-        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '8px' }}>
           Intelligence briefings delivered to your inbox.
+        </p>
+        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
+          {canDaily
+            ? 'New accounts default to weekly — switch to daily below to receive the full briefing every morning.'
+            : 'New accounts default to the free Sunday digest. Daily briefings unlock from the General tier.'}
         </p>
 
         <div style={{ display: 'flex', gap: '10px' }}>

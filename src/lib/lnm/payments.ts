@@ -16,6 +16,13 @@
 import { prisma } from '@/lib/db';
 import type { Tier } from '@/types';
 import { syncRelayForUser, getActiveNpub } from '@/lib/nostr/relay';
+import {
+  sendUpgradeConfirmationEmail,
+  sendExpiryWarningEmail,
+  expiryWarningPlaintext,
+} from '@/lib/newsletter/lifecycle';
+import { sendNostrDm } from '@/lib/nostr/dm';
+import { TIER_LABELS } from '@/lib/auth/tier';
 
 const SUBSCRIPTION_TIERS = ['general', 'members', 'vip'] as const;
 type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
@@ -95,21 +102,34 @@ export async function activateTier(
       ? new Date(now.getTime() + TRIAL_DURATION_MS)
       : new Date(now.getTime() + SUBSCRIPTION_DURATION_MS);
 
-  const updatedUser = await prisma.$transaction(async (tx) => {
+  const { user: updatedUser, payment } = await prisma.$transaction(async (tx) => {
     const u = await tx.user.update({
       where: { id: userId },
-      data: { tier, subscriptionActivatedAt: now, subscriptionExpiresAt: expiresAt },
+      data: {
+        tier,
+        subscriptionActivatedAt: now,
+        subscriptionExpiresAt:   expiresAt,
+        // Clear the warning flag so the next renewal cycle can warn again.
+        expiryWarningSentAt:     null,
+      },
     });
-    await tx.subscriptionPayment.update({
+    const p = await tx.subscriptionPayment.update({
       where: { id: paymentId },
       data: { status: 'confirmed', activatedAt: now, expiresAt },
     });
-    return u;
+    return { user: u, payment: p };
   });
 
   // Sync relay whitelist (Members+ get posting access)
   const npub = getActiveNpub(updatedUser);
   await syncRelayForUser(userId, npub, tier);
+
+  // Send upgrade confirmation email — non-blocking, swallow errors
+  await sendUpgradeConfirmationEmail(updatedUser.email, tier, {
+    duration,
+    expiresAt,
+    amountSats: payment.amountSats,
+  });
 
   const label = duration === 'lifetime' ? 'lifetime' : expiresAt!.toISOString();
   console.log(`[Payments] Activated ${tier} (${duration}) for user ${userId}, expires ${label}`);
@@ -129,18 +149,58 @@ export async function processExpiredSubscriptions(): Promise<void> {
   const now = new Date();
   const warningThreshold = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
 
-  // Users whose subscription expires within 3 days — send warning
+  // Users whose subscription expires within 3 days *and* haven't already been
+  // warned for this billing cycle. The flag is cleared inside activateTier on
+  // every renewal so the next cycle starts fresh.
   const soonExpiring = await prisma.user.findMany({
     where: {
-      tier:                    { not: 'free' },
-      subscriptionExpiresAt:   { lte: warningThreshold, gte: now },
+      tier:                  { not: 'free' },
+      subscriptionExpiresAt: { lte: warningThreshold, gte: now },
+      expiryWarningSentAt:   null,
     },
-    select: { id: true, email: true, nostrNpub: true, tier: true, subscriptionExpiresAt: true },
+    select: {
+      id:                    true,
+      email:                 true,
+      nostrNpub:             true,
+      tier:                  true,
+      subscriptionExpiresAt: true,
+    },
   });
 
   for (const user of soonExpiring) {
-    // TODO Phase 5.1: send Nostr DM warning if user.nostrNpub is set
-    console.log(`[Renewal] Warning: user ${user.id} (${user.tier}) expires ${user.subscriptionExpiresAt?.toISOString()}`);
+    if (!user.subscriptionExpiresAt) continue;
+
+    const tier = user.tier as Tier;
+    const tierLabel = TIER_LABELS[tier] ?? tier;
+    const daysRemaining = Math.max(
+      1,
+      Math.round((user.subscriptionExpiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)),
+    );
+
+    // 1. Email — only fires if user has a real email (not the nostr: placeholder).
+    const emailSent = await sendExpiryWarningEmail(user.email, tier, user.subscriptionExpiresAt);
+
+    // 2. Nostr DM — only fires if user has a native npub *and* the bot relay is configured.
+    let dmSent = false;
+    if (user.nostrNpub) {
+      dmSent = await sendNostrDm(
+        user.nostrNpub,
+        expiryWarningPlaintext(tierLabel, user.subscriptionExpiresAt, daysRemaining),
+      );
+    }
+
+    // 3. Mark as warned so the next cron tick doesn't re-send.
+    //    Set the flag even if both channels failed — otherwise we'd loop on
+    //    persistent failures (e.g. invalid email). Logged for visibility.
+    await prisma.user.update({
+      where: { id: user.id },
+      data:  { expiryWarningSentAt: now },
+    });
+
+    console.log(
+      `[Renewal] Warned user ${user.id} (${tier}) — expires ${user.subscriptionExpiresAt.toISOString()}, ` +
+      `email=${emailSent ? 'sent' : 'skipped'}, dm=${dmSent ? 'sent' : 'skipped'}`,
+    );
   }
 
   // Users whose subscription has expired — downgrade to free

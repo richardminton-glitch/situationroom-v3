@@ -35,11 +35,17 @@ model User {
 
   // ── Newsletter ───────────────────────────────────────────────────────────────
   newsletterEnabled   Boolean   @default(true)  @map("newsletter_enabled")
-  newsletterFrequency String    @default("daily") @map("newsletter_frequency")  // 'daily' | 'weekly'
+  newsletterFrequency String    @default("weekly") @map("newsletter_frequency")  // 'daily' | 'weekly'
   newsletterDay       Int       @default(0) @map("newsletter_day")  // 0=Sunday … 6=Saturday
   newsletterVipTopics String[]  @map("newsletter_vip_topics")
   newsletterLastSent  DateTime? @map("newsletter_last_sent")
   newsletterConfirmedAt DateTime? @map("newsletter_confirmed_at")
+
+  // ── Lifecycle emails ────────────────────────────────────────────────────────
+  welcomeEmailSentAt   DateTime? @map("welcome_email_sent_at")
+  // Set when the 3-day expiry warning has been sent for the *current* subscription.
+  // Reset to null inside activateTier so renewals get a fresh warning next cycle.
+  expiryWarningSentAt  DateTime? @map("expiry_warning_sent_at")
 
   // ── Portfolio (VIP) ─────────────────────────────────────────────────────────
   portfolioCostBasis   Float? @map("portfolio_cost_basis")
