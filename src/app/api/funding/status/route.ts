@@ -84,11 +84,14 @@ export async function GET() {
     const satsPerGbp = await getLiveSatsPerGbp();
     const costs = computeCosts(0.79);
 
-    // Fetch ALL confirmed payments (for all-time totals + runway)
+    // Fetch ALL confirmed payments (for all-time totals + runway).
+    // Order by createdAt — activatedAt can be backdated on legacy imports
+    // (e.g. donations carried over from V1/V2), which would push the runway
+    // anchor years into the past and permanently zero out the balance.
     const allPayments = await prisma.subscriptionPayment.findMany({
       where: { status: 'confirmed' },
-      select: { tier: true, amountSats: true, activatedAt: true },
-      orderBy: { activatedAt: 'asc' },
+      select: { tier: true, amountSats: true, activatedAt: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
     });
 
     let allTimeSats = 0;
@@ -121,11 +124,15 @@ export async function GET() {
     // ── Runway calculation ──────────────────────────────────────────────────
     // Total revenue in GBP (all time)
     const allTimeRevenueGBP = allTimeSats / satsPerGbp;
-    // First payment date (project funding start), or fallback to now
-    const firstPaymentDate = allPayments.length > 0 && allPayments[0].activatedAt
-      ? allPayments[0].activatedAt
+    // First payment date — when the *earliest* payment row was inserted into
+    // our DB. We deliberately use createdAt (not activatedAt) so that legacy
+    // imports with backdated activation timestamps don't push the project
+    // start years into the past and permanently zero the balance.
+    const firstPaymentDate = allPayments.length > 0
+      ? allPayments[0].createdAt
       : now;
-    // Months elapsed since first payment
+    // Months elapsed since first payment (clamped to ≥ 1 so a single-day
+    // project doesn't divide by zero or claim infinite runway).
     const msElapsed = now.getTime() - firstPaymentDate.getTime();
     const monthsElapsed = Math.max(1, msElapsed / (1000 * 60 * 60 * 24 * 30.44));
     // Total costs incurred since first payment
@@ -134,7 +141,7 @@ export async function GET() {
     const balanceGBP = allTimeRevenueGBP - costsIncurred;
     // Runway: how many months from now the balance covers
     const runwayMonths = costs.total > 0 ? Math.max(0, balanceGBP / costs.total) : 0;
-    // Runway end date
+    // Runway end date — moves forward as revenue increases
     const runwayEndDate = new Date(now.getTime() + runwayMonths * 30.44 * 24 * 60 * 60 * 1000);
 
     // Active member counts
