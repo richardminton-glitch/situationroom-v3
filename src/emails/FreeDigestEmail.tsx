@@ -9,6 +9,7 @@ import {
   Html, Head, Body, Container, Section,
   Text, Hr, Link, Row, Column,
 } from '@react-email/components';
+import { renderBriefingHtml } from './shared/briefingMarkdown';
 
 export interface FreeDigestEmailProps {
   weekOf: string;           // e.g. "3 April 2026"
@@ -192,9 +193,10 @@ export function FreeDigestEmail({
             <Text style={{ fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 8px' }}>
               WEEKLY OUTLOOK
             </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0' }}>
-              {outlook}
-            </Text>
+            <Text
+              style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0' }}
+              dangerouslySetInnerHTML={{ __html: renderBriefingHtml(outlook) }}
+            />
           </Section>
 
           {/* Upgrade CTA */}

@@ -83,12 +83,9 @@ const valueStyle = {
   margin: '0', fontWeight: 'bold' as const,
 };
 
-/** Convert markdown **bold** to <strong> and strip other markdown */
-function renderSection(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
-}
+// Briefing-section markdown rendering moved to ./shared/briefingMarkdown.ts
+// (see note in GeneralBriefingEmail for the full list of supported tokens).
+import { renderBriefingHtml } from './shared/briefingMarkdown';
 
 const SECTION_TITLES = [
   { key: 'market',  label: 'I. Market Conditions' },
@@ -189,7 +186,7 @@ export function VipBriefingEmail({
               </Text>
               <Text
                 style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0 0 16px' }}
-                dangerouslySetInnerHTML={{ __html: renderSection(sections[key as keyof typeof sections]) }}
+                dangerouslySetInnerHTML={{ __html: renderBriefingHtml(sections[key as keyof typeof sections]) }}
               />
               <Hr style={{ borderColor: C.dimBorder, margin: '0' }} />
             </Section>
