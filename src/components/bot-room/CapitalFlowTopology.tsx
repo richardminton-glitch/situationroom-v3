@@ -157,8 +157,9 @@ export function CapitalFlowTopology() {
     const container = containerRef.current;
     const canvas    = canvasRef.current;
     if (!container || !canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctxOrNull = canvas.getContext('2d');
+    if (!ctxOrNull) return;
+    const ctx: CanvasRenderingContext2D = ctxOrNull;
 
     let w = 0, h = 0;
 

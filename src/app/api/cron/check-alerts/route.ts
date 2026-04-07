@@ -91,10 +91,15 @@ export async function GET(request: NextRequest) {
   // Check which trigger types are needed so we only fetch data we need
   const triggerTypes = new Set(alerts.map((a) => a.triggerType));
 
-  // Fetch LTH and hash ribbon data only if needed
-  let lthPct: number | null = null;
-  let hashRibbonSignal: string | null = null;
-  let recentTrades: { decision: string; createdAt: Date }[] = [];
+  // Fetch LTH and hash ribbon data only if needed.
+  // Use a state object so TypeScript doesn't collapse the closure-assigned
+  // values to `never` via control-flow narrowing.
+  interface FetchState {
+    lthPct: number | null;
+    hashRibbonSignal: string | null;
+    recentTrades: { decision: string; createdAt: Date }[];
+  }
+  const state: FetchState = { lthPct: null, hashRibbonSignal: null, recentTrades: [] };
 
   const fetches: Promise<void>[] = [];
 
@@ -102,7 +107,7 @@ export async function GET(request: NextRequest) {
     fetches.push(
       fetchJSON<{ date: string; lth: number; sth: number; lthPct: number }[]>('/api/data/lth-sth')
         .then((data) => {
-          if (data && data.length > 0) lthPct = data[data.length - 1].lthPct;
+          if (data && data.length > 0) state.lthPct = data[data.length - 1].lthPct;
         }),
     );
   }
@@ -111,7 +116,7 @@ export async function GET(request: NextRequest) {
     fetches.push(
       fetchJSON<{ signal: string }>('/api/data/hash-ribbon')
         .then((data) => {
-          if (data) hashRibbonSignal = data.signal;
+          if (data) state.hashRibbonSignal = data.signal;
         }),
     );
   }
@@ -127,11 +132,12 @@ export async function GET(request: NextRequest) {
         select: { decision: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
         take: 5,
-      }).then((trades) => { recentTrades = trades; }),
+      }).then((trades) => { state.recentTrades = trades; }),
     );
   }
 
   await Promise.all(fetches);
+  const { lthPct, hashRibbonSignal, recentTrades } = state;
 
   // Get user emails for alerts in bulk
   const userIds = [...new Set(alerts.map((a) => a.userId))];

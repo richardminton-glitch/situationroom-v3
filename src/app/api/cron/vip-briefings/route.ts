@@ -28,7 +28,10 @@ export async function GET(request: NextRequest) {
     select: { id: true },
   });
 
-  const baseUrl = request.nextUrl.origin;
+  // Use HTTP localhost for internal calls — public HTTPS via the same node
+  // process can fail with ERR_SSL_WRONG_VERSION_NUMBER on loopback.
+  const baseUrl = process.env.INTERNAL_BASE_URL
+    ?? `http://localhost:${process.env.PORT ?? '3000'}`;
   const results = { ok: 0, skipped: 0, failed: 0 };
 
   for (const user of vipUsers) {

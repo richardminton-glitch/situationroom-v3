@@ -206,7 +206,7 @@ export function PuellMultiplePanel() {
 
       {/* Callout */}
       <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', lineHeight: 1.5, padding: '6px 10px', borderTop: '1px solid var(--border-subtle)', margin: 0 }}>
-        Puell Multiple compares today's miner revenue to the 365-day average. Values below 0.5 indicate
+        Puell Multiple compares today&apos;s miner revenue to the 365-day average. Values below 0.5 indicate
         deep miner capitulation — historically the strongest accumulation windows in Bitcoin cycles.
       </p>
     </div>

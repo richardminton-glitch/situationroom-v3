@@ -104,6 +104,10 @@ function statusText(inProfit: number, isDark: boolean): { text: string; color: s
 interface CustomTooltipProps extends TooltipProps<number, string> {
   isDark: boolean;
   totalSupply: number;
+  // recharts v3 strips these from TooltipProps; they're injected by Tooltip via cloneElement
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: number; payload?: URPDBucket }>;
+  label?: string | number;
 }
 
 function CustomTooltip({ active, payload, isDark, totalSupply }: CustomTooltipProps) {
@@ -303,15 +307,7 @@ export function URPDPanel() {
               tickFormatter={(v: number) => formatUSD(v)}
             />
             <Tooltip
-              content={
-                <CustomTooltip
-                  isDark={isDark}
-                  totalSupply={totalSupply}
-                  active={undefined}
-                  payload={undefined}
-                  label={undefined}
-                />
-              }
+              content={<CustomTooltip isDark={isDark} totalSupply={totalSupply} />}
               cursor={{ fill: C.crosshair }}
             />
 
@@ -406,7 +402,7 @@ export function URPDPanel() {
           flexShrink:    0,
         }}
       >
-        Dense supply clusters act as support and resistance. The realised price is the market's true average cost — price above it means the average holder is in profit.
+        Dense supply clusters act as support and resistance. The realised price is the market&apos;s true average cost — price above it means the average holder is in profit.
       </div>
     </div>
   );

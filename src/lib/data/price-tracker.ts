@@ -175,11 +175,11 @@ function seedFromFileCaches(): boolean {
         for (const [key, val] of Object.entries(section)) {
           if (
             val && typeof val === 'object' && 'price' in (val as Record<string, unknown>) &&
-            typeof (val as Record<string, unknown>).price === 'number' &&
-            (val as Record<string, unknown>).price! > 0 &&
+            typeof (val as Record<string, number>).price === 'number' &&
+            (val as Record<string, number>).price > 0 &&
             !prevDayPrices[cat][key]
           ) {
-            prevDayPrices[cat][key] = (val as Record<string, unknown>).price as number;
+            prevDayPrices[cat][key] = (val as Record<string, number>).price;
             totalSeeded++;
           }
         }

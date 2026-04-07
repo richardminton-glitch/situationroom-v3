@@ -4,7 +4,7 @@
  * Hash Ribbon signal: 30d MA crossing above 60d MA = miner capitulation recovery.
  *
  * Data sources (in priority order):
- *  1. BRK (bitview.space) — `hashrate` series (H/s, daily)
+ *  1. BRK (bitview.space) — `hash_rate` series (H/s, daily)
  *  2. Blockchain.info charts API — fallback
  *
  * Cache: file-based via shared BRK helper, 1-hour TTL.
@@ -45,8 +45,8 @@ function sma(values: number[], window: number): number[] {
 // ── BRK fetch ─────────────────────────────────────────────────────────────────
 
 function processHashrateData(seriesData: Record<string, number[]>, dates: string[]): HashRibbonResponse {
-  const rawData = seriesData['hashrate'] ?? [];
-  if (!rawData.length) throw new Error('BRK: empty hashrate series');
+  const rawData = seriesData['hash_rate'] ?? seriesData['hashrate'] ?? [];
+  if (!rawData.length) throw new Error('BRK: empty hash_rate series');
 
   const rawEH    = rawData.map((v) => (v ?? 0) / 1e18);
   const ma30vals = sma(rawEH, 30);
@@ -76,7 +76,7 @@ function processHashrateData(seriesData: Record<string, number[]>, dates: string
 
 async function fetchFromBRK(): Promise<HashRibbonResponse> {
   const raw = await fetchBrkSeries({
-    series: ['hashrate'],
+    series: ['hash_rate'],
     days: FETCH_DAYS,
     cacheFile: 'hash-ribbon-raw-cache.json',
   });

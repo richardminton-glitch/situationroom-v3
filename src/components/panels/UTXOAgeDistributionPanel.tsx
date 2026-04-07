@@ -94,6 +94,10 @@ function formatDateLabel(iso: string): string {
 interface CustomTooltipProps extends TooltipProps<number, string> {
   isDark: boolean;
   colors: string[];
+  // recharts v3 strips these from TooltipProps; they're injected by Tooltip via cloneElement
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: number; name?: string; color?: string; dataKey?: string }>;
+  label?: string | number;
 }
 
 function CustomTooltip({ active, payload, label, isDark, colors }: CustomTooltipProps) {
@@ -350,15 +354,7 @@ export function UTXOAgeDistributionPanel() {
               tickFormatter={formatBTC}
             />
             <Tooltip
-              content={
-                <CustomTooltip
-                  isDark={isDark}
-                  colors={colors}
-                  active={undefined}
-                  payload={undefined}
-                  label={undefined}
-                />
-              }
+              content={<CustomTooltip isDark={isDark} colors={colors} />}
               cursor={{ fill: C.crosshair }}
             />
             {BAND_LABELS.map((label, i) => (

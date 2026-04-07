@@ -75,6 +75,10 @@ function lineColorForPct(pct: number, isDark = false): string {
 
 interface CustomTooltipProps extends TooltipProps<number, string> {
   isDark: boolean;
+  // recharts v3 strips these from TooltipProps; they're injected by Tooltip via cloneElement
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: number; payload?: ChartPoint }>;
+  label?: string | number;
 }
 
 function CustomTooltip({ active, payload, isDark }: CustomTooltipProps) {
@@ -216,14 +220,7 @@ export function LTHSTHSupplyPanel() {
     label: formatDateLabel(d.date),
   }));
 
-  const tooltipContent = (
-    <CustomTooltip
-      isDark={isDark}
-      active={undefined}
-      payload={undefined}
-      label={undefined}
-    />
-  );
+  const tooltipContent = <CustomTooltip isDark={isDark} />;
 
   return (
     <div

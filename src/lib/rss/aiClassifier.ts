@@ -75,13 +75,25 @@ Respond with valid JSON only, no other text:
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
+// Categories Grok sometimes returns when nothing applies — handled silently.
+const SILENT_REJECT_CATEGORIES = new Set(['none', 'other', 'n/a', 'unknown', '']);
+
 function parseResult(raw: string): AIClassificationResult | null {
   try {
-    const json = JSON.parse(raw);
+    // Strip optional markdown code fences just in case
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const json = JSON.parse(cleaned);
 
-    const primary = json.primary as Category;
+    const primaryRaw = String(json.primary ?? '').toLowerCase().trim();
+    const primary = primaryRaw as Category;
+
+    // Silent reject: model decided nothing fits — don't warn, just return null
+    if (SILENT_REJECT_CATEGORIES.has(primaryRaw)) {
+      return null;
+    }
+
     if (!VALID_CATEGORIES.has(primary)) {
-      console.warn(`[AIClassifier] Invalid primary category: ${primary}`);
+      console.warn(`[AIClassifier] Invalid primary category: ${primaryRaw}`);
       return null;
     }
 

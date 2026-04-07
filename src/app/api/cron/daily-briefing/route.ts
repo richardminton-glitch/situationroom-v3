@@ -22,7 +22,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const baseUrl = request.nextUrl.origin;
+    // Use HTTP localhost for the internal call to avoid SSL handshake issues
+    // when reaching the public HTTPS URL from the same node process. The
+    // request.nextUrl.origin can give a https:// URL behind a reverse proxy
+    // which causes ERR_SSL_WRONG_VERSION_NUMBER on internal loopback.
+    const baseUrl = process.env.INTERNAL_BASE_URL
+      ?? `http://localhost:${process.env.PORT ?? '3000'}`;
     const res = await fetch(`${baseUrl}/api/briefing/generate`, {
       method: 'POST',
       headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {},

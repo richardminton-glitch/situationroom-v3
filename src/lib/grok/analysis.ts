@@ -10,12 +10,23 @@
 const GROK_ANALYSIS_URL = 'https://api.x.ai/v1/chat/completions';
 const GROK_ANALYSIS_MODEL = 'grok-4-1-fast-non-reasoning';
 const DEFAULT_TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 2;          // 1 initial + 2 retries = 3 total attempts
+const RETRY_BACKOFF_MS = 1500;  // exponential: 1.5s, 3s
 
 export interface GrokAnalysisOptions {
   system?: string;
   maxTokens?: number;
   timeoutMs?: number;
   jsonMode?: boolean;
+}
+
+function isTransientError(status: number): boolean {
+  // 408 Request Timeout, 429 Too Many Requests, 500/502/503/504 server errors
+  return status === 408 || status === 429 || (status >= 500 && status <= 504);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -54,29 +65,46 @@ export async function callGrokAnalysis(
     body.response_format = { type: 'json_object' };
   }
 
-  try {
-    const res = await fetch(GROK_ANALYSIS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+  let lastError = '';
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(GROK_ANALYSIS_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
 
-    if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content?.trim() ?? null;
+      }
+
       const errBody = await res.text().catch(() => '');
-      console.error(`[GrokAnalysis] HTTP ${res.status}: ${errBody.substring(0, 300)}`);
-      return null;
+      lastError = `HTTP ${res.status}: ${errBody.substring(0, 200)}`;
+
+      // Non-transient errors (4xx except retryable) — fail immediately
+      if (!isTransientError(res.status)) {
+        console.error(`[GrokAnalysis] ${lastError}`);
+        return null;
+      }
+      console.warn(`[GrokAnalysis] transient ${lastError} (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
+    } catch (err) {
+      // Network error / timeout — always retry
+      lastError = err instanceof Error ? err.message : String(err);
+      console.warn(`[GrokAnalysis] request error: ${lastError} (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
     }
 
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content?.trim() ?? null;
-  } catch (err) {
-    console.error('[GrokAnalysis] Request failed:', err);
-    return null;
+    if (attempt < MAX_RETRIES) {
+      await sleep(RETRY_BACKOFF_MS * (attempt + 1));
+    }
   }
+
+  console.error(`[GrokAnalysis] all retries exhausted: ${lastError}`);
+  return null;
 }
 
 /**

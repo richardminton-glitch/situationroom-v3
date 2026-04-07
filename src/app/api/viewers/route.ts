@@ -39,11 +39,10 @@ function countMembers(): number {
 }
 
 // POST /api/viewers — register heartbeat, return current counts
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const headersList = await headers();
   const ip = headersList.get('x-real-ip')
     ?? headersList.get('x-forwarded-for')?.split(',')[0].trim()
-    ?? req.ip
     ?? 'unknown';
   const ua = (headersList.get('user-agent') ?? '').slice(0, 80);
   const key = `${ip}|${ua}`;

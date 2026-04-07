@@ -136,6 +136,8 @@ export interface PoolState {
   takeProfit: number | null;
   stopLoss: number | null;
   openTradeLnmId: string | null;
+  /** Raw open positions from LNM v3 (array of trade objects) */
+  openPositions?: Record<string, unknown>[];
 }
 
 // ── Execution ─────────────────────────────────────────────────────────────────
