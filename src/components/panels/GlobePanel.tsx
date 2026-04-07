@@ -75,11 +75,11 @@ export function GlobePanel() {
       }}
     >
       {[
-        { label: 'Bitcoin', color: '#f7931a' },
-        { label: 'Conflict', color: '#8b2020' },
-        { label: 'Disaster', color: '#b8860b' },
-        { label: 'Economy', color: '#2a2a2a' },
-        { label: 'Political', color: '#555' },
+        { label: 'Bitcoin',   color: '#f7931a' },
+        { label: 'Conflict',  color: '#8b2020' },
+        { label: 'Disaster',  color: '#b8860b' },
+        { label: 'Economy',   color: '#2d6e5e' },
+        { label: 'Political', color: '#5e3d75' },
       ].map((cat) => (
         <span key={cat.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cat.color, display: 'inline-block' }} />

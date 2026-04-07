@@ -14,11 +14,11 @@ function escapeHtml(s: string): string {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  bitcoin: '#f7931a',
-  conflict: '#8b2020',
-  disaster: '#b8860b',
-  economy: '#2a2a2a',
-  political: '#555555',
+  bitcoin:   '#f7931a',
+  conflict:  '#8b2020',
+  disaster:  '#b8860b',
+  economy:   '#2d6e5e', // dark teal — money/finance association
+  political: '#5e3d75', // deep aubergine — authority association
 };
 
 export interface MapEvent {
@@ -376,9 +376,8 @@ export function ParchmentGlobe({ events = [] }: ParchmentGlobeProps) {
     markers
       .on('mouseenter', function (_event, d) {
         if (!tooltipEl) return;
-        const catColors: Record<string, string> = { bitcoin: '#f7931a', conflict: '#8b2020', disaster: '#b8860b', economy: '#2a2a2a', political: '#555' };
         tooltipEl.innerHTML = `
-          <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;color:${catColors[d.category] || '#888'}">${d.category}</div>
+          <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;color:${CATEGORY_COLORS[d.category] || '#888'}">${d.category}</div>
           <div style="font-weight:bold;font-size:12px">${escapeHtml(d.title)}</div>
           <div style="font-size:10px;color:#777;margin-top:2px">${escapeHtml(d.source)}</div>`;
         tooltipEl.style.display = 'block';

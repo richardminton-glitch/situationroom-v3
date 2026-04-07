@@ -13,12 +13,12 @@ interface Headline {
 }
 
 const CATEGORIES = [
-  { key: 'all', label: 'All' },
-  { key: 'bitcoin', label: 'Bitcoin', color: '#f7931a' },
-  { key: 'conflict', label: 'Conflict', color: '#8b2020' },
-  { key: 'disaster', label: 'Disaster', color: '#b8860b' },
-  { key: 'economy', label: 'Economy', color: '#2a2a2a' },
-  { key: 'political', label: 'Political', color: '#555' },
+  { key: 'all',       label: 'All' },
+  { key: 'bitcoin',   label: 'Bitcoin',   color: '#f7931a' },
+  { key: 'conflict',  label: 'Conflict',  color: '#8b2020' },
+  { key: 'disaster',  label: 'Disaster',  color: '#b8860b' },
+  { key: 'economy',   label: 'Economy',   color: '#2d6e5e' },
+  { key: 'political', label: 'Political', color: '#5e3d75' },
 ];
 
 export function IntelFeedPanel() {

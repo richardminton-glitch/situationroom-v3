@@ -122,13 +122,14 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 44px 44px;
 }
 
-/* Globe event markers — V2 styling */
+/* Globe event markers — V2 styling. Keep in sync with CATEGORY_COLORS in
+   src/components/panels/globes/ParchmentGlobe.tsx */
 .event-marker { cursor: pointer; }
 .event-dot.bitcoin    { fill: #f7931a; }
 .event-dot.conflict   { fill: #8b2020; }
 .event-dot.disaster   { fill: #b8860b; }
-.event-dot.economy    { fill: #2a2a2a; }
-.event-dot.political  { fill: #555; }
+.event-dot.economy    { fill: #2d6e5e; } /* dark teal — money/finance */
+.event-dot.political  { fill: #5e3d75; } /* deep aubergine — authority */
 
 /* Viewer dot pulse — matches V2 viewer-pulse */
 @keyframes viewer-pulse {
