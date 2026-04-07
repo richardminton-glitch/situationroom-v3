@@ -112,15 +112,14 @@ const TIER_COPY: Record<Tier, TierCopy> = {
   },
   vip: {
     headline: 'Welcome to VIP.',
-    intro: 'VIP is the briefing rebuilt around you. From tomorrow, your daily email is rewritten by AI to weight your selected topics, with a paragraph of personal context if you\u2019ve shared portfolio info. Custom alerts and dashboard layouts are now yours to configure.',
+    intro: 'VIP is the briefing rebuilt around you. From tomorrow, your daily email is AI-rewritten to weight your selected topics. Custom alerts and dashboard layouts are now yours to configure.',
     unlockedHeader: 'WHAT VIP UNLOCKS',
-    nextStep: 'Two things to set up first: pick up to 3 briefing topics on your account page (these reweight tomorrow\u2019s VIP briefing), and add your portfolio cost basis if you want personalised market-impact context in every email.',
+    nextStep: 'Head to your account page and pick up to 3 briefing topics \u2014 those topics reweight tomorrow\u2019s VIP briefing and every one after it.',
     features: [
       'Everything in Members \u2014 still included',
       'Personalised VIP briefing \u2014 each section AI-rewritten around your topics',
       'Custom alerts on conviction, LTH supply, hash ribbon, BTC price, fear/greed',
       'Layout editing \u2014 build your own dashboard from any panel',
-      'Portfolio context block \u2014 your cost basis informs the AI commentary',
       'Lifetime access \u2014 no renewals, ever',
     ],
   },
