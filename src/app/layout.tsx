@@ -16,6 +16,17 @@ const SITE_TAGLINE = 'Bitcoin & Global Macro Intelligence';
 const SITE_DESCRIPTION =
   'A personalised Bitcoin and macro intelligence platform. Daily briefings, conviction scoring, and real-time data — your command centre for the state of Bitcoin and the world.';
 
+// Social card title — longer form for richer link previews. Validators
+// (Twitter Cards, opengraph.xyz) flag titles below ~50 chars as too short
+// to drive engagement; 56 hits the recommended 50-60 sweet spot.
+const SOCIAL_TITLE = 'The Situation Room — Bitcoin & Global Macro Intelligence';
+
+// Social card description — same validators want 110-160 chars. The page
+// <meta name="description"> stays at the longer SEO-focused copy above;
+// this shorter version is optimised for link-preview engagement.
+const SOCIAL_DESCRIPTION =
+  'Daily Bitcoin briefings, macro context, conviction scoring, and live threat assessment — the situation room for serious bitcoiners and macro hawks.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: `${SITE_TITLE} — ${SITE_TAGLINE}`,
@@ -42,17 +53,18 @@ export const metadata: Metadata = {
     type:        'website',
     url:         SITE_URL,
     siteName:    SITE_TITLE,
-    title:       SITE_TITLE,
-    description: SITE_TAGLINE,
+    title:       SOCIAL_TITLE,
+    description: SOCIAL_DESCRIPTION,
     images: [
       {
-        // 1200×662 banner — within Twitter's 1200×600-800 sweet spot for
-        // summary_large_image, and tall enough that LinkedIn/Discord
-        // don't letterbox it.
+        // 1200×630 banner — the canonical Open Graph aspect ratio. Twitter,
+        // Facebook, LinkedIn, and Discord all crop or letterbox cleanly to
+        // it. Width/height are advisory hints — link previewers verify the
+        // real dimensions when they fetch the image.
         url:    '/icons/icon-1200.png',
         width:  1200,
-        height: 662,
-        alt:    SITE_TITLE,
+        height: 630,
+        alt:    SOCIAL_TITLE,
       },
     ],
   },
@@ -61,8 +73,8 @@ export const metadata: Metadata = {
   // full width of the post instead of a tiny square thumbnail.
   twitter: {
     card:        'summary_large_image',
-    title:       SITE_TITLE,
-    description: SITE_TAGLINE,
+    title:       SOCIAL_TITLE,
+    description: SOCIAL_DESCRIPTION,
     images:      ['/icons/icon-1200.png'],
     site:        '@rich_rdctd',
     creator:     '@rich_rdctd',
