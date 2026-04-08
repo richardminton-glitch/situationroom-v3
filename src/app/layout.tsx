@@ -46,11 +46,12 @@ export const metadata: Metadata = {
     description: SITE_TAGLINE,
     images: [
       {
-        // 1200x630 is the safest aspect ratio — Twitter, Facebook,
-        // LinkedIn, and Discord all crop or letterbox cleanly to it.
-        url:    '/icons/social-card.png',
+        // 1200×662 banner — within Twitter's 1200×600-800 sweet spot for
+        // summary_large_image, and tall enough that LinkedIn/Discord
+        // don't letterbox it.
+        url:    '/icons/icon-1200.png',
         width:  1200,
-        height: 630,
+        height: 662,
         alt:    SITE_TITLE,
       },
     ],
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
     card:        'summary_large_image',
     title:       SITE_TITLE,
     description: SITE_TAGLINE,
-    images:      ['/icons/social-card.png'],
+    images:      ['/icons/icon-1200.png'],
     site:        '@rich_rdctd',
     creator:     '@rich_rdctd',
   },
