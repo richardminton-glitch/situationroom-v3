@@ -15,6 +15,8 @@ export interface ThreatStatus {
   state: ThreatState;
   prevState: ThreatState;
   stateChanged: boolean;
+  /** Uncapped sum of decayed impacts — reveals saturation when > 100. */
+  rawScore: number;
 }
 
 /**
@@ -119,6 +121,7 @@ export function computeDecayedScore(
     state,
     prevState: state, // caller tracks transitions
     stateChanged: false,
+    rawScore: Math.round(rawScore * 10) / 10,
   };
 }
 

@@ -23,7 +23,20 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 // ── Score cache (60s) ─────────────────────────────────────────────────────────
-let cachedResult: { score: number; state: ThreatState } | null = null;
+interface ThreatResult {
+  score: number;
+  state: ThreatState;
+  /** Sum of raw decayed impacts before the 100-point cap. Useful for spotting
+   *  when the engine is saturated (rawScore >> 100 means many more events are
+   *  firing than the display can reflect). */
+  rawScore: number;
+  /** Total number of events feeding into the score (last 2h). */
+  eventCount: number;
+  /** Count of events by severity tier — lets us see whether a surge is coming
+   *  from Tier 4 shocks or just a lot of Tier 1/2 chatter. */
+  tierCounts: { 1: number; 2: number; 3: number; 4: number };
+}
+let cachedResult: ThreatResult | null = null;
 let cachedAt = 0;
 const CACHE_TTL = 60_000; // 1 minute
 
@@ -181,7 +194,15 @@ export async function GET() {
         description: h.description || '',
       }));
 
-    const { score, state } = computeDecayedScore(events, now);
+    const { score, state, rawScore } = computeDecayedScore(events, now);
+
+    // Count events per severity tier so the diagnostic output reveals
+    // whether a high score is driven by a handful of shocks or a flood of
+    // lower-tier chatter.
+    const tierCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    for (const e of events) {
+      if (e.tier >= 1 && e.tier <= 4) tierCounts[e.tier as 1 | 2 | 3 | 4]++;
+    }
 
     // ── State transition detection ────────────────────────────────────────
     if (state !== prevState) {
@@ -194,11 +215,11 @@ export async function GET() {
       prevState = state;
     }
 
-    cachedResult = { score, state };
+    cachedResult = { score, state, rawScore, eventCount: events.length, tierCounts };
     cachedAt = now;
 
     return NextResponse.json(cachedResult);
   } catch {
-    return NextResponse.json(cachedResult ?? { score: 0, state: 'QUIET' });
+    return NextResponse.json(cachedResult ?? { score: 0, state: 'QUIET', rawScore: 0, eventCount: 0, tierCounts: { 1: 0, 2: 0, 3: 0, 4: 0 } });
   }
 }
