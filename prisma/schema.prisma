@@ -47,6 +47,17 @@ model User {
   // Reset to null inside activateTier so renewals get a fresh warning next cycle.
   expiryWarningSentAt  DateTime? @map("expiry_warning_sent_at")
 
+  // ── Migration provenance ────────────────────────────────────────────────────
+  // Tracks where a user record came from. null = organic v3 signup.
+  // Set to "v2-migration-general" or "v2-migration-members" when imported by
+  // /api/admin/import-v2 during the v2→v3 cutover (April 2026). Used for
+  // audit, reversal, and to scope the migration broadcast to imported users.
+  source                    String?   @map("source")
+  // Set after the migration announcement email has been sent to this user.
+  // Idempotent guard for /api/admin/broadcast-migration so re-runs skip
+  // already-sent users unless force=true.
+  migrationBroadcastSentAt  DateTime? @map("migration_broadcast_sent_at")
+
   // ── Bot Room / TradingView ──────────────────────────────────────────────────
   tvChartState Json? @map("tv_chart_state")  // TradingView saved chart state (indicators, drawings, interval, etc.)
 
@@ -413,6 +424,40 @@ model NewsletterSend {
   @@index([userId])
   @@index([briefingDate])
   @@map("newsletter_sends")
+}
+
+// ── V2 → V3 Migration Audit Logs ──────────────────────────────────────────────
+// One-off audit tables created for the April 2026 cutover from v2
+// (situationroom.space) to v3. One row per import run; one row per
+// announcement email send. Useful for reversal queries and post-mortems.
+
+model MigrationImport {
+  id             String   @id @default(cuid())
+  runAt          DateTime @default(now()) @map("run_at")
+  actorEmail     String   @map("actor_email")        // admin who ran it (or "cron")
+  rowCount       Int      @map("row_count")
+  insertedCount  Int      @map("inserted_count")
+  updatedCount   Int      @map("updated_count")
+  skippedCount   Int      @map("skipped_count")
+  errorCount     Int      @default(0) @map("error_count")
+  notes          String?  @db.Text                   // optional free-text summary
+
+  @@index([runAt])
+  @@map("migration_imports")
+}
+
+model MigrationBroadcast {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  email     String                                    // captured at send-time in case the user is later deleted
+  tier      String                                    // 'general' | 'members' (the tier they were grandfathered to)
+  status    String   @default("sent")                 // 'sent' | 'failed' | 'skipped'
+  error     String?
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  @@index([userId])
+  @@index([sentAt])
+  @@map("migration_broadcasts")
 }
 
 // ── VIP Tier Models ───────────────────────────────────────────────────────────

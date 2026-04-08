@@ -32,7 +32,15 @@ import {
 import { FreeDigestEmail, freeDigestSubject } from '@/emails/FreeDigestEmail';
 import { GeneralBriefingEmail, generalBriefingSubject } from '@/emails/GeneralBriefingEmail';
 import { VipBriefingEmail, vipBriefingSubject } from '@/emails/VipBriefingEmail';
+import {
+  MigrationAnnouncementEmail,
+  migrationAnnouncementSubject,
+} from '@/emails/MigrationAnnouncementEmail';
 import type { Tier } from '@/types';
+
+// Same constant as the import / broadcast routes — every imported user expires here.
+const MIGRATION_GRANDFATHER_END = new Date('2026-07-14T00:00:00.000Z');
+const MIGRATION_LEGACY_URL = 'https://legacy.situationroom.space';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -353,12 +361,19 @@ export async function POST(request: NextRequest) {
     authedUserId = sessionUser.id;
   }
 
-  let body: { tier?: string; destination?: string };
+  let body: { tier?: string; destination?: string; template?: string; variant?: string };
   try { body = await request.json(); } catch { body = {}; }
 
   const tier = body.tier as Tier | undefined;
   if (!tier || !['free', 'general', 'members', 'vip'].includes(tier)) {
     return NextResponse.json({ error: 'tier must be free|general|members|vip' }, { status: 400 });
+  }
+  // Migration announcement preview only valid for the two grandfather tiers.
+  if (body.template === 'migration' && tier !== 'general' && tier !== 'members') {
+    return NextResponse.json(
+      { error: 'template=migration requires tier=general or tier=members' },
+      { status: 400 },
+    );
   }
 
   // Resolve destination + the userId we sign tokens with.
@@ -387,7 +402,34 @@ export async function POST(request: NextRequest) {
 
   let results: SendResult[];
   try {
-    if (tier === 'free') {
+    if (body.template === 'migration') {
+      // Single-template preview path: only the migration announcement email,
+      // no full per-tier batch. Used in the days leading up to the v2 → v3
+      // cutover to validate copy + links before broadcasting via
+      // /api/admin/broadcast-migration.
+      const variant: 'main' | 'reminder' = body.variant === 'reminder' ? 'reminder' : 'main';
+      const unsubToken = createNewsletterToken(userId, 'unsubscribe', 30 * 86400);
+      const html = await render(
+        MigrationAnnouncementEmail({
+          email:          destination,
+          tier:           tier as 'general' | 'members',
+          expiresAt:      MIGRATION_GRANDFATHER_END,
+          loginUrl:       `${SITE_URL}/login`,
+          legacyUrl:      MIGRATION_LEGACY_URL,
+          unsubscribeUrl: `${SITE_URL}/api/newsletter/unsubscribe?token=${unsubToken}`,
+          siteUrl:        SITE_URL,
+          variant,
+        }),
+      );
+      results = [
+        await safeSend(
+          `Migration announcement (${variant})`,
+          `[Example] ${migrationAnnouncementSubject[variant]}`,
+          html,
+          destination,
+        ),
+      ];
+    } else if (tier === 'free') {
       results = await sendFreeBatch(destination, userId);
     } else {
       results = await sendPaidBatch(destination, userId, tier);

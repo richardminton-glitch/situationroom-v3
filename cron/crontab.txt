@@ -6,7 +6,10 @@
 # Replace https://situationroom.space with your domain if different.
 
 CRON_SECRET=dev-cron-secret
-SITE=https://v3.situationroom.space
+# Hit v3 directly on the loopback. Avoids DNS / TLS / nginx dependencies, and
+# survives the v2→v3 domain cutover unchanged. (The site itself is still
+# served at https://situationroom.space; this is only the cron caller.)
+SITE=http://localhost:3001
 
 # Daily data refresh — UTXO age at 06:00 UTC
 0 6 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/data/utxo-age >> /opt/situationroom-v3/logs/cron.log 2>&1

@@ -9,7 +9,11 @@ import './globals.css';
 // metadataBase makes every relative URL below resolve to absolute https
 // links — required so Twitter / Telegram / WhatsApp can fetch the social
 // card image when our URL is shared.
-const SITE_URL = 'https://v3.situationroom.space';
+//
+// Set NEXT_PUBLIC_SITE_URL in .env.production to override the default. The
+// fallback is the post-migration apex (situationroom.space); historically
+// this was hardcoded to v3.situationroom.space.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://situationroom.space';
 
 const SITE_TITLE = 'The Situation Room';
 const SITE_TAGLINE = 'Bitcoin & Global Macro Intelligence';
@@ -120,7 +124,7 @@ export default function RootLayout({
             async
             src="/metrics.js"
             data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
-            data-domains="v3.situationroom.space"
+            data-domains={process.env.NEXT_PUBLIC_UMAMI_DOMAINS ?? 'situationroom.space,v3.situationroom.space'}
           />
         )}
       </body>
