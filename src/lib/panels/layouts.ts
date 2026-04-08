@@ -156,9 +156,9 @@ export const PARCHMENT_DEFAULT_LAYOUT: DashboardLayout = {
 export const PARCHMENT_PRESETS: DashboardLayout[] = [
   PARCHMENT_DEFAULT_LAYOUT,
   FULL_DATA_PARCHMENT,
-  AI_PRESET,
-  MACRO_FOCUS_PRESET,
-  ONCHAIN_PRESET,
+  MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
+  AI_PRESET,           // Members tier
+  ONCHAIN_PRESET,      // Members tier
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -193,9 +193,9 @@ export const DARK_DEFAULT_LAYOUT: DashboardLayout = {
 export const DARK_PRESETS: DashboardLayout[] = [
   DARK_DEFAULT_LAYOUT,
   FULL_DATA_DARK,
-  AI_PRESET,
-  MACRO_FOCUS_PRESET,
-  ONCHAIN_PRESET,
+  MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
+  AI_PRESET,           // Members tier
+  ONCHAIN_PRESET,      // Members tier
 ];
 
 // ══════════════════════════════════════════════════════════
