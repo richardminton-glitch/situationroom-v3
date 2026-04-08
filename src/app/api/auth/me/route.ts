@@ -36,9 +36,6 @@ export async function GET() {
       newsletterLastSent:   user.newsletterLastSent?.toISOString() ?? null,
       newsletterConfirmedAt: user.newsletterConfirmedAt?.toISOString() ?? null,
 
-      portfolioCostBasis:   user.portfolioCostBasis,
-      portfolioHoldingsBtc: user.portfolioHoldingsBtc,
-
       tvChartState: user.tvChartState as Record<string, unknown> | null,
     };
 

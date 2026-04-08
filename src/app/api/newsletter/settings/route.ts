@@ -74,18 +74,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (body.portfolioCostBasis !== undefined || body.portfolioHoldingsBtc !== undefined) {
-    if (!hasAccess(userTier, 'vip')) {
-      return NextResponse.json({ error: 'Portfolio fields require VIP tier' }, { status: 403 });
-    }
-    if (body.portfolioCostBasis !== undefined) {
-      data.portfolioCostBasis = body.portfolioCostBasis === null ? null : Number(body.portfolioCostBasis);
-    }
-    if (body.portfolioHoldingsBtc !== undefined) {
-      data.portfolioHoldingsBtc = body.portfolioHoldingsBtc === null ? null : Number(body.portfolioHoldingsBtc);
-    }
-  }
-
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }

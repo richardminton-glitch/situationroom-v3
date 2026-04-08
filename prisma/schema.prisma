@@ -47,10 +47,6 @@ model User {
   // Reset to null inside activateTier so renewals get a fresh warning next cycle.
   expiryWarningSentAt  DateTime? @map("expiry_warning_sent_at")
 
-  // ── Portfolio (VIP) ─────────────────────────────────────────────────────────
-  portfolioCostBasis   Float? @map("portfolio_cost_basis")
-  portfolioHoldingsBtc Float? @map("portfolio_holdings_btc")
-
   // ── Bot Room / TradingView ──────────────────────────────────────────────────
   tvChartState Json? @map("tv_chart_state")  // TradingView saved chart state (indicators, drawings, interval, etc.)
 
@@ -445,7 +441,6 @@ model VipBriefing {
   topics       String   @default("[]") @db.Text   // JSON array of topic keys
   contentJson  String   @map("content_json") @db.Text  // {market, network, geo, macro, outlook}
   headline     String
-  portfolioCtx String?  @map("portfolio_ctx") @db.Text  // AI paragraph about user's position
   generatedAt  DateTime @default(now()) @map("generated_at")
 
   @@unique([userId, date])

@@ -121,18 +121,11 @@ function dirLabel(dir: string): string {
 
 interface ConvictionBreakdownModalProps {
   data: ConvictionResult;
-  personal?: {
-    personalScore: number;
-    personalLabel: string;
-    profitPct: number | null;
-    positionStatus: string;
-  } | null;
   onClose: () => void;
 }
 
 export function ConvictionBreakdownModal({
   data,
-  personal,
   onClose,
 }: ConvictionBreakdownModalProps) {
   const { theme } = useTheme();
@@ -140,7 +133,6 @@ export function ConvictionBreakdownModal({
   const pricing = usePricing();
   const router = useRouter();
   const hasGeneral = canAccess('general');
-  const isVip = canAccess('vip');
 
   const bandColor = theme === 'dark'
     ? (DARK_BAND_COLORS[data.band] ?? data.bandColor)
@@ -350,60 +342,6 @@ export function ConvictionBreakdownModal({
                 </div>
               </div>
             </div>
-
-            {/* VIP personal score */}
-            {isVip && personal && personal.positionStatus !== 'no_data' && (
-              <div
-                style={{
-                  padding: '12px 16px',
-                  marginBottom: 20,
-                  background: theme === 'dark' ? 'rgba(0, 212, 200, 0.06)' : 'rgba(139, 105, 20, 0.06)',
-                  border: `1px solid ${theme === 'dark' ? 'rgba(0, 212, 200, 0.15)' : 'rgba(139, 105, 20, 0.15)'}`,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                    }}
-                  >
-                    YOUR PERSONAL SCORE
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-data)',
-                      fontSize: 18,
-                      fontWeight: 'bold',
-                      color: personal.personalScore >= 60
-                        ? 'var(--accent-success)'
-                        : personal.personalScore >= 40
-                        ? 'var(--text-secondary)'
-                        : 'var(--accent-danger)',
-                    }}
-                  >
-                    {personal.personalScore}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-data)',
-                    fontSize: 11,
-                    color: 'var(--text-secondary)',
-                    marginTop: 4,
-                  }}
-                >
-                  {personal.personalLabel}
-                  {personal.profitPct !== null && (
-                    <span style={{ marginLeft: 12, color: personal.profitPct >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
-                      Position: {personal.profitPct >= 0 ? '+' : ''}{personal.profitPct}%
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Divider */}
             <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: 20 }} />

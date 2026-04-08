@@ -17,8 +17,14 @@ export interface ThreatStatus {
   stateChanged: boolean;
 }
 
-/** Half-life in milliseconds (3 hours) */
-const HALF_LIFE_MS = 3 * 60 * 60 * 1000;
+/**
+ * Half-life in milliseconds (2 hours).
+ * An event's contribution halves every 2 hours of age: after 4h it's 25%,
+ * after 6h it's 12.5%, so a Tier 4 shock (25 pts) contributes roughly
+ * 12/6/3 points as it rolls through the 2/4/6-hour windows. Previously 3h,
+ * shortened so the score drains out faster on a quiet news cycle.
+ */
+const HALF_LIFE_MS = 2 * 60 * 60 * 1000;
 
 /** Decay constant: lambda = ln(2) / halfLife */
 const LAMBDA = Math.LN2 / HALF_LIFE_MS;
@@ -26,13 +32,21 @@ const LAMBDA = Math.LN2 / HALF_LIFE_MS;
 /** Max score cap */
 const MAX_SCORE = 100;
 
-/** State thresholds */
+/**
+ * State thresholds — higher is worse.
+ *
+ * Tuning (Apr 2026):
+ *   CRITICAL raised from 76 to 88 so it only fires on sustained extreme
+ *   activity — genuine disaster, economic collapse, all-out war. A typical
+ *   day of moderate-severity headlines should land in MONITORING (16-40),
+ *   not push through ALERT on a single bad afternoon.
+ */
 const STATE_THRESHOLDS: [number, ThreatState][] = [
-  [76, 'CRITICAL'],
-  [56, 'ALERT'],
-  [36, 'ELEVATED'],
+  [88, 'CRITICAL'],
+  [64, 'ALERT'],
+  [40, 'ELEVATED'],
   [16, 'MONITORING'],
-  [0, 'QUIET'],
+  [0,  'QUIET'],
 ];
 
 export function getStateForScore(score: number): ThreatState {

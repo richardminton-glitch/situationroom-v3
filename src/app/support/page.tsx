@@ -72,7 +72,6 @@ export default function SupportPage() {
           { tier: 'VIP', price: pricing ? `${formatSats(pricing.tierPricesSats.vip)} sats (lifetime)` : '...', color: '#7c5cbf', subtitle: 'One-off payment · Lifetime access', features: [
             'Everything in Members',
             'Custom dashboard layouts — save & switch',
-            'Personal conviction score with portfolio context',
             'On-demand Grok macro & on-chain deep analysis',
             'Personalised VIP briefings by topic',
             'Threshold alerts via Nostr DM',

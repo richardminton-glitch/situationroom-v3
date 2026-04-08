@@ -27,14 +27,13 @@ export async function GET(
 
   const vipBriefing = await (prisma as any).vipBriefing.findUnique({
     where: { userId_date: { userId: session.user.id, date: targetDate } },
-    select: { portfolioCtx: true, topics: true, headline: true, contentJson: true },
-  }) as { portfolioCtx: string | null; topics: string; headline: string; contentJson: string } | null;
+    select: { topics: true, headline: true, contentJson: true },
+  }) as { topics: string; headline: string; contentJson: string } | null;
 
   if (!vipBriefing) return NextResponse.json({ personal: null });
 
   return NextResponse.json({
     personal: {
-      portfolioCtx: vipBriefing.portfolioCtx,
       topics: JSON.parse(vipBriefing.topics) as string[],
       outlook: vipBriefing.contentJson
         ? (JSON.parse(vipBriefing.contentJson) as { outlook?: string }).outlook ?? null

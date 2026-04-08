@@ -35,10 +35,6 @@ export interface UserProfile {
   newsletterLastSent: string | null;
   newsletterConfirmedAt: string | null;
 
-  // Portfolio (VIP)
-  portfolioCostBasis: number | null;
-  portfolioHoldingsBtc: number | null;
-
   // Bot Room / TradingView
   tvChartState: Record<string, unknown> | null;
 }

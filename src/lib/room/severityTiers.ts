@@ -7,12 +7,22 @@
  * Tier 4 (Shock):      extreme terms or multi-domain hit
  */
 
-/** Impact scores added to the threat score on event arrival */
+/**
+ * Impact scores added to the threat score on event arrival.
+ *
+ * Tuning history:
+ *   Apr 2026: halved across the board after the indicator sat pinned at
+ *   CRITICAL [100] for 24+ hours on a normal news day. A single Tier 4
+ *   shock event used to be enough to cross the ALERT threshold on its
+ *   own (50 pts), and two fresh Tier 4s would saturate the cap. Normal
+ *   daily flow should rest in the MONITORING band (16-35); CRITICAL is
+ *   reserved for genuine disaster, economic collapse, or all-out war.
+ */
 export const TIER_IMPACT: Record<1 | 2 | 3 | 4, number> = {
-  1: 4,
-  2: 12,
-  3: 28,
-  4: 50,
+  1: 2,   // was 4  — routine domain match
+  2: 6,   // was 12 — moderate escalation
+  3: 14,  // was 28 — high-impact single event
+  4: 25,  // was 50 — shock event; two fresh shocks now sum to 50 (ALERT, not CRITICAL)
 };
 
 /** Tier 2 — moderate escalation keywords */

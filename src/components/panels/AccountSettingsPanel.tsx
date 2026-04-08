@@ -295,11 +295,6 @@ export function AccountSettingsPanel() {
           </div>
         </TierGate>
 
-        {/* VIP portfolio fields */}
-        {canAccess('vip') && (
-          <PortfolioFields />
-        )}
-
         {/* VIP custom alerts */}
         {canAccess('vip') && (
           <AlertsSection />
@@ -587,91 +582,3 @@ function AlertsSection() {
   );
 }
 
-// ── PortfolioFields ───────────────────────────────────────────────────────────
-
-function PortfolioFields() {
-  const [costBasis, setCostBasis] = useState('');
-  const [holdings, setHoldings] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/newsletter/settings')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.portfolioCostBasis != null) setCostBasis(String(d.portfolioCostBasis));
-        if (d.portfolioHoldingsBtc != null) setHoldings(String(d.portfolioHoldingsBtc));
-      })
-      .catch(() => { /* */ });
-  }, []);
-
-  const save = async () => {
-    setSaving(true);
-    await fetch('/api/newsletter/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        portfolioCostBasis: costBasis ? parseFloat(costBasis) : null,
-        portfolioHoldingsBtc: holdings ? parseFloat(holdings) : null,
-      }),
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <div className="mb-3">
-      <div style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>Portfolio (for personalised briefing)</div>
-      <div className="flex gap-2 items-center">
-        <div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '9px', marginBottom: '2px' }}>Cost basis (USD)</div>
-          <input
-            type="number"
-            value={costBasis}
-            onChange={(e) => setCostBasis(e.target.value)}
-            placeholder="0.00"
-            className="px-2 py-1 rounded w-28"
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-subtle)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-            }}
-          />
-        </div>
-        <div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '9px', marginBottom: '2px' }}>Holdings (BTC)</div>
-          <input
-            type="number"
-            value={holdings}
-            onChange={(e) => setHoldings(e.target.value)}
-            placeholder="0.00000000"
-            step="0.00000001"
-            className="px-2 py-1 rounded w-28"
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-subtle)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-            }}
-          />
-        </div>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="px-3 py-1 rounded mt-3.5"
-          style={{
-            backgroundColor: saved ? 'var(--accent-success)' : 'var(--bg-card)',
-            color: saved ? 'var(--bg-primary)' : 'var(--text-secondary)',
-            border: '1px solid var(--border-primary)',
-          }}
-        >
-          {saved ? '✓' : saving ? '…' : 'Save'}
-        </button>
-      </div>
-    </div>
-  );
-}

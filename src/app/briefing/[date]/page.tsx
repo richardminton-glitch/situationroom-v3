@@ -6,7 +6,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
 import Link from 'next/link';
-import { PersonalBriefingContext } from '@/components/briefing/PersonalBriefingContext';
 import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
 import { normaliseThreatState } from '@/lib/room/threatEngine';
 
@@ -194,8 +193,6 @@ export default async function BriefingPage({ params }: Props) {
               <BriefingMarkdown content={section.content} />
             </section>
           ))}
-          {/* VIP personalised position context — renders client-side if applicable */}
-          <PersonalBriefingContext date={date} />
         </>
       ) : freeWindowExpired ? (
         /* Free tier — briefing older than 7 days */

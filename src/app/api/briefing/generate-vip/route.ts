@@ -197,7 +197,6 @@ export async function POST(request: NextRequest) {
         topics:      JSON.stringify(topics),
         contentJson,
         headline,
-        portfolioCtx: null,
       },
     });
 
