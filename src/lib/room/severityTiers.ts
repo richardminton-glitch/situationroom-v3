@@ -34,14 +34,25 @@ const TIER_2_TERMS = [
   'default', 'contagion', 'systemic', 'flash crash', 'circuit breaker',
 ];
 
-/** Tier 3 — high-impact event keywords */
+/**
+ * Tier 3 — high-impact event keywords.
+ *
+ * Tuning (Apr 2026): pruned aggressively after diagnostic rawScore showed
+ * 7 Tier 3 events in a 2-hour window on a normal news day, saturating the
+ * score. Words that describe routine-if-significant monetary policy
+ * (pause, pivot, taper, stimulus, rate hike, rate cut, bailout,
+ * intervention, QE, etf approved/rejected) and editorial framing
+ * (emergency, crisis) were demoted — they belong in Tier 2 at most.
+ * Tier 3 now only fires on language that describes a concrete high-impact
+ * event: legal actions, security breaches, kinetic military, bans.
+ */
 const TIER_3_TERMS = [
-  'emergency', 'crisis', 'ban', 'rate hike', 'rate cut', 'etf approved',
-  'etf rejected', 'hack', 'exploit', 'insolvent', 'bankruptcy',
-  'indictment', 'arrest', 'seized', 'frozen', 'delisted', 'subpoena',
-  'executive order', 'intervention', 'bailout', 'stimulus',
-  'quantitative easing', 'taper', 'pivot', 'pause', 'escalation',
-  'ceasefire', 'missile strike', 'airstrike', 'invasion', 'blockade',
+  // BTC/crypto-specific shocks
+  'ban', 'hack', 'exploit', 'insolvent', 'bankruptcy', 'delisted',
+  // Legal / enforcement
+  'indictment', 'arrest', 'seized', 'frozen', 'subpoena', 'executive order',
+  // Kinetic military / geopolitical rupture
+  'escalation', 'missile strike', 'airstrike', 'invasion', 'blockade',
 ];
 
 /** Tier 4 — extreme / shock keywords */
@@ -67,9 +78,11 @@ export function classifyTier(
   if (TIER_4_TERMS.some((t) => lower.includes(t))) return 4;
   if (domainCount >= 3 && relevance >= 8) return 4;
 
-  // Tier 3: high-impact terms with reasonable confidence
-  if (TIER_3_TERMS.some((t) => lower.includes(t)) && confidence >= 0.5) return 3;
-  if (relevance >= 9 && confidence >= 0.7) return 3;
+  // Tier 3: high-impact terms with HIGH classifier confidence.
+  // 0.5 → 0.7 after observing the classifier assigning Tier 3 to editorial
+  // "crisis language" headlines. At 0.7 the classifier has to be certain.
+  if (TIER_3_TERMS.some((t) => lower.includes(t)) && confidence >= 0.7) return 3;
+  if (relevance >= 9 && confidence >= 0.8) return 3;
 
   // Tier 2: moderate terms or elevated relevance
   if (TIER_2_TERMS.some((t) => lower.includes(t))) return 2;
