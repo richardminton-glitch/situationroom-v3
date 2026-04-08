@@ -5,13 +5,10 @@
 
 import { prisma } from '@/lib/db';
 import { callGrokAnalysis } from '@/lib/grok/analysis';
-import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 const BOT_NPUB = 'sitroom-ai';
 const BOT_DISPLAY = 'SitRoom AI';
 const BOT_ICON = 'bot';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://situationroom.space';
 
 // ── Dedup guard ────────────────────────────────────────────────────────────────
 
@@ -99,12 +96,11 @@ export async function handleConvictionBandChange(scoreBefore: number, scoreNow: 
 }
 
 export async function handleNewBriefing(headline: string, date: string, threatLevel: string): Promise<void> {
-  const eventKey = `briefing_${date}`;
-  if (await isDuplicate('new_briefing', eventKey)) return;
-
-  const url = `${SITE_URL}/briefing/${date}`;
-  const normalisedThreat = normaliseThreatState(threatLevel);
-  await postBotMessage(`Today's briefing: ${headline} [THREAT: ${normalisedThreat}] \u2192 ${url}`, 'new_briefing');
+  // Briefing announcement format lives in @/lib/chat/announcements —
+  // the centralised helper enforces the brief one-line format and
+  // handles dedup via the shared eventKey.
+  const { announceBriefing } = await import('@/lib/chat/announcements');
+  await announceBriefing(headline, date, threatLevel);
 }
 
 export async function handleWhaleTx(amountBtc: number, direction: string): Promise<void> {

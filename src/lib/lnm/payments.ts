@@ -23,6 +23,7 @@ import {
 } from '@/lib/newsletter/lifecycle';
 import { sendNostrDm } from '@/lib/nostr/dm';
 import { TIER_LABELS } from '@/lib/auth/tier';
+import { announceSubscription, announceDonation } from '@/lib/chat/announcements';
 
 const SUBSCRIPTION_TIERS = ['general', 'members', 'vip'] as const;
 type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
@@ -131,16 +132,55 @@ export async function activateTier(
     amountSats: payment.amountSats,
   });
 
+  // Announce the subscription in the ops room (brief one-liner). Uses the
+  // user's chatDisplayName (anon-XXXX fallback) so no PII leaks. Dedup is
+  // keyed to the paymentId inside the helper so restart loops won't flood.
+  const displayName = updatedUser.chatDisplayName && updatedUser.chatDisplayName.trim().length > 0
+    ? updatedUser.chatDisplayName
+    : `anon-${userId.slice(0, 4)}`;
+  try {
+    await announceSubscription(displayName, tier, duration, paymentId);
+  } catch (err) {
+    console.error('[Payments] announceSubscription failed:', err);
+  }
+
   const label = duration === 'lifetime' ? 'lifetime' : expiresAt!.toISOString();
   console.log(`[Payments] Activated ${tier} (${duration}) for user ${userId}, expires ${label}`);
 }
 
 export async function recordDonation(amountSats: number, paymentId: string): Promise<void> {
-  await prisma.subscriptionPayment.update({
+  const payment = await prisma.subscriptionPayment.update({
     where: { id: paymentId },
     data: { status: 'confirmed', activatedAt: new Date() },
+    select: {
+      id: true,
+      userId: true,
+      user: {
+        select: { id: true, chatDisplayName: true },
+      },
+    },
   });
-  console.log(`[Payments] Donation recorded: ${amountSats} sats`);
+
+  // Look up the donor's chatDisplayName so the thank-you post can credit
+  // them (privacy-preserving — it's still the anon-XXXX pseudonym, not
+  // their email). Anonymous donations (LNURL, no user attached) fall
+  // through to the generic "anonymous supporter" branch inside
+  // announceDonation.
+  let displayName: string | null = null;
+  if (payment.user) {
+    const name = payment.user.chatDisplayName?.trim() ?? '';
+    displayName = name.length > 0
+      ? name
+      : `anon-${payment.user.id.slice(0, 4)}`;
+  }
+
+  try {
+    await announceDonation(amountSats, paymentId, displayName);
+  } catch (err) {
+    console.error('[Payments] announceDonation failed:', err);
+  }
+
+  console.log(`[Payments] Donation recorded: ${amountSats} sats from ${displayName ?? 'anonymous'}`);
 }
 
 // ── Renewal check (run daily) ─────────────────────────────────────────────────

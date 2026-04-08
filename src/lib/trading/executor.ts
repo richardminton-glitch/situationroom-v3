@@ -11,6 +11,13 @@ import {
   announceTradeOpen,
   announceTradeClose,
 } from './bot-messages';
+// Brief ops-room mirrors of the verbose bot-room trade posts. Every
+// open / close is cross-posted so members-facing awareness of
+// trading activity is not gated behind the dedicated bot-room page.
+import {
+  announceTradeOpen as opsAnnounceTradeOpen,
+  announceTradeClose as opsAnnounceTradeClose,
+} from '@/lib/chat/announcements';
 import type { AIDecision, PoolState, ExecutionResult } from './types';
 
 // ── Main executor ─────────────────────────────────────────────────────────────
@@ -93,7 +100,7 @@ async function executeOpen(
     },
   });
 
-  // Announce in bot room
+  // Announce in bot room (detailed telemetry) + ops room (brief one-liner)
   await announceTradeOpen(
     t.side,
     t.leverage,
@@ -101,6 +108,7 @@ async function executeOpen(
     decision.conviction,
     decision.chat_message,
   );
+  await opsAnnounceTradeOpen(t.side, t.leverage, entryPrice, decision.conviction);
 
   // Mark decision as executed
   await prisma.tradingDecision.update({
@@ -164,6 +172,7 @@ async function executeClose(
       pnlSats,
       chatMessage,
     );
+    await opsAnnounceTradeClose(pool.positionSide!, exitPrice, pnlSats, 'ai_decision');
   }
 
   // Mark decision as executed

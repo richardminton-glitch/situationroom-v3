@@ -8,6 +8,7 @@
 import { getBotClient } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import { announceExternalClose } from './bot-messages';
+import { announceExternalClose as opsAnnounceExternalClose } from '@/lib/chat/announcements';
 
 export async function syncPositions(): Promise<{
   synced: number;
@@ -83,6 +84,7 @@ export async function syncPositions(): Promise<{
           : 'unknown';
 
         await announceExternalClose(side, syncReason, pnlSats, exitPrice);
+        await opsAnnounceExternalClose(side, syncReason, pnlSats, exitPrice);
         synced++;
 
         console.log(`[position-sync] Trade ${local.lnmTradeId} closed externally: ${closeReason} P&L: ${pnlSats} sats`);
