@@ -29,7 +29,9 @@ import {
   Robot,
   PencilSimple,
   Plus,
+  Envelope,
 } from '@phosphor-icons/react';
+import { FeedbackModal } from '@/components/feedback/FeedbackModal';
 
 // Tier requirements for each preset
 const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
@@ -106,6 +108,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
   const [showNewDash, setShowNewDash] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const { user, logout, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -505,6 +508,21 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                 );
               })}
 
+              {/* Feedback — opens a modal, authenticated users only */}
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                className="flex items-center gap-3 w-full px-3 py-2 rounded text-sm transition-colors text-left"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid transparent',
+                }}
+                title={collapsed ? 'Feedback' : undefined}
+              >
+                <span className="text-base shrink-0"><Envelope size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
+                {!collapsed && <span>Feedback</span>}
+              </button>
+
               {/* Admin — only visible to admin users */}
               {checkAdmin(user.email) && (
                 <Link
@@ -684,6 +702,8 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
         </div>
       </aside>
 
+      {/* Feedback modal — portal-free, rendered alongside the aside */}
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </>
   );
 }
