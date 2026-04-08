@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getLiveSatsPerGbp } from '@/lib/lnm/rates';
+import { getMonthlyAiCostUsd } from '@/lib/grok/usageEstimate';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,44 +24,17 @@ const DOMAINS_GBP = 2.25;    // £26.99 / 12
 // Only charged if over free tier — we're on the paid plan at $35/mo flat.
 const API_NINJAS_USD = 35;
 
-// ── AI cost estimate (xAI Grok) ──────────────────────────────────────────────
-// Computed from token usage and current xAI pricing (Apr 2026):
-//   grok-4.20 (Responses API): $3.00/M in, $15.00/M out + $5/1K web searches
-//   grok-4-1-fast:             $0.20/M in, $0.50/M out
-//
-// Daily Briefing (grok-4.20): 6 calls/day × $0.030/call = $0.18/day
-// VIP Briefings (grok-4-1-fast): ~10 calls/day × $0.0005/call = $0.005/day
-// RSS Classifier (grok-4-1-fast): ~75 calls/day × $0.0003/call = $0.023/day
-// On-demand analysis (8 routes, grok-4-1-fast): ~45 calls/day × ~$0.0005 = $0.023/day
-// Threat Analysis (grok-4-1-fast): ~15 calls/day × $0.0003/call = $0.005/day
-
-function estimateAiCostUsd(): number {
-  // Per-day cost estimates by feature
-  const dailyCosts = {
-    briefing: 6 * 0.030,       // grok-4.20 + web search
-    vipBriefings: 10 * 0.0005, // grok-4-1-fast, ~5 VIP users × 2 calls
-    rssClassifier: 75 * 0.0003,// grok-4-1-fast
-    annotation: 10 * 0.0002,
-    signalInterpreter: 5 * 0.0009,
-    cohortAnalysis: 4 * 0.0006,
-    bitcoinArgument: 2 * 0.0007,
-    patternHistorian: 3 * 0.0005,
-    briefingSearch: 2 * 0.0026,
-    briefingRetro: 3 * 0.0007,
-    threatAnalysis: 15 * 0.0003,
-    onchainAnalysis: 4 * 0.027,  // grok-3, VIP, 6h cache
-  };
-
-  const dailyTotal = Object.values(dailyCosts).reduce((s, v) => s + v, 0);
-  return dailyTotal * 30; // monthly
-}
+// ── xAI / Grok cost ──────────────────────────────────────────────────────────
+// Sourced from @/lib/grok/usageEstimate — the same table the admin page
+// renders. Editing rows there automatically moves the figure shown in the
+// header funding bar and on the /support page.
 
 // ── GBP conversion ───────────────────────────────────────────────────────────
 // Uses shared getLiveSatsPerGbp() from @/lib/lnm/rates
 // (CoinGecko BTC/GBP, 5-min cache, 5s timeout, fallback to 1,900 sats/GBP)
 
 function computeCosts(usdToGbp: number) {
-  const aiUsd = estimateAiCostUsd();
+  const aiUsd = getMonthlyAiCostUsd();
   const aiGbp = Math.round(aiUsd * usdToGbp);
   const apiNinjasGbp = Math.round(API_NINJAS_USD * usdToGbp);
   const hostingRounded = Math.round(HOSTING_GBP);

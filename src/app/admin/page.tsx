@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { ADMIN_EMAILS } from '@/lib/auth/tier';
+import {
+  AI_USAGE_DATA,
+  AI_TOTAL_7D_USD as AI_TOTAL_7D,
+  AI_TOTAL_30D_USD as AI_TOTAL_30D,
+} from '@/lib/grok/usageEstimate';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,23 +132,9 @@ const smallValueStyle: React.CSSProperties = {
 };
 
 // ── AI / LLM Cost Estimates ──────────────────────────────────────────────────
-// Based on xAI pricing (Apr 2026):
-//   grok-4.20 multi-agent (Responses API): $3.00/M in, $15.00/M out + $5/1K web searches
-//   grok-4-1-fast-non-reasoning:           $0.20/M in, $0.50/M out
-//   grok-3:                                $3.00/M in, $15.00/M out
-//   grok-3-mini-fast:                      ~$0.10/M in, $0.40/M out
-
-interface AiUsageRow {
-  feature: string;
-  model: string;
-  trigger: string;
-  inputTokens: number;   // avg per call
-  outputTokens: number;  // avg per call
-  callsPerDay: number;   // estimated avg
-  costPerCall: number;   // USD
-  est7dCost: number;     // USD
-  est30dCost: number;    // USD
-}
+// AI_USAGE_DATA + totals are imported from @/lib/grok/usageEstimate so that
+// this admin table and the /support page funding bar can never drift apart.
+// Edit rows there, not here.
 
 const MODEL_COLORS: Record<string, string> = {
   'grok-4.20': '#7c5cbf',
@@ -151,208 +142,6 @@ const MODEL_COLORS: Record<string, string> = {
   'grok-3': '#f0a500',
   'grok-3-mini-fast': '#4a9eff',
 };
-
-const AI_USAGE_DATA: AiUsageRow[] = [
-  {
-    feature: 'Daily Briefing',
-    model: 'grok-4.20',
-    trigger: 'Cron 06:00 UTC',
-    inputTokens: 3_000,
-    outputTokens: 400,
-    callsPerDay: 6,
-    // (3000 × $3/M) + (400 × $15/M) + ~3 web searches × $0.005 = $0.030
-    costPerCall: 0.030,
-    est7dCost: 1.26,
-    est30dCost: 5.40,
-  },
-  {
-    feature: 'VIP Briefings',
-    model: 'grok-4-1-fast',
-    trigger: 'Cron 06:10 UTC',
-    inputTokens: 1_750,
-    outputTokens: 250,
-    callsPerDay: 10,  // ~5 VIP users × 2 calls
-    costPerCall: 0.0005,
-    est7dCost: 0.04,
-    est30dCost: 0.15,
-  },
-  {
-    feature: 'RSS Classifier',
-    model: 'grok-4-1-fast',
-    trigger: 'Auto (feed ingest)',
-    inputTokens: 1_250,
-    outputTokens: 175,
-    callsPerDay: 75,  // 50–100 depending on feed velocity
-    // (1250 × $0.20/M) + (175 × $0.50/M) = $0.0003
-    costPerCall: 0.0003,
-    est7dCost: 0.16,
-    est30dCost: 0.68,
-  },
-  {
-    feature: 'Signal Annotation',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 800,
-    outputTokens: 125,
-    callsPerDay: 10,
-    costPerCall: 0.0002,
-    est7dCost: 0.01,
-    est30dCost: 0.06,
-  },
-  {
-    feature: 'Signal Interpreter',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 2_500,
-    outputTokens: 750,
-    callsPerDay: 5,
-    costPerCall: 0.0009,
-    est7dCost: 0.03,
-    est30dCost: 0.14,
-  },
-  {
-    feature: 'Cohort Analysis',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 1_800,
-    outputTokens: 430,
-    callsPerDay: 4,
-    costPerCall: 0.0006,
-    est7dCost: 0.02,
-    est30dCost: 0.07,
-  },
-  {
-    feature: 'Bitcoin Argument',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 2_000,
-    outputTokens: 500,
-    callsPerDay: 2,
-    costPerCall: 0.0007,
-    est7dCost: 0.01,
-    est30dCost: 0.04,
-  },
-  {
-    feature: 'Pattern Historian',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 1_600,
-    outputTokens: 430,
-    callsPerDay: 3,
-    costPerCall: 0.0005,
-    est7dCost: 0.01,
-    est30dCost: 0.05,
-  },
-  {
-    feature: 'Briefing Search',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (VIP only)',
-    inputTokens: 10_000,
-    outputTokens: 1_100,
-    callsPerDay: 2,
-    costPerCall: 0.0026,
-    est7dCost: 0.04,
-    est30dCost: 0.16,
-  },
-  {
-    feature: 'Briefing Retrospective',
-    model: 'grok-4-1-fast',
-    trigger: 'On-demand (Members+)',
-    inputTokens: 2_500,
-    outputTokens: 450,
-    callsPerDay: 3,
-    costPerCall: 0.0007,
-    est7dCost: 0.02,
-    est30dCost: 0.06,
-  },
-  {
-    feature: 'Threat Analysis',
-    model: 'grok-4-1-fast',
-    trigger: 'Auto (state shifts)',
-    inputTokens: 1_200,
-    outputTokens: 175,
-    callsPerDay: 15,
-    costPerCall: 0.0003,
-    est7dCost: 0.03,
-    est30dCost: 0.14,
-  },
-  {
-    feature: 'On-Chain Analysis (Members)',
-    model: 'grok-3',
-    trigger: 'On-demand (Members, 12h cache)',
-    inputTokens: 2_500,
-    outputTokens: 900,
-    callsPerDay: 6,  // ~10 members × ~0.6 calls/day (12h window)
-    // (2500 × $3/M) + (900 × $15/M) = $0.0075 + $0.0135 = $0.021
-    costPerCall: 0.021,
-    est7dCost: 0.88,
-    est30dCost: 3.78,
-  },
-  {
-    feature: 'On-Chain Analysis (VIP)',
-    model: 'grok-3',
-    trigger: 'On-demand (VIP, 6h cache)',
-    inputTokens: 3_000,
-    outputTokens: 1_400,
-    callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
-    // (3000 × $3/M) + (1400 × $15/M) = $0.009 + $0.021 = $0.030
-    costPerCall: 0.030,
-    est7dCost: 0.84,
-    est30dCost: 3.60,
-  },
-  {
-    feature: 'Macro Analysis (General)',
-    model: 'grok-3-mini-fast',
-    trigger: 'On-demand (General, 24h cache)',
-    inputTokens: 2_000,
-    outputTokens: 500,
-    callsPerDay: 1,  // 1 per 24h window (shared cache)
-    // grok-3-mini-fast: ~$0.10/M in, $0.40/M out
-    // (2000 × $0.10/M) + (500 × $0.40/M) = $0.0002 + $0.0002 = $0.0004
-    costPerCall: 0.0004,
-    est7dCost: 0.003,
-    est30dCost: 0.01,
-  },
-  {
-    feature: 'Macro Analysis (Members)',
-    model: 'grok-3',
-    trigger: 'On-demand (Members, 12h cache)',
-    inputTokens: 3_000,
-    outputTokens: 900,
-    callsPerDay: 2,  // 2 per 12h window (shared cache)
-    // (3000 × $3/M) + (900 × $15/M) = $0.009 + $0.0135 = $0.023
-    costPerCall: 0.023,
-    est7dCost: 0.32,
-    est30dCost: 1.38,
-  },
-  {
-    feature: 'Macro Analysis (VIP)',
-    model: 'grok-3',
-    trigger: 'On-demand (VIP, 6h cache)',
-    inputTokens: 3_500,
-    outputTokens: 1_400,
-    callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
-    // (3500 × $3/M) + (1400 × $15/M) = $0.0105 + $0.021 = $0.032
-    costPerCall: 0.032,
-    est7dCost: 0.90,
-    est30dCost: 3.84,
-  },
-  {
-    feature: 'Trading AI Engine',
-    model: 'grok-4-1-fast',
-    trigger: '1h cron (24×/day)',
-    inputTokens: 2_000,
-    outputTokens: 1_200,
-    callsPerDay: 24,  // 24 cycles/day × 1 Grok call per cycle
-    // (2000 × $0.20/M) + (1200 × $0.50/M) = $0.0004 + $0.0006 = $0.001
-    costPerCall: 0.001,
-    est7dCost: 0.17,
-    est30dCost: 0.72,
-  },
-];
-
-const AI_TOTAL_7D = AI_USAGE_DATA.reduce((s, r) => s + r.est7dCost, 0);
-const AI_TOTAL_30D = AI_USAGE_DATA.reduce((s, r) => s + r.est30dCost, 0);
 
 // ── API Usage Estimates ──────────────────────────────────────────────────────
 // Calculated from cache TTLs, polling intervals, and cron schedules.

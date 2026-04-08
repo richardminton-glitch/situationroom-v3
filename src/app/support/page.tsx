@@ -65,9 +65,7 @@ export default function SupportPage() {
             'Trading pool view + capital flow topology',
             'On-Chain Deep Dive dashboard',
             'AI Analysis dashboard — 8 specialist agents',
-            'AI "Why Bitcoin" annotations on data',
             'On-chain AI analysis (Grok-powered)',
-            'Miners & network health section',
           ], cta: 'SUBSCRIBE' },
           { tier: 'VIP', price: pricing ? `${formatSats(pricing.tierPricesSats.vip)} sats (lifetime)` : '...', color: '#7c5cbf', subtitle: 'One-off payment · Lifetime access', features: [
             'Everything in Members',
