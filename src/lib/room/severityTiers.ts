@@ -11,27 +11,43 @@
  * Impact scores added to the threat score on event arrival.
  *
  * Tuning history:
- *   Apr 2026: halved across the board after the indicator sat pinned at
- *   CRITICAL [100] for 24+ hours on a normal news day. A single Tier 4
- *   shock event used to be enough to cross the ALERT threshold on its
- *   own (50 pts), and two fresh Tier 4s would saturate the cap. Normal
- *   daily flow should rest in the MONITORING band (16-35); CRITICAL is
- *   reserved for genuine disaster, economic collapse, or all-out war.
+ *   Apr 2026 (pass 1): halved across the board — CRITICAL had been pinned
+ *                      at 100 for 24h.
+ *   Apr 2026 (pass 2): Tier 2 dropped further after the diagnostic
+ *                      rawScore showed 9 Tier 2 events / 2h = 54 pts
+ *                      which alone pushes into ELEVATED. Tier 2 is just
+ *                      "moderate market vocabulary" — it should be a
+ *                      background hum, not a threat driver.
+ *
+ * Target: normal daily news flow (15-20 events / 2h, mostly Tier 1-2)
+ * should rest in MONITORING (16-40). CRITICAL is reserved for genuine
+ * disaster, economic collapse, or all-out war.
  */
 export const TIER_IMPACT: Record<1 | 2 | 3 | 4, number> = {
-  1: 2,   // was 4  — routine domain match
-  2: 6,   // was 12 — moderate escalation
-  3: 14,  // was 28 — high-impact single event
-  4: 25,  // was 50 — shock event; two fresh shocks now sum to 50 (ALERT, not CRITICAL)
+  1: 2,   // routine domain match
+  2: 4,   // was 6 — moderate market vocabulary
+  3: 14,  // high-impact single event
+  4: 25,  // shock event
 };
 
-/** Tier 2 — moderate escalation keywords */
+/**
+ * Tier 2 — moderate escalation keywords.
+ *
+ * Tuning (Apr 2026): removed positive/neutral price-movement vocabulary
+ * (surge, rally, breakout, soar, pump, upgrade, record) because a BTC
+ * rally isn't a threat — it's normal bull behaviour. Only downside /
+ * forced-selling / systemic-stress language belongs here.
+ */
 const TIER_2_TERMS = [
-  'unexpected', 'surge', 'collapse', 'halt', 'plunge', 'spike',
-  'reversal', 'shock', 'downgrade', 'upgrade', 'breach', 'record',
-  'selloff', 'sell-off', 'rally', 'rout', 'volatility', 'breakout',
-  'tumble', 'soar', 'dump', 'pump', 'liquidation', 'capitulation',
+  // Downside movement
+  'collapse', 'halt', 'plunge', 'reversal', 'shock', 'downgrade',
+  'selloff', 'sell-off', 'rout', 'tumble', 'dump',
+  // Forced selling
+  'liquidation', 'capitulation',
+  // Systemic stress
   'default', 'contagion', 'systemic', 'flash crash', 'circuit breaker',
+  // Breach (security or level)
+  'breach', 'unexpected',
 ];
 
 /**
