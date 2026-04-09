@@ -13,20 +13,23 @@
  * Tuning history:
  *   Apr 2026 (pass 1): halved across the board — CRITICAL had been pinned
  *                      at 100 for 24h.
- *   Apr 2026 (pass 2): Tier 2 dropped further after the diagnostic
- *                      rawScore showed 9 Tier 2 events / 2h = 54 pts
- *                      which alone pushes into ELEVATED. Tier 2 is just
- *                      "moderate market vocabulary" — it should be a
- *                      background hum, not a threat driver.
+ *   Apr 2026 (pass 2): Tier 2 dropped 6→4 after diagnostic rawScore showed
+ *                      9 Tier 2 events / 2h = 54 pts alone.
+ *   Apr 2026 (pass 3): Tier 1 halved 2→1, Tier 2 halved 4→2. Removed
+ *                      relevance-based tier promotion entirely. The threat
+ *                      meter is a global threat assessment — Bitcoin relevance
+ *                      doesn't make a headline more threatening. Only threat
+ *                      vocabulary should drive tiers. With 30+ events/2h the
+ *                      old values saturated the score even on routine days.
  *
- * Target: normal daily news flow (15-20 events / 2h, mostly Tier 1-2)
- * should rest in MONITORING (16-40). CRITICAL is reserved for genuine
- * disaster, economic collapse, or all-out war.
+ * Target: normal daily news flow (20-30 events / 2h, mostly Tier 1)
+ * should rest in MONITORING (16-40). ELEVATED when threat vocabulary
+ * appears. ALERT/CRITICAL only on genuine high-impact events.
  */
 export const TIER_IMPACT: Record<1 | 2 | 3 | 4, number> = {
-  1: 2,   // routine domain match
-  2: 4,   // was 6 — moderate market vocabulary
-  3: 14,  // high-impact single event
+  1: 1,   // routine domain match — background hum
+  2: 2,   // moderate threat vocabulary — notable but not alarming
+  3: 14,  // high-impact concrete event
   4: 25,  // shock event
 };
 
@@ -106,32 +109,33 @@ function matchesTerm(lower: string, term: string): boolean {
 
 /**
  * Determine severity tier from headline text and classification metrics.
+ *
+ * Tuning (Apr 2026): removed all relevanceToBitcoin-based tier promotion.
+ * The threat assessor is a GLOBAL threat meter with a Bitcoin flavour, not
+ * a Bitcoin-specific threat meter. A headline's indirect relevance to BTC
+ * doesn't make it more threatening — only actual threat vocabulary does.
+ * Previously, high relevance scores were auto-promoting ~60% of headlines
+ * to Tier 2+, pinning the score at CRITICAL on routine news days.
  */
 export function classifyTier(
   headline: string,
-  relevance: number,
+  _relevance: number,
   confidence: number,
   domainCount: number,
 ): 1 | 2 | 3 | 4 {
   const lower = headline.toLowerCase();
 
-  // Tier 4: extreme terms OR multi-domain with high relevance
+  // Tier 4: extreme terms OR multi-domain convergence
   if (TIER_4_TERMS.some((t) => matchesTerm(lower, t))) return 4;
-  if (domainCount >= 3 && relevance >= 8) return 4;
+  if (domainCount >= 3) return 4;
 
   // Tier 3: high-impact terms with HIGH classifier confidence.
-  // 0.5 → 0.7 after observing the classifier assigning Tier 3 to editorial
-  // "crisis language" headlines. At 0.7 the classifier has to be certain.
+  // Confidence gate at 0.7 prevents editorial "crisis language" from
+  // triggering — the classifier has to be certain this is a real event.
   if (TIER_3_TERMS.some((t) => matchesTerm(lower, t)) && confidence >= 0.7) return 3;
-  if (relevance >= 9 && confidence >= 0.8) return 3;
 
-  // Tier 2: moderate terms or elevated relevance
-  // Relevance threshold raised 7 → 8 (Apr 2026): the RSS classifier
-  // over-scores geopolitical headlines (Iran, Lebanon, oil) at 7-8
-  // even when they have minimal direct BTC relevance. At 7 this was
-  // promoting ~60% of all headlines to Tier 2, flooding the score.
+  // Tier 2: moderate threat vocabulary
   if (TIER_2_TERMS.some((t) => matchesTerm(lower, t))) return 2;
-  if (relevance >= 8) return 2;
 
   // Tier 1: baseline signal
   return 1;
