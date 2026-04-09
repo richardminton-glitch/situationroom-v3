@@ -126,8 +126,12 @@ export function classifyTier(
   if (relevance >= 9 && confidence >= 0.8) return 3;
 
   // Tier 2: moderate terms or elevated relevance
+  // Relevance threshold raised 7 → 8 (Apr 2026): the RSS classifier
+  // over-scores geopolitical headlines (Iran, Lebanon, oil) at 7-8
+  // even when they have minimal direct BTC relevance. At 7 this was
+  // promoting ~60% of all headlines to Tier 2, flooding the score.
   if (TIER_2_TERMS.some((t) => matchesTerm(lower, t))) return 2;
-  if (relevance >= 7) return 2;
+  if (relevance >= 8) return 2;
 
   // Tier 1: baseline signal
   return 1;
