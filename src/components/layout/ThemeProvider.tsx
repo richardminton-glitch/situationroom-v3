@@ -31,8 +31,13 @@ export function ThemeProvider({
   // Always start with initialTheme to match SSR; sync from localStorage after mount
   const [theme, setThemeRaw] = useState<Theme>(initialTheme);
 
-  // Hydrate theme from localStorage after mount (avoids SSR mismatch)
+  // Hydrate theme from localStorage after mount (avoids SSR mismatch).
+  // Skip if a room layout has already forced dark — its useEffect fires
+  // before ours (React flushes child effects first) and sets the session
+  // key. Without this guard the localStorage read overwrites the forced
+  // dark theme, causing a parchment flash on the sidebar.
   useEffect(() => {
+    if (sessionStorage.getItem('sr-ops-room-prev-theme')) return;
     const stored = localStorage.getItem('sr-theme') as Theme | null;
     if (stored === 'dark' || stored === 'parchment') {
       setThemeRaw(stored);
