@@ -71,13 +71,38 @@ const TIER_3_TERMS = [
   'escalation', 'missile strike', 'airstrike', 'invasion', 'blockade',
 ];
 
-/** Tier 4 — extreme / shock keywords */
+/**
+ * Tier 4 — extreme / shock keywords.
+ *
+ * Tuning (Apr 2026): replaced bare "nuclear" with threat-specific phrases.
+ * "Nuclear moratorium lifted" (energy policy) was hitting Tier 4. Only
+ * nuclear *weapon/strike/threat* context belongs at shock level.
+ */
 const TIER_4_TERMS = [
   'war declared', 'exchange insolvent', 'btc banned', 'bitcoin banned',
-  'fed emergency', 'nuclear', 'martial law', 'coup', 'assassination',
+  'fed emergency', 'nuclear strike', 'nuclear attack', 'nuclear threat',
+  'nuclear war', 'martial law', 'coup', 'assassination',
   'sovereign default', 'bank run', 'systemic collapse', 'market halt',
   'trading suspended', 'protocol exploit', 'chain halted', 'zero day',
 ];
+
+/**
+ * Word-boundary-aware term matching.
+ *
+ * Uses \b word boundaries so "ban" matches "ban", "bans", "banned" but NOT
+ * "Lebanon", "bank", "bargain", "abandon". Multi-word phrases like
+ * "war declared" still work because \b only wraps the full phrase.
+ */
+const termRegexCache = new Map<string, RegExp>();
+
+function matchesTerm(lower: string, term: string): boolean {
+  let re = termRegexCache.get(term);
+  if (!re) {
+    re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+    termRegexCache.set(term, re);
+  }
+  return re.test(lower);
+}
 
 /**
  * Determine severity tier from headline text and classification metrics.
@@ -91,17 +116,17 @@ export function classifyTier(
   const lower = headline.toLowerCase();
 
   // Tier 4: extreme terms OR multi-domain with high relevance
-  if (TIER_4_TERMS.some((t) => lower.includes(t))) return 4;
+  if (TIER_4_TERMS.some((t) => matchesTerm(lower, t))) return 4;
   if (domainCount >= 3 && relevance >= 8) return 4;
 
   // Tier 3: high-impact terms with HIGH classifier confidence.
   // 0.5 → 0.7 after observing the classifier assigning Tier 3 to editorial
   // "crisis language" headlines. At 0.7 the classifier has to be certain.
-  if (TIER_3_TERMS.some((t) => lower.includes(t)) && confidence >= 0.7) return 3;
+  if (TIER_3_TERMS.some((t) => matchesTerm(lower, t)) && confidence >= 0.7) return 3;
   if (relevance >= 9 && confidence >= 0.8) return 3;
 
   // Tier 2: moderate terms or elevated relevance
-  if (TIER_2_TERMS.some((t) => lower.includes(t))) return 2;
+  if (TIER_2_TERMS.some((t) => matchesTerm(lower, t))) return 2;
   if (relevance >= 7) return 2;
 
   // Tier 1: baseline signal
