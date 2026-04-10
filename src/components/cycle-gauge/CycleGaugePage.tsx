@@ -85,7 +85,7 @@ export function CycleGaugePage({ data, loading, error }: Props) {
             <p style={{ fontSize: 9, letterSpacing: '0.18em', color: textMuted, margin: 0, marginBottom: 4 }}>
               SITUATION ROOM
             </p>
-            <h1 style={{ fontSize: 18, color: textPrimary, margin: 0, fontWeight: 600, letterSpacing: '0.06em', fontFamily: 'var(--font-heading)' }}>
+            <h1 style={{ fontSize: 18, color: textPrimary, margin: 0, fontWeight: 600, letterSpacing: '0.06em', fontFamily: isDark ? FONT : "'Georgia', 'Times New Roman', serif" }}>
               CYCLE POSITION GAUGE
             </h1>
           </div>
