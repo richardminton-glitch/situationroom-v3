@@ -7,7 +7,7 @@ import { useTheme } from '@/components/layout/ThemeProvider';
 import { useAuth } from '@/components/layout/AuthProvider';
 
 // Pages inside /room that respect the user's theme instead of forcing dark
-const PARCHMENT_COMPATIBLE = ['/room/cycle-gauge', '/room/dca-signal'];
+const PARCHMENT_COMPATIBLE = ['/room/cycle-gauge', '/room/dca-signal', '/room/mining'];
 
 export default function RoomLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();

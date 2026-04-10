@@ -52,6 +52,9 @@ export const METRICS: MetricDef[] = [
   { key: 'peaceRank', label: 'Peace Index', group: 'Governance', format: fmtInt, higherIsBetter: false },
   { key: 'pressRank', label: 'Press Freedom', group: 'Governance', format: fmtInt, higherIsBetter: false },
   { key: 'democracy', label: 'Democracy Score', group: 'Governance', format: (v) => `${v.toFixed(1)}/10`, higherIsBetter: true, domain: [0, 10] },
+
+  // Mining
+  { key: 'miningHashratePct', label: 'Mining Hashrate %', group: 'Economic', format: fmtPct, higherIsBetter: true, domain: [0, 40] },
 ];
 
 export const METRIC_BY_KEY = Object.fromEntries(METRICS.map((m) => [m.key, m]));

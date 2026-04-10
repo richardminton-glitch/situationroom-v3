@@ -32,6 +32,7 @@ import {
   Envelope,
   ChartLine,
   Gauge,
+  HardHat,
 } from '@phosphor-icons/react';
 import { FeedbackModal } from '@/components/feedback/FeedbackModal';
 
@@ -63,6 +64,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Bot Room',   href: '/bot-room',       icon: <Robot     size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
   { label: 'DCA Signal',   href: '/room/dca-signal',   icon: <ChartLine size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'general' },
   { label: 'Cycle Gauge', href: '/room/cycle-gauge', icon: <Gauge     size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
+  { label: 'Mining Intel', href: '/room/mining', icon: <HardHat   size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'general' },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [

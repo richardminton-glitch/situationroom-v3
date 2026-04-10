@@ -643,6 +643,10 @@ model CountryData {
   aqi           Int?
   aqiLabel      String?  @map("aqi_label")
 
+  // Mining — updated via hashrate-geo seed / future cron
+  miningHashratePct  Float?    @map("mining_hashrate_pct")   // % of global hashrate (0–100)
+  miningHashrateAt   DateTime? @map("mining_hashrate_at")    // last updated
+
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("country_data")
