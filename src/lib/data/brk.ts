@@ -146,9 +146,9 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
     const total = probe.total;
     const startOffset = Math.max(0, total - days);
 
-    // 3. Bulk fetch
+    // 3. Bulk fetch (cache-bust same as probe)
     const seriesParam = series.join(',');
-    const fetchUrl = `${BRK_BASE}/bulk?series=${seriesParam}&index=day1&start=${startOffset}&limit=${days}`;
+    const fetchUrl = `${BRK_BASE}/bulk?series=${seriesParam}&index=day1&start=${startOffset}&limit=${days}&_t=${Math.floor(Date.now() / 1000)}`;
     const rawBulk = await brkFetch<BrkBulkEntry | BrkBulkEntry[]>(fetchUrl);
 
     // BRK returns a single object for 1 series, or an array for multiple
@@ -206,5 +206,6 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
  * Does NOT use the standard probe→bulk pattern.
  */
 export async function fetchBrkSpecial<T>(endpoint: string): Promise<T> {
-  return brkFetch<T>(`${BRK_BASE}/${endpoint}`);
+  const separator = endpoint.includes('?') ? '&' : '?';
+  return brkFetch<T>(`${BRK_BASE}/${endpoint}${separator}_t=${Math.floor(Date.now() / 1000)}`);
 }
