@@ -579,6 +579,26 @@ model ClassificationCache {
   @@map("classification_cache")
 }
 
+// ── DCA Signal Email Subscribers ─────────────────────────────────────────────
+// Standalone subscription — does not require a full user account.
+// Members can also subscribe; their email is stored here separately for
+// the DCA signal send list.
+
+model DcaSignalSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  frequency     String    @default("weekly")   // 'weekly' | 'monthly'
+  baseAmount    Int       @default(100)         // USD, for the recommended buy calculation
+  confirmed     Boolean   @default(false)       // double opt-in
+  confirmToken  String?   @unique @map("confirm_token")
+  unsubToken    String    @unique @map("unsub_token")
+  confirmedAt   DateTime? @map("confirmed_at")
+  lastSentAt    DateTime? @map("last_sent_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("dca_signal_subscribers")
+}
+
 // ── Country Data (Global Situation Map) ──────────────────────────────────────
 
 model CountryData {
