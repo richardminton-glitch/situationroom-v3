@@ -63,8 +63,16 @@ export async function GET() {
       fetchPuellSeries(),
     ]);
 
+    console.log(`[btc-signal] prices.length=${prices.length}, puell.values.length=${puell.values.length}, puell.dates.length=${puell.dates.length}`);
+    if (prices.length > 0) console.log(`[btc-signal] price range: ${prices[0]?.date} → ${prices[prices.length-1]?.date}`);
+    if (puell.dates.length > 0) console.log(`[btc-signal] puell range: ${puell.dates[0]} → ${puell.dates[puell.dates.length-1]}`);
+
     const ma200wPoints  = computeMA200w(prices);
+    console.log(`[btc-signal] ma200wPoints.length=${ma200wPoints.length}`);
+    if (ma200wPoints.length > 0) console.log(`[btc-signal] ma200w range: ${ma200wPoints[0]?.date} → ${ma200wPoints[ma200wPoints.length-1]?.date}`);
+
     const compositeRows = computeComposite(ma200wPoints, puell.values, puell.dates);
+    console.log(`[btc-signal] compositeRows.length=${compositeRows.length}`);
 
     if (compositeRows.length === 0) {
       return NextResponse.json({ error: 'Insufficient data to compute signal' }, { status: 503 });
