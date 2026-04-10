@@ -1,24 +1,38 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useAuth } from '@/components/layout/AuthProvider';
 
+// Pages inside /room that respect the user's theme instead of forcing dark
+const PARCHMENT_COMPATIBLE = ['/room/cycle-gauge', '/room/dca-signal'];
+
 export default function RoomLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user }            = useAuth();
+  const pathname            = usePathname();
   const [transitionPhase, setTransitionPhase] = useState<'entering' | 'visible'>('entering');
 
-  // Force dark mode after mount — the opaque overlay covers everything until
-  // the theme is applied, so useEffect is safe (no parchment flash).
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.documentElement.classList.add('dark');
+  const forcesDark = !PARCHMENT_COMPATIBLE.some(p => pathname.startsWith(p));
 
+  useEffect(() => {
     const userPref = user?.themePref || localStorage.getItem('sr-theme') || 'parchment';
     sessionStorage.setItem('sr-ops-room-prev-theme', userPref);
-    if (theme !== 'dark') setTheme('dark');
+
+    if (forcesDark) {
+      // Original behaviour: ops-room pages are always dark
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
+      if (theme !== 'dark') setTheme('dark');
+    } else {
+      // Parchment-compatible pages: restore the user's preference
+      document.documentElement.setAttribute('data-theme', userPref);
+      document.documentElement.classList.toggle('dark', userPref === 'dark');
+      if (theme !== userPref) setTheme(userPref as 'dark' | 'parchment');
+    }
+
     const timer = setTimeout(() => setTransitionPhase('visible'), 300);
     return () => {
       clearTimeout(timer);
@@ -40,18 +54,18 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
   return (
     <div
       className="h-screen flex overflow-hidden"
-      style={{ backgroundColor: '#090d12', position: 'relative' }}
+      style={{ backgroundColor: forcesDark ? '#090d12' : 'var(--bg-primary)', position: 'relative' }}
     >
-      {/* Dark transition overlay — covers everything while theme switches */}
+      {/* Dark transition overlay — only needed when switching to dark */}
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#090d12',
-          zIndex: 9999,
+          position:      'absolute',
+          inset:         0,
+          background:    '#090d12',
+          zIndex:        9999,
           pointerEvents: transitionPhase === 'visible' ? 'none' : 'auto',
-          opacity: transitionPhase === 'entering' ? 1 : 0,
-          transition: 'opacity 300ms ease-out',
+          opacity:       (!forcesDark || transitionPhase === 'visible') ? 0 : 1,
+          transition:    'opacity 300ms ease-out',
         }}
       />
 
