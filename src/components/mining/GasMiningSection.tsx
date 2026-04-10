@@ -1,6 +1,7 @@
 'use client';
 
 import { useTheme } from '@/components/layout/ThemeProvider';
+import { StrandedEnergyMap } from './StrandedEnergyMap';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -131,6 +132,12 @@ export function GasMiningSection({ projects, narrativeHook, stats, flareSites }:
           </div>
         ))}
       </div>
+
+      {/* D3 world map — flare heat + mining operation markers */}
+      <StrandedEnergyMap
+        flareCountries={flareSites.topCountries}
+        projects={projects}
+      />
 
       {/* Project cards grid */}
       <div
