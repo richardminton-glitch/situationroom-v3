@@ -60,8 +60,8 @@ interface FileCache {
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
-/** BRK day1 index epoch: 2009-01-03 (Bitcoin genesis) */
-const BRK_EPOCH = new Date('2009-01-03T00:00:00Z');
+/** BRK day1 index epoch: 2009-01-01 (NOT the genesis block — BRK uses calendar start) */
+const BRK_EPOCH = new Date('2009-01-01T00:00:00Z');
 
 /** Convert BRK day1 offset to ISO date string */
 export function brkOffsetToDate(offset: number): string {
