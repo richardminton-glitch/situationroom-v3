@@ -7,13 +7,14 @@ import { HeroSignal }      from './HeroSignal';
 import { SignalGrid }      from './SignalGrid';
 import { ConfluenceBar }   from './ConfluenceBar';
 import { SignalChart }     from './SignalChart';
-import { SignalHistory }    from './SignalHistory';
-import { ReturnsSummary }   from './ReturnsSummary';
-import { StackingChart }    from './StackingChart';
+import { SignalHistory }   from './SignalHistory';
+import { ReturnsSummary }  from './ReturnsSummary';
+import { StackingChart }   from './StackingChart';
+import { DCAOutSection }   from './DCAOutSection';
 import { SignalEmailSignup } from './SignalEmailSignup';
 
-const FONT       = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
-const LS_BASE    = 'sr-dca-base-amount';
+const FONT    = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
+const LS_BASE = 'sr-dca-base-amount';
 
 interface Props {
   data:    BtcSignalResponse | null;
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export function DCASignalPage({ data, loading, error }: Props) {
-  // Read baseAmount here so ReturnsSummary and SignalEmailSignup can share it
+  // Single shared base amount — drives HeroSignal, ReturnsSummary, StackingChart, DCAOutSection
   const [baseAmount, setBaseAmount] = useState(100);
 
   useEffect(() => {
@@ -35,7 +36,12 @@ export function DCASignalPage({ data, loading, error }: Props) {
     } catch { /* SSR */ }
   }, []);
 
-  // Loading state
+  function handleBaseAmountChange(n: number) {
+    setBaseAmount(n);
+    try { localStorage.setItem(LS_BASE, String(n)); } catch { /* noop */ }
+  }
+
+  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{
@@ -47,7 +53,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
     );
   }
 
-  // Error state
+  // ── Error state ────────────────────────────────────────────────────────────
   if (error || !data) {
     return (
       <div style={{
@@ -63,22 +69,27 @@ export function DCASignalPage({ data, loading, error }: Props) {
 
   return (
     <div style={{
-      height:        '100%',
-      overflowY:     'auto',
+      height:          '100%',
+      overflowY:       'auto',
       backgroundColor: '#090d12',
-      fontFamily:    FONT,
-      color:         '#e8edf2',
-      padding:       '24px 32px',
-      display:       'flex',
-      flexDirection: 'column',
-      gap:           24,
+      fontFamily:      FONT,
+      color:           '#e8edf2',
+      padding:         '24px 32px',
+      display:         'flex',
+      flexDirection:   'column',
+      gap:             24,
     }}>
 
       {/* Top bar — price + date + last updated */}
       <PageHeader btcPrice={data.btcPrice} timestamp={data.timestamp} />
 
       {/* Hero — large composite number, frequency toggle, base input, recommended buy */}
-      <HeroSignal composite={data.composite} tier={data.tier} />
+      <HeroSignal
+        composite={data.composite}
+        tier={data.tier}
+        baseAmount={baseAmount}
+        onBaseAmountChange={handleBaseAmountChange}
+      />
 
       {/* Signal grid + confluence bar */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -86,7 +97,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
         <ConfluenceBar maMult={data.maMult} puellMult={data.puellMult} />
       </div>
 
-      {/* Returns vs vanilla DCA */}
+      {/* Returns vs vanilla DCA — scales with baseAmount */}
       {data.backtestSummary && data.backtestSummary.length > 0 && (
         <ReturnsSummary
           backtestSummary={data.backtestSummary}
@@ -98,7 +109,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
       {/* 12-month signal chart */}
       <SignalChart chartData={data.chartData} />
 
-      {/* BTC stacking chart — signal vs vanilla, all-time */}
+      {/* BTC stacking chart — signal vs vanilla, scales with baseAmount */}
       {data.stackingHistory && data.stackingHistory.length > 0 && (
         <StackingChart stackingHistory={data.stackingHistory} baseAmount={baseAmount} />
       )}
@@ -106,13 +117,16 @@ export function DCASignalPage({ data, loading, error }: Props) {
       {/* Email signup */}
       <SignalEmailSignup baseAmount={baseAmount} />
 
-      {/* Weekly signal history table — below email */}
+      {/* Weekly signal history — below email */}
       <SignalHistory data={data} />
+
+      {/* DCA Exit Strategy — VIP gated, scales with baseAmount */}
+      <DCAOutSection data={data} baseAmount={baseAmount} />
 
       {/* Footer */}
       <div style={{
         paddingTop: 8, paddingBottom: 16,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop:  '1px solid rgba(255,255,255,0.06)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
       }}>
         <span style={{ fontSize: 9, color: '#4a5568', letterSpacing: '0.1em' }}>

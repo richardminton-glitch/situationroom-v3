@@ -253,19 +253,8 @@ export function computeBacktestSummary(
   allRows: CompositeRow[],
   currentPrice: number,
 ): BacktestPeriod[] {
-  const BASE_USD   = 100;
-  const DAYS_IN_WEEK = 7;
-
-  // Sample to weekly (pick one row per 7-day window = Friday proxy)
-  const weeklyRows: CompositeRow[] = [];
-  let lastWeekDate = '';
-  for (const row of allRows) {
-    const weekKey = getIsoWeek(row.date);
-    if (weekKey !== lastWeekDate) {
-      weeklyRows.push(row);
-      lastWeekDate = weekKey;
-    }
-  }
+  const BASE_USD = 100;
+  const weeklyRows = sampleWeekly(allRows);
 
   const periods: { label: string; yearsAgo: number | null }[] = [
     { label: '1 year',  yearsAgo: 1 },
@@ -318,6 +307,17 @@ export function computeBacktestSummary(
   return results;
 }
 
+// ── Exit multiplier (inverse of the buy signal) ───────────────────────────────
+
+function compositeToExitMult(composite: number): number {
+  if (composite >= 2.0) return 0.2;   // Strong accumulate → barely sell
+  if (composite >= 1.5) return 0.5;   // Accumulate → light exits
+  if (composite >= 1.15) return 0.8;  // DCA normally → modest exits
+  if (composite >= 0.85) return 1.0;  // Neutral → normal distribution
+  if (composite >= 0.5)  return 1.5;  // Reduce → increase exits
+  return 2.5;                          // Pause → heavy distribution
+}
+
 // ── Stacking history helper (shared with API route) ───────────────────────────
 
 export interface StackingPoint {
@@ -329,20 +329,21 @@ export interface StackingPoint {
 
 /**
  * Build a cumulative weekly BTC-stacking series across the full history.
- * Base is always $100/week for comparability — the chart component scales
- * by the user's actual baseAmount.
+ * Base is always $100/week — the chart component scales by user's baseAmount.
  */
-export function computeStackingHistory(allRows: CompositeRow[]): StackingPoint[] {
-  // Sample to one row per ISO week
-  const weeklyRows: CompositeRow[] = [];
-  let lastWeekKey = '';
+/** Shared weekly sampler */
+function sampleWeekly(allRows: CompositeRow[]): CompositeRow[] {
+  const weekly: CompositeRow[] = [];
+  let lastKey = '';
   for (const row of allRows) {
-    const weekKey = getIsoWeek(row.date);
-    if (weekKey !== lastWeekKey) {
-      weeklyRows.push(row);
-      lastWeekKey = weekKey;
-    }
+    const key = getIsoWeek(row.date);
+    if (key !== lastKey) { weekly.push(row); lastKey = key; }
   }
+  return weekly;
+}
+
+export function computeStackingHistory(allRows: CompositeRow[]): StackingPoint[] {
+  const weeklyRows = sampleWeekly(allRows);
 
   let btcSignal  = 0;
   let btcVanilla = 0;
@@ -353,6 +354,45 @@ export function computeStackingHistory(allRows: CompositeRow[]): StackingPoint[]
     btcSignal  += (100 * mult) / row.price;
     btcVanilla += 100          / row.price;
     result.push({ date: row.date, price: row.price, btcSignal, btcVanilla });
+  }
+
+  return result;
+}
+
+// ── Distribution history helper (DCA-out, shared with API route) ──────────────
+
+export interface DistributionPoint {
+  date:       string;
+  price:      number;
+  usdSignal:  number;   // cumulative USD received (signal-timed exits, $100/week base)
+  usdVanilla: number;   // cumulative USD received (vanilla, $100/week base)
+  btcSignal:  number;   // cumulative BTC sold via signal timing
+  btcVanilla: number;   // cumulative BTC sold via vanilla
+}
+
+/**
+ * Build a cumulative weekly distribution series (DCA-out).
+ * Signal-timed selling: sell MORE when composite is low (overvalued);
+ * sell LESS when composite is high (undervalued / accumulate zone).
+ * Base: $100/week vanilla — component scales by user's baseSell.
+ */
+export function computeDistributionHistory(allRows: CompositeRow[]): DistributionPoint[] {
+  const weeklyRows = sampleWeekly(allRows);
+
+  let usdSignal  = 0;
+  let usdVanilla = 0;
+  let btcSignal  = 0;
+  let btcVanilla = 0;
+  const result: DistributionPoint[] = [];
+
+  for (const row of weeklyRows) {
+    const sellMult = compositeToExitMult(row.normalisedComposite);
+    const spend    = 100 * sellMult;   // USD received this week (signal)
+    usdSignal  += spend;
+    usdVanilla += 100;
+    btcSignal  += spend      / row.price;
+    btcVanilla += 100        / row.price;
+    result.push({ date: row.date, price: row.price, usdSignal, usdVanilla, btcSignal, btcVanilla });
   }
 
   return result;

@@ -17,9 +17,9 @@ import { prisma }                from '@/lib/db';
 import { fetchCoinGeckoHistory } from '@/lib/data/coingecko-history';
 import { fetchPuellSeries }      from '@/lib/data/puell-series';
 import { computeMA200w, computeComposite, compositeToTier } from '@/lib/signals/dca-engine';
-import { computeBacktestSummary, computeStackingHistory } from '@/lib/data/daily-snapshot';
+import { computeBacktestSummary, computeStackingHistory, computeDistributionHistory } from '@/lib/data/daily-snapshot';
 import type { CompositeRow } from '@/lib/signals/dca-engine';
-import type { BacktestPeriod, StackingPoint } from '@/lib/data/daily-snapshot';
+import type { BacktestPeriod, StackingPoint, DistributionPoint } from '@/lib/data/daily-snapshot';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,9 +32,10 @@ export interface BtcSignalResponse {
   puellMult:       number;
   btcPrice:        number;
   timestamp:       string;
-  chartData:        CompositeRow[];    // last 365 entries for the 12-month chart
-  backtestSummary:  BacktestPeriod[];  // 1yr / 3yr / 5yr / all-time DCA comparison
-  stackingHistory:  StackingPoint[];   // all-time weekly cumulative BTC stacking series
+  chartData:           CompositeRow[];       // last 365 entries for the 12-month chart
+  backtestSummary:     BacktestPeriod[];     // 1yr / 3yr / 5yr / all-time DCA comparison
+  stackingHistory:     StackingPoint[];      // all-time weekly cumulative BTC stacking (DCA-in)
+  distributionHistory: DistributionPoint[];  // all-time weekly cumulative USD distribution (DCA-out)
 }
 
 // Module-level fallback cache — used if DB cache isn't populated yet
@@ -71,10 +72,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Insufficient data to compute signal' }, { status: 503 });
     }
 
-    const latest          = compositeRows[compositeRows.length - 1];
-    const chartData       = compositeRows.slice(-365);
-    const backtestSummary = computeBacktestSummary(compositeRows, latest.price);
-    const stackingHistory = computeStackingHistory(compositeRows);
+    const latest             = compositeRows[compositeRows.length - 1];
+    const chartData          = compositeRows.slice(-365);
+    const backtestSummary    = computeBacktestSummary(compositeRows, latest.price);
+    const stackingHistory    = computeStackingHistory(compositeRows);
+    const distributionHistory = computeDistributionHistory(compositeRows);
 
     const response: BtcSignalResponse = {
       composite:       latest.normalisedComposite,
@@ -88,6 +90,7 @@ export async function GET() {
       chartData,
       backtestSummary,
       stackingHistory,
+      distributionHistory,
     };
 
     // Store in memory cache

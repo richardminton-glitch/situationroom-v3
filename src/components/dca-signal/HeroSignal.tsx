@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
-const LS_BASE_AMOUNT  = 'sr-dca-base-amount';
-const LS_FREQ         = 'sr-dca-frequency';
+const LS_FREQ = 'sr-dca-frequency';
 
 type Frequency = 'weekly' | 'monthly';
 
 interface Props {
-  composite: number;
-  tier:      string;
+  composite:          number;
+  tier:               string;
+  baseAmount:         number;                    // lifted to DCASignalPage
+  onBaseAmountChange: (n: number) => void;       // lifted to DCASignalPage
 }
 
 function compositeColour(composite: number): string {
@@ -20,30 +21,21 @@ function compositeColour(composite: number): string {
   return '#d06050';                         // coral
 }
 
-export function HeroSignal({ composite, tier }: Props) {
-  const [baseAmount, setBaseAmount] = useState(100);
-  const [frequency,  setFrequency]  = useState<Frequency>('weekly');
+export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: Props) {
+  const [frequency, setFrequency] = useState<Frequency>('weekly');
 
-  // Hydrate from localStorage
+  // Hydrate frequency from localStorage only
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(LS_BASE_AMOUNT);
-      if (stored) {
-        const n = parseInt(stored, 10);
-        if (!isNaN(n) && n > 0) setBaseAmount(n);
-      }
-      const storedFreq = localStorage.getItem(LS_FREQ) as Frequency | null;
-      if (storedFreq === 'weekly' || storedFreq === 'monthly') {
-        setFrequency(storedFreq);
-      }
+      const stored = localStorage.getItem(LS_FREQ) as Frequency | null;
+      if (stored === 'weekly' || stored === 'monthly') setFrequency(stored);
     } catch { /* SSR guard */ }
   }, []);
 
   function handleAmountChange(val: string) {
     const n = parseInt(val, 10);
     if (!isNaN(n) && n > 0 && n <= 9_999_999) {
-      setBaseAmount(n);
-      try { localStorage.setItem(LS_BASE_AMOUNT, String(n)); } catch { /* noop */ }
+      onBaseAmountChange(n);
     }
   }
 
