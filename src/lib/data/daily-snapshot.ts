@@ -307,15 +307,35 @@ export function computeBacktestSummary(
   return results;
 }
 
-// ── Exit multiplier (inverse of the buy signal) ───────────────────────────────
+// ── Combined strategy crossover ───────────────────────────────────────────────
+//
+// The same composite signal drives BOTH the DCA-in and DCA-out strategies.
+// Above CROSSOVER: use the buy multiplier table (accumulate).
+// Below CROSSOVER: the signal naturally transitions into distribution territory —
+//   buying drops to near-zero, then creeps into active selling as composite falls.
+//
+//   composite ≥ 0.70 (CROSSOVER): buy zone → 0 selling
+//   composite 0.55-0.70:           barely buying → light exits begin (0.3×)
+//   composite 0.40-0.55:           buy nothing → moderate exits (0.7×)
+//   composite 0.25-0.40:           increase exits (1.2×)
+//   composite < 0.25:              heavy distribution (2.0×)
 
-function compositeToExitMult(composite: number): number {
-  if (composite >= 2.0) return 0.2;   // Strong accumulate → barely sell
-  if (composite >= 1.5) return 0.5;   // Accumulate → light exits
-  if (composite >= 1.15) return 0.8;  // DCA normally → modest exits
-  if (composite >= 0.85) return 1.0;  // Neutral → normal distribution
-  if (composite >= 0.5)  return 1.5;  // Reduce → increase exits
-  return 2.5;                          // Pause → heavy distribution
+export const DCA_CROSSOVER = 0.70;  // exported so components can use the same constant
+
+export function compositeToSellMult(composite: number): number {
+  if (composite >= DCA_CROSSOVER) return 0;    // still in accumulate zone
+  if (composite >= 0.55) return 0.3;           // just past crossover — light exits
+  if (composite >= 0.40) return 0.7;           // building distribution
+  if (composite >= 0.25) return 1.2;           // increase exits
+  return 2.0;                                   // heavy distribution
+}
+
+export function compositeToExitTier(composite: number): string {
+  if (composite >= DCA_CROSSOVER) return 'Accumulate zone';
+  if (composite >= 0.55) return 'Light exits';
+  if (composite >= 0.40) return 'Building distribution';
+  if (composite >= 0.25) return 'Increase exits';
+  return 'Heavy distribution';
 }
 
 // ── Stacking history helper (shared with API route) ───────────────────────────
@@ -364,7 +384,9 @@ export function computeStackingHistory(allRows: CompositeRow[]): StackingPoint[]
 export interface DistributionPoint {
   date:       string;
   price:      number;
-  usdSignal:  number;   // cumulative USD received (signal-timed exits, $100/week base)
+  composite:  number;   // normalised composite at this week
+  sellMult:   number;   // 0 when in accumulate zone, >0 when past crossover
+  usdSignal:  number;   // cumulative USD received (crossover-based exits, $100/week base)
   usdVanilla: number;   // cumulative USD received (vanilla, $100/week base)
   btcSignal:  number;   // cumulative BTC sold via signal timing
   btcVanilla: number;   // cumulative BTC sold via vanilla
@@ -372,9 +394,13 @@ export interface DistributionPoint {
 
 /**
  * Build a cumulative weekly distribution series (DCA-out).
- * Signal-timed selling: sell MORE when composite is low (overvalued);
- * sell LESS when composite is high (undervalued / accumulate zone).
- * Base: $100/week vanilla — component scales by user's baseSell.
+ *
+ * Signal exits ONLY activate when composite drops below DCA_CROSSOVER (0.70).
+ * Above the crossover: the signal is in accumulate territory — no selling.
+ * Below the crossover: exits scale up progressively as composite falls further.
+ * Vanilla comparison: $100/week flat selling throughout.
+ *
+ * Base: $100/week — component scales by user's baseSell.
  */
 export function computeDistributionHistory(allRows: CompositeRow[]): DistributionPoint[] {
   const weeklyRows = sampleWeekly(allRows);
@@ -386,13 +412,18 @@ export function computeDistributionHistory(allRows: CompositeRow[]): Distributio
   const result: DistributionPoint[] = [];
 
   for (const row of weeklyRows) {
-    const sellMult = compositeToExitMult(row.normalisedComposite);
-    const spend    = 100 * sellMult;   // USD received this week (signal)
+    const c        = row.normalisedComposite;
+    const sellMult = compositeToSellMult(c);   // 0 above crossover
+    const spend    = 100 * sellMult;            // $0 in accumulate zone
     usdSignal  += spend;
     usdVanilla += 100;
     btcSignal  += spend      / row.price;
     btcVanilla += 100        / row.price;
-    result.push({ date: row.date, price: row.price, usdSignal, usdVanilla, btcSignal, btcVanilla });
+    result.push({
+      date: row.date, price: row.price,
+      composite: c, sellMult,
+      usdSignal, usdVanilla, btcSignal, btcVanilla,
+    });
   }
 
   return result;

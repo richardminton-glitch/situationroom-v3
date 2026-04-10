@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   ComposedChart,
   Line,
-  Area,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,52 +15,55 @@ import { useTier }         from '@/hooks/useTier';
 import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
+import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier } from '@/lib/data/daily-snapshot';
 
 const FONT      = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_SELL   = 'sr-dca-base-sell';
 const LS_PERIOD = 'sr-dca-out-period';
 
 type Period = '1Y' | '3Y' | '5Y' | 'ALL';
-
 const PERIODS: { label: Period; years: number | null }[] = [
-  { label: '1Y',  years: 1 },
-  { label: '3Y',  years: 3 },
-  { label: '5Y',  years: 5 },
-  { label: 'ALL', years: null },
+  { label: '1Y', years: 1 }, { label: '3Y', years: 3 },
+  { label: '5Y', years: 5 }, { label: 'ALL', years: null },
 ];
 
-// ── Exit signal logic ─────────────────────────────────────────────────────────
+// ── Spectrum constants ────────────────────────────────────────────────────────
+// Visual range of the spectrum bar: 0 → MAX_VIZ composite
+const MAX_VIZ = 2.5;
 
-function compositeToExitMult(c: number): number {
-  if (c >= 2.0) return 0.2;
-  if (c >= 1.5) return 0.5;
-  if (c >= 1.15) return 0.8;
-  if (c >= 0.85) return 1.0;
-  if (c >= 0.5)  return 1.5;
-  return 2.5;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function spectrumPct(composite: number): number {
+  // Maps composite 0→MAX_VIZ to 0→100% (left = distribute, right = accumulate)
+  return Math.min(Math.max((composite / MAX_VIZ) * 100, 0), 100);
 }
 
-function compositeToExitTier(c: number): string {
-  if (c >= 2.0) return 'Hold';
-  if (c >= 1.5) return 'Partial exits';
-  if (c >= 1.15) return 'Light exits';
-  if (c >= 0.85) return 'Normal distribution';
-  if (c >= 0.5)  return 'Increase exits';
-  return 'Heavy distribution';
+function crossoverPct(): number {
+  return spectrumPct(DCA_CROSSOVER);
 }
 
-function exitColour(mult: number): string {
-  if (mult >= 1.5) return '#00d4c8';  // teal  — good time to sell
-  if (mult >= 0.8) return '#c4885a';  // amber — neutral
-  return '#6b7a8d';                   // muted — not a good time to sell
+function modeInfo(composite: number): {
+  label: string;
+  sublabel: string;
+  colour: string;
+} {
+  if (composite >= 1.5) return { label: 'ACCUMULATE',       sublabel: 'Signal strongly in buy zone',       colour: '#00d4c8' };
+  if (composite >= 1.15) return { label: 'DCA NORMALLY',    sublabel: 'Signal in buy zone',                colour: '#00d4c8' };
+  if (composite >= 0.85) return { label: 'MILD DCA',        sublabel: 'Buy zone, approaching crossover',   colour: '#8aaba6' };
+  if (composite >= DCA_CROSSOVER) return { label: 'APPROACHING CROSSOVER', sublabel: 'Reduce buy size — exits may start soon', colour: '#c4885a' };
+  if (composite >= 0.55) return { label: 'LIGHT EXITS',     sublabel: 'Just past crossover — begin exiting', colour: '#c4885a' };
+  if (composite >= 0.40) return { label: 'BUILD EXITS',     sublabel: 'Distribution territory — increase exits', colour: '#d08060' };
+  if (composite >= 0.25) return { label: 'INCREASE EXITS',  sublabel: 'Signal deep in distribution zone',  colour: '#d06050' };
+  return                         { label: 'HEAVY DISTRIBUTION', sublabel: 'Maximum exit signal',            colour: '#d06050' };
 }
 
-// ── Formatting ────────────────────────────────────────────────────────────────
-
-function formatUsd(v: number): string {
-  if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(2) + 'M';
-  if (v >= 1_000)     return '$' + (v / 1_000).toFixed(1) + 'K';
-  return '$' + v.toFixed(0);
+function formatUsd(v: number, compact = false): string {
+  if (compact) {
+    if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1) + 'M';
+    if (v >= 1_000)     return '$' + (v / 1_000).toFixed(0) + 'K';
+    return '$' + v.toFixed(0);
+  }
+  return '$' + Math.round(v).toLocaleString('en-US');
 }
 
 function formatPrice(v: number): string {
@@ -74,8 +77,6 @@ function shiftYears(dateStr: string, years: number): string {
   d.setUTCFullYear(d.getUTCFullYear() - years);
   return d.toISOString().slice(0, 10);
 }
-
-// ── Chart helpers ─────────────────────────────────────────────────────────────
 
 function getXTicks(data: DistributionPoint[], period: Period): string[] {
   const seen = new Set<string>();
@@ -100,20 +101,16 @@ function formatXTick(dateStr: string, period: Period): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
-  const sig = payload.find((p: any) => p.dataKey === 'usdSignalScaled');
-  const van = payload.find((p: any) => p.dataKey === 'usdVanillaScaled');
-  const prc = payload.find((p: any) => p.dataKey === 'price');
+  const sig  = payload.find((p: any) => p.dataKey === 'weeklyUsd');
+  const prc  = payload.find((p: any) => p.dataKey === 'price');
+  const comp = payload.find((p: any) => p.dataKey === 'composite');
   return (
-    <div style={{
-      background:    'rgba(21,29,37,0.97)',
-      border:        '1px solid rgba(255,255,255,0.1)',
-      padding:       '8px 12px', fontFamily: FONT, fontSize: 10,
-      color: '#e8edf2', letterSpacing: '0.06em', lineHeight: 1.8,
-    }}>
+    <div style={{ background: 'rgba(21,29,37,0.97)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', fontFamily: FONT, fontSize: 10, color: '#e8edf2', letterSpacing: '0.06em', lineHeight: 1.8 }}>
       <div style={{ color: '#6b7a8d', marginBottom: 4 }}>{label}</div>
-      {sig && <div style={{ color: '#00d4c8' }}>SIGNAL  {formatUsd(sig.value)}</div>}
-      {van && <div style={{ color: '#4a5568' }}>VANILLA {formatUsd(van.value)}</div>}
-      {prc && <div style={{ color: '#8aaba6' }}>BTC     {formatPrice(prc.value)}</div>}
+      {comp && <div style={{ color: comp.value < DCA_CROSSOVER ? '#d06050' : '#00d4c8' }}>COMPOSITE  {Number(comp.value).toFixed(3)}×</div>}
+      {sig  && sig.value > 0 && <div style={{ color: '#c4885a' }}>EXITS      {formatUsd(Number(sig.value))}</div>}
+      {sig  && sig.value === 0 && <div style={{ color: '#4a5568' }}>NO EXIT (accumulate zone)</div>}
+      {prc  && <div style={{ color: '#8aaba6' }}>BTC        {formatPrice(Number(prc.value))}</div>}
     </div>
   );
 }
@@ -122,7 +119,7 @@ function ChartTooltip({ active, payload, label }: any) {
 
 interface Props {
   data:       BtcSignalResponse;
-  baseAmount: number;   // shared base from DCASignalPage — scales all sell recommendations
+  baseAmount: number;
 }
 
 export function DCAOutSection({ data, baseAmount }: Props) {
@@ -130,8 +127,6 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const isVip = canAccess('vip');
 
   const [period, setPeriod] = useState<Period>('5Y');
-
-  // Initialise baseSell from localStorage, default to baseAmount
   const [baseSell, setBaseSell] = useState(baseAmount);
 
   useEffect(() => {
@@ -139,22 +134,20 @@ export function DCAOutSection({ data, baseAmount }: Props) {
       const stored = localStorage.getItem(LS_SELL);
       if (stored) {
         const n = parseInt(stored, 10);
-        if (!isNaN(n) && n > 0) setBaseSell(n);
-        else setBaseSell(baseAmount);
-      } else {
-        setBaseSell(baseAmount);
+        if (!isNaN(n) && n > 0) { setBaseSell(n); return; }
       }
+      setBaseSell(baseAmount);
+    } catch { setBaseSell(baseAmount); }
+    try {
       const p = localStorage.getItem(LS_PERIOD) as Period | null;
       if (p && PERIODS.some(x => x.label === p)) setPeriod(p);
-    } catch { /* SSR */ }
+    } catch { /* noop */ }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep baseSell in sync with baseAmount when baseAmount changes (unless user has set their own)
+  // Keep baseSell in sync when baseAmount changes (unless user has overridden)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LS_SELL);
-      if (!stored) setBaseSell(baseAmount);
-    } catch { setBaseSell(baseAmount); }
+    try { if (!localStorage.getItem(LS_SELL)) setBaseSell(baseAmount); }
+    catch { setBaseSell(baseAmount); }
   }, [baseAmount]);
 
   function handleSellChange(val: string) {
@@ -170,222 +163,250 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     try { localStorage.setItem(LS_PERIOD, p); } catch { /* noop */ }
   }
 
-  const exitMult = compositeToExitMult(data.composite);
-  const exitTier = compositeToExitTier(data.composite);
-  const colour   = exitColour(exitMult);
+  const composite    = data.composite;
+  const sellMult     = compositeToSellMult(composite);
+  const exitTier     = compositeToExitTier(composite);
+  const mode         = modeInfo(composite);
+  const inExitZone   = composite < DCA_CROSSOVER;
+  const nearCrossover = !inExitZone && composite < 0.85;
 
-  // Recommended sell this week = baseSell * exitMult
-  const recommendedSell = Math.round(baseSell * exitMult);
-  // In BTC at current price
-  const recommendedBtc  = recommendedSell / data.btcPrice;
+  const recommendedSell = Math.round(baseSell * sellMult);
+  const recommendedBtc  = sellMult > 0 ? recommendedSell / data.btcPrice : 0;
 
-  // Distribution chart data — filtered to period, zero-based for non-ALL
+  const cPct   = spectrumPct(composite);
+  const xPct   = crossoverPct();
+
+  // ── Chart data ─────────────────────────────────────────────────────────────
   const history = data.distributionHistory ?? [];
   const scale   = baseSell / 100;
   const lastDate = history.at(-1)?.date ?? '';
-  const cutoff   = period === 'ALL'
-    ? ''
-    : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
+  const cutoff   = period === 'ALL' ? '' : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
 
-  type ChartRow = DistributionPoint & { usdSignalScaled: number; usdVanillaScaled: number };
-
-  let chartData: ChartRow[];
-  if (period === 'ALL') {
-    chartData = history.map(r => ({
-      ...r,
-      usdSignalScaled:  r.usdSignal  * scale,
-      usdVanillaScaled: r.usdVanilla * scale,
-    }));
-  } else {
-    const raw = history.filter(r => r.date >= cutoff);
-    if (raw.length === 0) {
-      chartData = [];
-    } else {
-      const b0s = raw[0].usdSignal;
-      const b0v = raw[0].usdVanilla;
-      chartData = raw.map(r => ({
-        ...r,
-        usdSignalScaled:  (r.usdSignal  - b0s) * scale,
-        usdVanillaScaled: (r.usdVanilla - b0v) * scale,
-      }));
-    }
-  }
+  type ChartRow = DistributionPoint & { weeklyUsd: number };
+  const chartData: ChartRow[] = (() => {
+    const raw = period === 'ALL' ? history : history.filter(r => r.date >= cutoff);
+    // Compute weekly USD (not cumulative) for a bar chart — clearer view of WHEN exits happened
+    return raw.map((r, i) => {
+      const prev  = i > 0 ? raw[i - 1] : null;
+      const delta = prev ? r.usdSignal - prev.usdSignal : r.usdSignal;
+      return { ...r, weeklyUsd: delta * scale };
+    });
+  })();
 
   const xTicks = getXTicks(chartData, period);
-  const lastRow = chartData.at(-1);
-  const lastSig = lastRow?.usdSignalScaled ?? 0;
-  const lastVan = lastRow?.usdVanillaScaled ?? 0;
-  const advPct  = lastVan > 0 ? ((lastSig - lastVan) / lastVan) * 100 : 0;
 
-  // USD-per-BTC efficiency advantage from all-time history
-  const allLast   = history.at(-1);
+  // All-time USD/BTC efficiency advantage
+  const allLast    = history.at(-1);
   const effSignal  = allLast && allLast.btcSignal  > 0 ? allLast.usdSignal  / allLast.btcSignal  : 0;
   const effVanilla = allLast && allLast.btcVanilla > 0 ? allLast.usdVanilla / allLast.btcVanilla : 0;
   const effAdvPct  = effVanilla > 0 ? ((effSignal - effVanilla) / effVanilla) * 100 : 0;
 
+  // Periods that were in exit territory
+  const exitWeeks = history.filter(r => r.sellMult > 0).length;
+  const totalWeeks = history.length;
+
   if (tierLoading) return null;
 
   return (
-    <div style={{
-      paddingTop: 16,
-      borderTop:  '1px solid rgba(255,255,255,0.06)',
-      fontFamily: FONT,
-    }}>
+    <div style={{ paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: FONT }}>
 
-      {/* Section header */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d' }}>
           DCA EXIT STRATEGY
         </span>
-        {!isVip && (
-          <span style={{ fontSize: 8, color: '#c4885a', letterSpacing: '0.1em', padding: '2px 8px', border: '1px solid rgba(196,136,90,0.3)', background: 'rgba(196,136,90,0.06)' }}>
-            VIP ONLY
-          </span>
-        )}
-      </div>
-
-      {/* Current exit signal — always visible as teaser */}
-      <div style={{
-        display:        'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap:            16,
-        marginBottom:   16,
-      }}>
-        {/* Exit signal hero */}
-        <div style={{
-          padding:    '16px 18px',
-          background: 'rgba(255,255,255,0.02)',
-          border:     `1px solid rgba(255,255,255,0.06)`,
-          borderLeft: `3px solid ${colour}`,
-        }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', display: 'block', marginBottom: 8 }}>
-            EXIT SIGNAL
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 36, fontWeight: 600, color: colour, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {exitMult.toFixed(1)}×
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {effAdvPct > 0 && (
+            <span style={{ fontSize: 8, color: '#00d4c8', letterSpacing: '0.08em' }}>
+              +{effAdvPct.toFixed(1)}% MORE $ PER BTC (ALL-TIME)
             </span>
-          </div>
-          <span style={{ fontSize: 10, color: colour, letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' as const }}>
-            {exitTier}
-          </span>
-          <div style={{ marginTop: 8, fontSize: 8, color: '#4a5568', letterSpacing: '0.06em' }}>
-            Inverse of buy composite ({data.composite.toFixed(2)}×)
-          </div>
-        </div>
-
-        {/* Weekly recommendation — blurred for non-VIP */}
-        <div style={{ position: 'relative' }}>
-          <div style={{
-            padding:    '16px 18px',
-            background: 'rgba(255,255,255,0.02)',
-            border:     '1px solid rgba(255,255,255,0.06)',
-            filter:     isVip ? 'none' : 'blur(6px)',
-            userSelect: isVip ? 'auto' : 'none',
-            pointerEvents: isVip ? 'auto' : 'none',
-          }}>
-            <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d', display: 'block', marginBottom: 8 }}>
-              THIS WEEK — SELL
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 22, fontWeight: 500, color: '#e8edf2', letterSpacing: '0.02em' }}>
-                ${recommendedSell.toLocaleString()}
-              </span>
-            </div>
-            <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.06em' }}>
-              ≈ {recommendedBtc.toFixed(4)} BTC @ ${data.btcPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-            </span>
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.08em', marginBottom: 4 }}>BASE SELL / WEEK</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, color: '#6b7a8d' }}>$</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={9999999}
-                  value={baseSell}
-                  onChange={e => handleSellChange(e.target.value)}
-                  style={{
-                    width: 112, fontSize: 12, fontFamily: FONT,
-                    background: '#0d1520', border: '1px solid rgba(255,255,255,0.12)',
-                    color: '#e8edf2', padding: '4px 8px', outline: 'none', transition: 'none',
-                  }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#00d4c8'; }}
-                  onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
-                />
-              </div>
-              <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em', marginTop: 6 }}>
-                {exitMult.toFixed(1)}× your ${baseSell.toLocaleString()} base · {exitTier.toLowerCase()}
-              </div>
-            </div>
-          </div>
-
+          )}
           {!isVip && (
-            <div style={{
-              position: 'absolute', inset: 0, display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(9,13,18,0.55)',
-            }}>
-              <UpgradePrompt requiredTier="vip" featureName="DCA Exit Strategy" variant="overlay" />
-            </div>
+            <span style={{ fontSize: 8, color: '#c4885a', letterSpacing: '0.1em', padding: '2px 8px', border: '1px solid rgba(196,136,90,0.3)', background: 'rgba(196,136,90,0.06)' }}>
+              VIP ONLY
+            </span>
           )}
         </div>
       </div>
 
-      {/* Distribution chart — blurred + overlay for non-VIP */}
+      {/* ── POSITION SPECTRUM — always visible ─────────────────────────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 8, letterSpacing: '0.1em' }}>
+          <span style={{ color: '#d06050' }}>DISTRIBUTE</span>
+          <span style={{ color: '#6b7a8d' }}>CROSSOVER {DCA_CROSSOVER.toFixed(2)}×</span>
+          <span style={{ color: '#00d4c8' }}>ACCUMULATE</span>
+        </div>
+
+        {/* Spectrum bar */}
+        <div style={{ position: 'relative', height: 12, borderRadius: 1, overflow: 'visible' }}>
+          {/* Background gradient: coral → amber → teal */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to right, #d06050 0%, #c4885a 28%, #8aaba6 45%, #00d4c8 100%)',
+            opacity: 0.25,
+          }} />
+          {/* Crossover marker */}
+          <div style={{
+            position: 'absolute', top: -4, bottom: -4,
+            left: `${xPct}%`,
+            width: 1,
+            background: 'rgba(255,255,255,0.35)',
+          }} />
+          {/* Current position marker */}
+          <div style={{
+            position: 'absolute',
+            left: `${cPct}%`,
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 14, height: 14,
+            borderRadius: '50%',
+            background: mode.colour,
+            border: '2px solid #090d12',
+            boxShadow: `0 0 8px ${mode.colour}88`,
+            zIndex: 2,
+          }} />
+        </div>
+
+        {/* Tick labels */}
+        <div style={{ position: 'relative', height: 16, marginTop: 4, fontSize: 7, color: '#4a5568', letterSpacing: '0.06em' }}>
+          {[0, 0.5, DCA_CROSSOVER, 1.0, 1.5, 2.0, 2.5].map(v => (
+            <span key={v} style={{
+              position: 'absolute',
+              left: `${spectrumPct(v)}%`,
+              transform: 'translateX(-50%)',
+              color: Math.abs(v - composite) < 0.05 ? mode.colour : '#4a5568',
+            }}>
+              {v.toFixed(v === DCA_CROSSOVER ? 2 : 1)}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Status box */}
+      <div style={{
+        padding:    '12px 16px',
+        background: `rgba(${inExitZone ? '208,96,80' : nearCrossover ? '196,136,90' : '0,212,200'}, 0.05)`,
+        border:     `1px solid rgba(${inExitZone ? '208,96,80' : nearCrossover ? '196,136,90' : '0,212,200'}, 0.15)`,
+        borderLeft: `3px solid ${mode.colour}`,
+        marginBottom: 16,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <div>
+          <div style={{ fontSize: 10, color: mode.colour, fontWeight: 600, letterSpacing: '0.1em', marginBottom: 3 }}>
+            {mode.label}
+          </div>
+          <div style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.06em' }}>
+            {mode.sublabel}
+          </div>
+          {!inExitZone && (
+            <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em', marginTop: 4 }}>
+              Exits begin at {DCA_CROSSOVER.toFixed(2)}× — signal currently at {composite.toFixed(3)}×
+              {' '}({(((composite - DCA_CROSSOVER) / DCA_CROSSOVER) * 100).toFixed(0)}% above crossover)
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.08em', marginBottom: 2 }}>
+            {inExitZone ? 'EXIT MULT' : 'SELL MULT'}
+          </div>
+          <div style={{ fontSize: 22, color: inExitZone ? mode.colour : '#4a5568', fontWeight: 600, letterSpacing: '-0.01em' }}>
+            {inExitZone ? `${sellMult.toFixed(1)}×` : '—'}
+          </div>
+          <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em' }}>
+            {inExitZone ? exitTier : 'no exits'}
+          </div>
+        </div>
+      </div>
+
+      {/* ── VIP GATED: calculator + chart ──────────────────────────────────── */}
       <div style={{ position: 'relative' }}>
         <div style={{
-          filter:     isVip ? 'none' : 'blur(5px)',
-          userSelect: isVip ? 'auto' : 'none',
+          filter:        isVip ? 'none' : 'blur(5px)',
+          userSelect:    isVip ? 'auto' : 'none',
           pointerEvents: isVip ? 'auto' : 'none',
         }}>
-          {/* Chart header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div>
-              <span style={{ fontSize: 9, letterSpacing: '0.12em', color: '#6b7a8d' }}>
-                CUMULATIVE USD RECEIVED · SIGNAL vs VANILLA
-              </span>
-              {effAdvPct > 0 && (
-                <span style={{ fontSize: 9, color: '#00d4c8', marginLeft: 12, letterSpacing: '0.06em' }}>
-                  +{effAdvPct.toFixed(1)}% MORE $ PER BTC (ALL-TIME)
-                </span>
-              )}
+
+          {/* Calculator row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+
+            {/* Base sell input */}
+            <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: 8, color: '#6b7a8d', letterSpacing: '0.1em', marginBottom: 8 }}>BASE SELL / WEEK</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: '#6b7a8d' }}>$</span>
+                <input
+                  type="number" min={1} max={9999999} value={baseSell}
+                  onChange={e => handleSellChange(e.target.value)}
+                  style={{ width: 112, fontSize: 13, fontFamily: FONT, background: '#0d1520', border: '1px solid rgba(255,255,255,0.12)', color: '#e8edf2', padding: '4px 8px', outline: 'none', transition: 'none' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#00d4c8'; }}
+                  onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                />
+              </div>
+              <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em' }}>
+                Your base weekly distribution amount · multiplied by exit signal
+              </div>
             </div>
-            {/* Period picker */}
-            <div style={{ display: 'flex', gap: 0 }}>
-              {PERIODS.map(p => (
-                <button
-                  key={p.label}
-                  onClick={() => handlePeriod(p.label)}
-                  style={{
-                    padding: '3px 9px', fontSize: 9, letterSpacing: '0.1em',
-                    fontFamily: FONT, cursor: 'pointer',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: period === p.label ? 'rgba(0,212,200,0.12)' : 'transparent',
-                    color:      period === p.label ? '#00d4c8' : '#4a5568',
-                    transition: 'none',
-                  }}
-                >
-                  {p.label}
-                </button>
-              ))}
+
+            {/* This week recommendation */}
+            <div style={{
+              padding: '14px 16px',
+              background: inExitZone ? 'rgba(196,136,90,0.05)' : 'rgba(255,255,255,0.02)',
+              border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{ fontSize: 8, color: '#6b7a8d', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
+              {inExitZone ? (
+                <>
+                  <div style={{ fontSize: 22, fontWeight: 500, color: '#e8edf2', letterSpacing: '0.02em', marginBottom: 4 }}>
+                    {formatUsd(recommendedSell)}
+                  </div>
+                  <div style={{ fontSize: 9, color: '#6b7a8d' }}>
+                    ≈ {recommendedBtc.toFixed(4)} BTC · {sellMult.toFixed(1)}× your ${baseSell.toLocaleString()} base
+                  </div>
+                  <div style={{ fontSize: 8, color: mode.colour, letterSpacing: '0.08em', marginTop: 6 }}>
+                    {exitTier.toUpperCase()}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 18, color: '#4a5568', letterSpacing: '0.02em', marginBottom: 4 }}>
+                    $0
+                  </div>
+                  <div style={{ fontSize: 9, color: '#4a5568' }}>
+                    Signal in accumulate zone — no exits this week
+                  </div>
+                  <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em', marginTop: 6 }}>
+                    Exits begin when composite falls below {DCA_CROSSOVER.toFixed(2)}×
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {chartData.length > 0 ? (
-            <>
+          {/* Chart: weekly exit amounts over time */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div>
+                <span style={{ fontSize: 9, letterSpacing: '0.12em', color: '#6b7a8d' }}>
+                  WEEKLY EXIT AMOUNTS · WHEN SIGNAL CROSSED BELOW {DCA_CROSSOVER.toFixed(2)}×
+                </span>
+                {totalWeeks > 0 && (
+                  <span style={{ fontSize: 8, color: '#4a5568', marginLeft: 12, letterSpacing: '0.06em' }}>
+                    {exitWeeks} / {totalWeeks} weeks had exits ({((exitWeeks / totalWeeks) * 100).toFixed(0)}%)
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 0 }}>
+                {PERIODS.map(p => (
+                  <button key={p.label} onClick={() => handlePeriod(p.label)} style={{ padding: '3px 9px', fontSize: 9, letterSpacing: '0.1em', fontFamily: FONT, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', background: period === p.label ? 'rgba(0,212,200,0.12)' : 'transparent', color: period === p.label ? '#00d4c8' : '#4a5568', transition: 'none' }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <ComposedChart data={chartData} margin={{ top: 4, right: 52, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="distSignalGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#00d4c8" stopOpacity={0.18} />
-                      <stop offset="95%" stopColor="#00d4c8" stopOpacity={0.01} />
-                    </linearGradient>
-                    <linearGradient id="distVanillaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#4a5568" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#4a5568" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -396,68 +417,56 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                     tickLine={false}
                   />
                   <YAxis
-                    yAxisId="left"
-                    domain={[0, 'auto']}
-                    tickFormatter={v => formatUsd(v)}
+                    yAxisId="left" domain={[0, 'auto']}
+                    tickFormatter={v => formatUsd(v * scale, true)}
                     tick={{ fontFamily: FONT, fontSize: 8, fill: '#6b7a8d' }}
-                    axisLine={false} tickLine={false} width={56}
+                    axisLine={false} tickLine={false} width={52}
                   />
                   <YAxis
-                    yAxisId="right"
-                    orientation="right"
+                    yAxisId="right" orientation="right"
                     tickFormatter={formatPrice}
                     tick={{ fontFamily: FONT, fontSize: 9, fill: '#4a5568' }}
                     axisLine={false} tickLine={false} width={52}
                   />
+                  {/* Crossover reference line on composite axis — we use a ref for context */}
                   <Tooltip content={<ChartTooltip />} />
+                  {/* BTC price — muted context */}
                   <Line
                     yAxisId="right" type="monotone" dataKey="price"
                     stroke="rgba(200,230,227,0.2)" strokeWidth={1} dot={false} isAnimationActive={false}
                   />
-                  <Area
-                    yAxisId="left" type="monotone" dataKey="usdVanillaScaled"
-                    stroke="rgba(74,85,104,0.6)" strokeWidth={1.5}
-                    fill="url(#distVanillaGrad)" dot={false} isAnimationActive={false}
-                  />
-                  <Area
-                    yAxisId="left" type="monotone" dataKey="usdSignalScaled"
-                    stroke="#00d4c8" strokeWidth={2}
-                    fill="url(#distSignalGrad)" dot={false} isAnimationActive={false}
+                  {/* Weekly exit amounts — amber bars when exits happened, invisible otherwise */}
+                  <Bar
+                    yAxisId="left" dataKey="weeklyUsd"
+                    fill="#c4885a" opacity={0.75}
+                    isAnimationActive={false}
+                    maxBarSize={6}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
-
-              {/* Legend */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontFamily: FONT, fontSize: 9, letterSpacing: '0.08em', color: '#6b7a8d' }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ display: 'inline-block', width: 16, height: 2, background: '#00d4c8' }} />
-                    SIGNAL EXITS · {formatUsd(lastSig)}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ display: 'inline-block', width: 16, height: 1.5, background: 'rgba(74,85,104,0.6)' }} />
-                    VANILLA EXITS · {formatUsd(lastVan)}
-                  </span>
-                </div>
-                <span style={{ color: advPct >= 0 ? '#00d4c8' : '#d06050' }}>
-                  {advPct >= 0 ? '+' : ''}{advPct.toFixed(1)}% MORE USD
-                </span>
+            ) : (
+              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a5568', fontSize: 9, letterSpacing: '0.1em' }}>
+                NO EXIT DATA FOR PERIOD
               </div>
-            </>
-          ) : (
-            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a5568', fontSize: 9, letterSpacing: '0.1em' }}>
-              NO DATA FOR PERIOD
-            </div>
-          )}
+            )}
+          </div>
 
-          <p style={{ marginTop: 8, fontSize: 8, color: '#4a5568', letterSpacing: '0.08em' }}>
-            SIGNAL exits MORE when composite is low (overvalued) · LESS when composite is high (accumulate zone) · NOT FINANCIAL ADVICE
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+            <p style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.08em', margin: 0 }}>
+              EXITS TRIGGER WHEN COMPOSITE DROPS BELOW {DCA_CROSSOVER.toFixed(2)}× · SAME SIGNAL, INVERTED LOGIC · NOT FINANCIAL ADVICE
+            </p>
+            {effAdvPct > 0 && (
+              <span style={{ fontSize: 8, color: '#00d4c8', letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                SIGNAL EXITS: +{effAdvPct.toFixed(1)}% MORE $ PER BTC vs VANILLA
+              </span>
+            )}
+          </div>
+
         </div>
 
-        {/* VIP overlay on chart */}
+        {/* VIP overlay */}
         {!isVip && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(9,13,18,0.4)' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(9,13,18,0.45)' }}>
             <UpgradePrompt requiredTier="vip" featureName="DCA Exit Strategy" variant="overlay" />
           </div>
         )}
