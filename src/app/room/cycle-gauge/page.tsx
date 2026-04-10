@@ -42,10 +42,10 @@ export default function CycleGaugeRoute() {
         display:         'flex',
         alignItems:      'center',
         justifyContent:  'center',
-        backgroundColor: '#090d12',
+        backgroundColor: 'var(--bg-primary)',
         fontFamily:      FONT,
       }}>
-        <p style={{ color: '#6b7a8d', fontSize: 11, letterSpacing: '0.14em' }}>INITIALISING...</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: '0.14em' }}>INITIALISING...</p>
       </div>
     );
   }
@@ -59,30 +59,30 @@ export default function CycleGaugeRoute() {
         flexDirection:   'column',
         alignItems:      'center',
         justifyContent:  'center',
-        backgroundColor: '#090d12',
+        backgroundColor: 'var(--bg-primary)',
         fontFamily:      FONT,
         padding:         '40px 20px',
       }}>
-        <p style={{ fontSize: 9, letterSpacing: '0.18em', color: '#6b7a8d', marginBottom: 8 }}>
+        <p style={{ fontSize: 9, letterSpacing: '0.18em', color: 'var(--text-muted)', marginBottom: 8 }}>
           CYCLE POSITION GAUGE
         </p>
-        <h1 style={{ fontSize: 22, color: '#e8edf2', marginBottom: 12, fontWeight: 600, letterSpacing: '0.06em' }}>
+        <h1 style={{ fontSize: 22, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600, letterSpacing: '0.06em' }}>
           SIGN IN TO VIEW
         </h1>
-        <p style={{ fontSize: 11, color: '#6b7a8d', marginBottom: 24, lineHeight: 1.6, textAlign: 'center', maxWidth: 400 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6, textAlign: 'center', maxWidth: 400 }}>
           Sign in to access the Cycle Position Gauge and on-chain cycle analysis.
         </p>
         <a
           href="/login"
           style={{
-            display:        'inline-block',
-            padding:        '8px 20px',
-            fontSize:       11,
-            letterSpacing:  '0.1em',
-            backgroundColor: '#00e5c8',
-            color:          '#090d12',
-            textDecoration: 'none',
-            fontWeight:     600,
+            display:         'inline-block',
+            padding:         '8px 20px',
+            fontSize:        11,
+            letterSpacing:   '0.1em',
+            backgroundColor: 'var(--accent-primary)',
+            color:           'var(--bg-primary)',
+            textDecoration:  'none',
+            fontWeight:      600,
           }}
         >
           SIGN IN

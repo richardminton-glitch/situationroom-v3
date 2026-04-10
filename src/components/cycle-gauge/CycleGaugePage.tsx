@@ -1,5 +1,6 @@
 'use client';
 
+import { useTheme } from '@/components/layout/ThemeProvider';
 import type { CycleGaugeResponse } from '@/app/api/cycle-gauge/route';
 import { HeroGauge }          from './HeroGauge';
 import { IndicatorGrid }      from './IndicatorGrid';
@@ -30,42 +31,37 @@ function formatTimestamp(ts: string): string {
 }
 
 function Divider() {
-  return (
-    <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
-  );
+  return <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />;
 }
 
 export function CycleGaugePage({ data, loading, error }: Props) {
-  // Loading state
+  const { theme } = useTheme();
+  const isDark    = theme === 'dark';
+
+  const bgPrimary  = 'var(--bg-primary)';
+  const textPrimary  = 'var(--text-primary)';
+  const textMuted    = 'var(--text-muted)';
+
   if (loading) {
     return (
       <div style={{
-        height:          '100%',
-        display:         'flex',
-        alignItems:      'center',
-        justifyContent:  'center',
-        backgroundColor: '#090d12',
-        fontFamily:      FONT,
+        height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: bgPrimary, fontFamily: FONT,
       }}>
-        <p style={{ color: '#6b7a8d', fontSize: 11, letterSpacing: '0.14em' }}>
+        <p style={{ color: textMuted, fontSize: 11, letterSpacing: '0.14em' }}>
           COMPUTING CYCLE POSITION...
         </p>
       </div>
     );
   }
 
-  // Error state
   if (error || !data) {
     return (
       <div style={{
-        height:          '100%',
-        display:         'flex',
-        alignItems:      'center',
-        justifyContent:  'center',
-        backgroundColor: '#090d12',
-        fontFamily:      FONT,
+        height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: bgPrimary, fontFamily: FONT,
       }}>
-        <p style={{ color: '#d06050', fontSize: 11, letterSpacing: '0.14em' }}>
+        <p style={{ color: isDark ? '#d06050' : '#9b3232', fontSize: 11, letterSpacing: '0.14em' }}>
           CYCLE DATA ERROR — {error ?? 'No data available'}
         </p>
       </div>
@@ -73,38 +69,33 @@ export function CycleGaugePage({ data, loading, error }: Props) {
   }
 
   return (
-    <div style={{
-      minHeight:       '100%',
-      backgroundColor: '#090d12',
-      fontFamily:      FONT,
-      overflowY:       'auto',
-    }}>
+    <div style={{ minHeight: '100%', backgroundColor: bgPrimary, fontFamily: FONT, overflowY: 'auto' }}>
       <div style={{
-        maxWidth:  900,
-        margin:    '0 auto',
-        padding:   '24px 32px 48px',
-        display:   'flex',
+        maxWidth:      900,
+        margin:        '0 auto',
+        padding:       '24px 32px 48px',
+        display:       'flex',
         flexDirection: 'column',
-        gap:       24,
+        gap:           24,
       }}>
 
         {/* Page header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <p style={{ fontSize: 9, letterSpacing: '0.18em', color: 'rgba(200,220,218,0.4)', margin: 0, marginBottom: 4 }}>
+            <p style={{ fontSize: 9, letterSpacing: '0.18em', color: textMuted, margin: 0, marginBottom: 4 }}>
               SITUATION ROOM
             </p>
-            <h1 style={{ fontSize: 18, color: '#e8edf2', margin: 0, fontWeight: 600, letterSpacing: '0.06em' }}>
+            <h1 style={{ fontSize: 18, color: textPrimary, margin: 0, fontWeight: 600, letterSpacing: '0.06em' }}>
               CYCLE POSITION GAUGE
             </h1>
           </div>
           <div style={{ textAlign: 'right' }}>
             {data.btcPrice > 0 && (
-              <div style={{ fontSize: 16, color: '#e8edf2', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: 16, color: textPrimary, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                 {formatPrice(data.btcPrice)}
               </div>
             )}
-            <div style={{ fontSize: 9, color: 'rgba(200,220,218,0.35)', letterSpacing: '0.08em', marginTop: 2 }}>
+            <div style={{ fontSize: 9, color: textMuted, letterSpacing: '0.08em', marginTop: 2 }}>
               {formatTimestamp(data.timestamp)}
             </div>
           </div>
@@ -126,7 +117,7 @@ export function CycleGaugePage({ data, loading, error }: Props) {
 
         {/* Indicator grid */}
         <div>
-          <p style={{ fontSize: 9, letterSpacing: '0.14em', color: 'rgba(200,220,218,0.35)', margin: '0 0 12px', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: 9, letterSpacing: '0.14em', color: textMuted, margin: '0 0 12px', textTransform: 'uppercase' }}>
             Signal Breakdown
           </p>
           <IndicatorGrid indicators={data.indicators} />
@@ -134,25 +125,24 @@ export function CycleGaugePage({ data, loading, error }: Props) {
 
         <Divider />
 
-        {/* Confidence display */}
         <ConfidenceDisplay confidence={data.confidence} indicators={data.indicators} />
 
         <Divider />
 
-        {/* Historical analogues */}
         <HistoricalAnalogues />
 
         {/* Footer */}
         <div style={{
           paddingTop:    16,
-          borderTop:     '1px solid rgba(255,255,255,0.04)',
+          borderTop:     '1px solid var(--border-subtle)',
           fontSize:      9,
-          color:         'rgba(200,220,218,0.25)',
+          color:         textMuted,
           letterSpacing: '0.08em',
           lineHeight:    1.8,
+          opacity:       0.65,
         }}>
           <p style={{ margin: 0 }}>
-            SOURCES — MVRV &amp; REALISED PRICE: CoinMetrics Community API · PUELL MULTIPLE: bitview.space ·
+            SOURCES — MVRV &amp; REALISED PRICE: BRK (bitview.space) · PUELL MULTIPLE: bitview.space ·
             PI CYCLE &amp; RAINBOW: CoinGecko price history · HISTORICAL ANALOGUES: xAI Grok (weekly)
           </p>
           <p style={{ margin: '4px 0 0' }}>
