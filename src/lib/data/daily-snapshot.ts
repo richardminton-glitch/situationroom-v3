@@ -318,6 +318,46 @@ export function computeBacktestSummary(
   return results;
 }
 
+// ── Stacking history helper (shared with API route) ───────────────────────────
+
+export interface StackingPoint {
+  date:       string;   // YYYY-MM-DD (weekly sample)
+  price:      number;   // BTC price at this week
+  btcSignal:  number;   // cumulative BTC accumulated via signal DCA ($100/week base)
+  btcVanilla: number;   // cumulative BTC accumulated via vanilla DCA ($100/week base)
+}
+
+/**
+ * Build a cumulative weekly BTC-stacking series across the full history.
+ * Base is always $100/week for comparability — the chart component scales
+ * by the user's actual baseAmount.
+ */
+export function computeStackingHistory(allRows: CompositeRow[]): StackingPoint[] {
+  // Sample to one row per ISO week
+  const weeklyRows: CompositeRow[] = [];
+  let lastWeekKey = '';
+  for (const row of allRows) {
+    const weekKey = getIsoWeek(row.date);
+    if (weekKey !== lastWeekKey) {
+      weeklyRows.push(row);
+      lastWeekKey = weekKey;
+    }
+  }
+
+  let btcSignal  = 0;
+  let btcVanilla = 0;
+  const result: StackingPoint[] = [];
+
+  for (const row of weeklyRows) {
+    const mult  = Math.max(0.1, Math.min(5.0, row.normalisedComposite));
+    btcSignal  += (100 * mult) / row.price;
+    btcVanilla += 100          / row.price;
+    result.push({ date: row.date, price: row.price, btcSignal, btcVanilla });
+  }
+
+  return result;
+}
+
 function getIsoWeek(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00Z');
   const day = d.getUTCDay() || 7;

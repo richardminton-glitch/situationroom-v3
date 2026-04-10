@@ -41,7 +41,7 @@ export function HeroSignal({ composite, tier }: Props) {
 
   function handleAmountChange(val: string) {
     const n = parseInt(val, 10);
-    if (!isNaN(n) && n > 0) {
+    if (!isNaN(n) && n > 0 && n <= 9_999_999) {
       setBaseAmount(n);
       try { localStorage.setItem(LS_BASE_AMOUNT, String(n)); } catch { /* noop */ }
     }
@@ -140,11 +140,12 @@ export function HeroSignal({ composite, tier }: Props) {
           <input
             type="number"
             min={1}
+            max={9999999}
             step={1}
             value={baseAmount}
             onChange={e => handleAmountChange(e.target.value)}
             style={{
-              width:           72,
+              width:           112,
               fontSize:        13,
               fontFamily:      FONT,
               background:      '#0d1520',

@@ -7,8 +7,9 @@ import { HeroSignal }      from './HeroSignal';
 import { SignalGrid }      from './SignalGrid';
 import { ConfluenceBar }   from './ConfluenceBar';
 import { SignalChart }     from './SignalChart';
-import { SignalHistory }   from './SignalHistory';
-import { ReturnsSummary }  from './ReturnsSummary';
+import { SignalHistory }    from './SignalHistory';
+import { ReturnsSummary }   from './ReturnsSummary';
+import { StackingChart }    from './StackingChart';
 import { SignalEmailSignup } from './SignalEmailSignup';
 
 const FONT       = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
@@ -94,14 +95,19 @@ export function DCASignalPage({ data, loading, error }: Props) {
         />
       )}
 
-      {/* 12-month chart */}
+      {/* 12-month signal chart */}
       <SignalChart chartData={data.chartData} />
 
-      {/* Weekly signal history table */}
-      <SignalHistory data={data} />
+      {/* BTC stacking chart — signal vs vanilla, all-time */}
+      {data.stackingHistory && data.stackingHistory.length > 0 && (
+        <StackingChart stackingHistory={data.stackingHistory} baseAmount={baseAmount} />
+      )}
 
       {/* Email signup */}
       <SignalEmailSignup baseAmount={baseAmount} />
+
+      {/* Weekly signal history table — below email */}
+      <SignalHistory data={data} />
 
       {/* Footer */}
       <div style={{
