@@ -31,6 +31,7 @@ import {
   Plus,
   Envelope,
   ChartLine,
+  Gauge,
 } from '@phosphor-icons/react';
 import { FeedbackModal } from '@/components/feedback/FeedbackModal';
 
@@ -60,7 +61,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Situation Map', href: '/map', icon: <MapTrifold size={ICON_SIZE} weight={ICON_WEIGHT} /> },
   { label: 'Members Room', href: '/room', icon: <Crosshair size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
   { label: 'Bot Room',   href: '/bot-room',       icon: <Robot     size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'members' },
-  { label: 'DCA Signal', href: '/room/dca-signal', icon: <ChartLine size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'general' },
+  { label: 'DCA Signal',   href: '/room/dca-signal',   icon: <ChartLine size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true, requiredTier: 'general' },
+  { label: 'Cycle Gauge', href: '/room/cycle-gauge', icon: <Gauge     size={ICON_SIZE} weight={ICON_WEIGHT} />, requiresAuth: true },
 ];
 
 const SYSTEM_ITEMS: NavItem[] = [
