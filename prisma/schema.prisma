@@ -586,7 +586,8 @@ model ClassificationCache {
 
 model DcaSignalSubscriber {
   id            String    @id @default(cuid())
-  email         String    @unique
+  email         String
+  signalType    String    @default("dca_in") @map("signal_type")  // 'dca_in' | 'dca_in_out'
   frequency     String    @default("weekly")   // 'weekly' | 'monthly'
   baseAmount    Int       @default(100)         // USD, for the recommended buy calculation
   confirmed     Boolean   @default(false)       // double opt-in
@@ -596,6 +597,7 @@ model DcaSignalSubscriber {
   lastSentAt    DateTime? @map("last_sent_at")
   createdAt     DateTime  @default(now()) @map("created_at")
 
+  @@unique([email, signalType])
   @@map("dca_signal_subscribers")
 }
 

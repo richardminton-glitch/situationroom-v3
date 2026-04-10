@@ -2,7 +2,9 @@
  * GET /api/dca-signal-confirm?token=xxx
  *
  * Confirms a DCA signal email subscription via double opt-in link.
- * Redirects to /room/dca-signal with a ?subscribed=1 query param on success.
+ * Redirects to /room/dca-signal with:
+ *   - ?subscribed=1     for dca_in subscriptions
+ *   - ?vip_subscribed=1 for dca_in_out (VIP) subscriptions
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -35,7 +37,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(`${SITE_URL}/room/dca-signal?subscribed=1`);
+    const param = subscriber.signalType === 'dca_in_out' ? 'vip_subscribed=1' : 'subscribed=1';
+    return NextResponse.redirect(`${SITE_URL}/room/dca-signal?${param}`);
 
   } catch (err) {
     console.error('[dca-signal-confirm] Error:', err);

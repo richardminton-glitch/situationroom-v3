@@ -16,6 +16,7 @@ import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
 import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier } from '@/lib/signals/dca-exit-utils';
+import { VIPEmailSignup } from './VIPEmailSignup';
 
 const FONT      = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_SELL   = 'sr-dca-base-sell';
@@ -461,6 +462,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
               </span>
             )}
           </div>
+
+          {/* VIP email signup — receive combined in/out signal by email */}
+          <VIPEmailSignup baseAmount={baseSell} />
 
         </div>
 
