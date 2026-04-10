@@ -36,7 +36,7 @@ interface Props {
   };
 }
 
-const energySourceColor: Record<string, string> = {
+const SRC_COLORS: Record<string, string> = {
   'flared-gas': '#f59e0b',
   hydro: '#3b82f6',
   geothermal: '#ef4444',
@@ -44,7 +44,7 @@ const energySourceColor: Record<string, string> = {
 };
 
 function getSourceColor(source: string): string {
-  return energySourceColor[source] || '#6b7280';
+  return SRC_COLORS[source] || '#6b7280';
 }
 
 function trendIcon(trend: string): { symbol: string; color: string } {
@@ -53,10 +53,10 @@ function trendIcon(trend: string): { symbol: string; color: string } {
   return { symbol: '\u2192', color: '#6b7280' };
 }
 
-function statusColor(status: string, isDark: boolean): string {
+function statusDotColor(status: string): string {
   if (status === 'operational') return '#22c55e';
   if (status === 'construction' || status === 'under-construction') return '#f59e0b';
-  return isDark ? '#9ca3af' : '#6b7280';
+  return '#6b7280';
 }
 
 export function GasMiningSection({ projects, narrativeHook, stats, flareSites }: Props) {
@@ -76,281 +76,246 @@ export function GasMiningSection({ projects, narrativeHook, stats, flareSites }:
           fontFamily: FONT,
         }}
       >
-        STRANDED ENERGY — MINING OPPORTUNITY MAP
+        STRANDED ENERGY — MINING OPERATIONS
       </div>
 
-      {/* Stats row */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+      {/* Stats strip — full width, inline metrics */}
+      <div style={{ display: 'flex', gap: 24, alignItems: 'baseline', marginBottom: 16 }}>
         {[
-          { label: 'FLARED GAS (2024)', value: `${stats.totalFlaredGasBcm}`, unit: 'bcm/year' },
-          { label: 'ACTIVE OPERATIONS', value: `${stats.activeMiningOperations}`, unit: '' },
+          { label: 'FLARED', value: `${stats.totalFlaredGasBcm}`, unit: 'bcm' },
+          { label: 'OPERATIONS', value: `${stats.activeMiningOperations}`, unit: '' },
           { label: 'COUNTRIES', value: `${stats.countriesWithOperations}`, unit: '' },
-        ].map((card) => (
-          <div
-            key={card.label}
-            style={{
-              flex: 1,
-              padding: '14px 16px',
-              border: '1px solid var(--border-subtle)',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-            }}
-          >
-            <div
+        ].map((m) => (
+          <div key={m.label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <span
               style={{
                 fontSize: 9,
                 textTransform: 'uppercase',
-                letterSpacing: '0.12em',
+                letterSpacing: '0.1em',
                 color: 'var(--text-muted)',
-                marginBottom: 6,
                 fontFamily: FONT,
               }}
             >
-              {card.label}
-            </div>
-            <div
+              {m.label}
+            </span>
+            <span
               style={{
-                fontSize: 22,
-                fontWeight: 600,
+                fontSize: 16,
+                fontWeight: 700,
                 color: 'var(--text-primary)',
-                fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
+                fontFamily: FONT,
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
-              {card.value}
-              {card.unit && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--text-muted)',
-                    marginLeft: 4,
-                    fontWeight: 400,
-                  }}
-                >
-                  {card.unit}
-                </span>
-              )}
-            </div>
+              {m.value}
+            </span>
+            {m.unit && (
+              <span
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  fontFamily: FONT,
+                }}
+              >
+                {m.unit}
+              </span>
+            )}
           </div>
         ))}
       </div>
 
-      {/* D3 world map — flare heat + mining operation markers */}
-      <StrandedEnergyMap
-        flareCountries={flareSites.topCountries}
-        projects={projects}
-      />
-
-      {/* Project cards grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 12,
-          marginBottom: 28,
-        }}
-      >
-        {projects.map((project) => {
-          const srcColor = getSourceColor(project.energySource);
-          return (
+      {/* Two-column grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, alignItems: 'start' }}>
+        {/* Left column — map + narrative */}
+        <div>
+          <StrandedEnergyMap
+            flareCountries={flareSites.topCountries}
+            projects={projects}
+          />
+          {narrativeHook && (
             <div
-              key={`${project.name}-${project.region}`}
               style={{
-                borderLeft: `3px solid ${srcColor}`,
-                padding: '12px 14px',
-                border: '1px solid var(--border-subtle)',
-                borderLeftWidth: 3,
-                borderLeftColor: srcColor,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)',
+                fontFamily: 'var(--font-body)',
+                fontStyle: 'italic',
+                fontSize: 12,
+                lineHeight: 1.6,
+                color: 'var(--text-muted)',
+                maxWidth: 600,
+                marginTop: 12,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              {narrativeHook}
+            </div>
+          )}
+        </div>
+
+        {/* Right column — compact sidebar */}
+        <div>
+          {/* Operations sub-label */}
+          <div
+            style={{
+              fontSize: 9,
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              color: 'var(--text-muted)',
+              marginBottom: 8,
+              fontFamily: FONT,
+            }}
+          >
+            OPERATIONS
+          </div>
+
+          {/* Project list */}
+          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {projects.map((project) => {
+              const srcColor = getSourceColor(project.energySource);
+              return (
                 <div
+                  key={`${project.name}-${project.region}`}
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: srcColor,
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
+                    borderLeft: `2px solid ${srcColor}`,
+                    padding: '6px 8px',
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)',
                   }}
                 >
-                  {project.name}
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'var(--text-muted)',
-                  marginBottom: 6,
-                  fontFamily: FONT,
-                }}
-              >
-                {project.region}, {project.country}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.5,
-                  marginBottom: 8,
-                  fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
-                }}
-              >
-                {project.description}
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {project.capacityMW != null && (
-                  <span
+                  {/* First row: dot + name + capacity badge + status dot */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: srcColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        fontFamily: FONT,
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {project.name}
+                    </span>
+                    {project.capacityMW != null && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          padding: '1px 4px',
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                          color: 'var(--text-muted)',
+                          fontFamily: FONT,
+                          fontVariantNumeric: 'tabular-nums',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {project.capacityMW} MW
+                      </span>
+                    )}
+                    <div
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: '50%',
+                        backgroundColor: statusDotColor(project.status),
+                        flexShrink: 0,
+                      }}
+                    />
+                  </div>
+                  {/* Second row: region + country */}
+                  <div
                     style={{
                       fontSize: 10,
-                      padding: '2px 6px',
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                      color: 'var(--text-secondary)',
+                      color: 'var(--text-muted)',
+                      fontFamily: FONT,
+                      marginTop: 2,
+                      paddingLeft: 12,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {project.region}, {project.country}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '10px 0' }} />
+
+          {/* Top flaring countries */}
+          <div
+            style={{
+              fontSize: 9,
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              color: 'var(--text-muted)',
+              marginBottom: 8,
+              fontFamily: FONT,
+            }}
+          >
+            TOP FLARING COUNTRIES
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {flareSites.topCountries.slice(0, 5).map((row) => {
+              const t = trendIcon(row.trend);
+              return (
+                <div
+                  key={row.country}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '2px 0',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--text-primary)',
                       fontFamily: FONT,
                     }}
                   >
-                    {project.capacityMW} MW
-                  </span>
-                )}
-                <span
-                  style={{
-                    fontSize: 10,
-                    padding: '2px 6px',
-                    color: statusColor(project.status, isDark),
-                    border: `1px solid ${statusColor(project.status, isDark)}`,
-                    fontFamily: FONT,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  {project.status}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Top flaring countries table */}
-      <div style={{ marginBottom: 24 }}>
-        <div
-          style={{
-            fontSize: 9,
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            color: 'var(--text-muted)',
-            marginBottom: 10,
-            fontFamily: FONT,
-          }}
-        >
-          TOP FLARING COUNTRIES ({flareSites.year})
-        </div>
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: 12,
-            fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                borderBottom: '1px solid var(--border-subtle)',
-              }}
-            >
-              {['Country', 'Flared Gas (bcm)', 'Global %', 'Trend'].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    textAlign: h === 'Country' ? 'left' : 'right',
-                    padding: '6px 8px',
-                    fontSize: 9,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    color: 'var(--text-muted)',
-                    fontWeight: 500,
-                    fontFamily: FONT,
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {flareSites.topCountries.slice(0, 10).map((row) => {
-              const t = trendIcon(row.trend);
-              return (
-                <tr
-                  key={row.country}
-                  style={{ borderBottom: '1px solid var(--border-subtle)' }}
-                >
-                  <td
-                    style={{
-                      padding: '6px 8px',
-                      color: 'var(--text-primary)',
-                      fontWeight: 500,
-                    }}
-                  >
                     {row.name || row.country}
-                  </td>
-                  <td
-                    style={{
-                      padding: '6px 8px',
-                      textAlign: 'right',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {row.flaredBcm.toFixed(1)}
-                  </td>
-                  <td
-                    style={{
-                      padding: '6px 8px',
-                      textAlign: 'right',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {row.pctGlobal.toFixed(1)}%
-                  </td>
-                  <td
-                    style={{
-                      padding: '6px 8px',
-                      textAlign: 'right',
-                      color: t.color,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {t.symbol}
-                  </td>
-                </tr>
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--text-secondary)',
+                        fontFamily: FONT,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {row.flaredBcm.toFixed(1)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: t.color,
+                        fontWeight: 600,
+                        fontFamily: FONT,
+                      }}
+                    >
+                      {t.symbol}
+                    </span>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Narrative hook */}
-      {narrativeHook && (
-        <div
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontStyle: 'italic',
-            fontSize: 14,
-            lineHeight: 1.7,
-            color: 'var(--text-secondary)',
-            maxWidth: 720,
-          }}
-        >
-          {narrativeHook}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

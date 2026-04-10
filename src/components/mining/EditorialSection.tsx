@@ -36,45 +36,46 @@ export function EditorialSection({ title, body, updatedAt }: Props) {
       <h2
         style={{
           fontFamily: 'var(--font-heading)',
-          fontSize: 20,
+          fontSize: 18,
+          fontWeight: 600,
           color: 'var(--text-primary)',
           marginTop: 0,
-          marginBottom: 16,
-          fontWeight: 400,
+          marginBottom: 12,
         }}
       >
         {title}
       </h2>
 
       {/* Body paragraphs */}
-      <div style={{ maxWidth: 720 }}>
+      <div style={{ maxWidth: 680 }}>
         {paragraphs.map((p, i) => (
           <p
             key={i}
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: isDark ? 12 : 14,
-              lineHeight: 1.8,
+              fontSize: 13,
+              lineHeight: 1.75,
               color: 'var(--text-secondary)',
               marginTop: 0,
-              marginBottom: i < paragraphs.length - 1 ? 16 : 0,
+              marginBottom: 12,
             }}
           >
             {p}
           </p>
         ))}
-      </div>
 
-      {/* Updated date */}
-      <div
-        style={{
-          fontSize: 10,
-          color: 'var(--text-muted)',
-          fontFamily: FONT,
-          marginTop: 16,
-        }}
-      >
-        Updated {updatedAt}
+        {/* Updated timestamp — right-aligned within maxWidth */}
+        <div
+          style={{
+            fontSize: 9,
+            color: 'var(--text-muted)',
+            fontFamily: FONT,
+            marginTop: 12,
+            textAlign: 'right',
+          }}
+        >
+          Updated {updatedAt}
+        </div>
       </div>
     </div>
   );

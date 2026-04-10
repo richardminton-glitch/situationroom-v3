@@ -2,8 +2,7 @@
 
 import { useTheme } from '@/components/layout/ThemeProvider';
 
-const FONT_MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
-const FONT_SERIF = "'Source Serif 4', 'Georgia', serif";
+const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 interface Props {
   alerts: {
@@ -28,12 +27,10 @@ function severityColor(severity: string): string {
 }
 
 export default function GeoShiftAlerts({ alerts }: Props) {
-  const { theme } = useTheme();
-  const isDark = theme !== 'parchment';
-  const font = isDark ? FONT_MONO : FONT_SERIF;
+  useTheme(); // consumed for reactivity
 
   return (
-    <section style={{ fontFamily: font }}>
+    <section style={{ fontFamily: FONT }}>
       {/* Section label */}
       <div
         style={{
@@ -44,61 +41,91 @@ export default function GeoShiftAlerts({ alerts }: Props) {
           marginBottom: 12,
         }}
       >
-        GEOGRAPHIC SHIFTS — GEOPOLITICAL SIGNALS
+        GEOGRAPHIC SIGNALS
       </div>
 
-      {/* Alert cards */}
       {alerts.length === 0 ? (
         <div
           style={{
-            fontSize: 12,
+            fontSize: 11,
             color: 'var(--text-muted)',
-            padding: '16px 0',
             fontStyle: 'italic',
           }}
         >
-          No active geographic signals
+          No active signals
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 10,
+          }}
+        >
           {alerts.map((alert, i) => {
             const borderColor = severityColor(alert.severity);
+            const dotColor = severityColor(alert.severity);
 
             return (
               <div
                 key={i}
                 style={{
-                  borderLeft: `3px solid ${borderColor}`,
-                  background: isDark ? 'var(--bg-card)' : 'transparent',
-                  borderBottom: isDark ? 'none' : '1px solid var(--border-primary)',
                   padding: '10px 12px',
+                  borderLeft: `3px solid ${borderColor}`,
+                  background: 'var(--bg-card)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
                 }}
               >
-                {/* Headline */}
+                {/* Row 1: severity dot + headline */}
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    marginBottom: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    overflow: 'hidden',
                   }}
                 >
-                  {alert.headline}
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: dotColor,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {alert.headline}
+                  </span>
                 </div>
 
-                {/* Detail */}
+                {/* Row 2: detail — max 2 lines */}
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: 11,
                     color: 'var(--text-muted)',
-                    lineHeight: 1.5,
-                    marginBottom: 8,
+                    lineHeight: 1.4,
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
                   }}
                 >
                   {alert.detail}
                 </div>
 
-                {/* Bottom row: region tag + date */}
+                {/* Row 3: region tag + date */}
                 <div
                   style={{
                     display: 'flex',
@@ -108,23 +135,17 @@ export default function GeoShiftAlerts({ alerts }: Props) {
                 >
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 9,
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
-                      padding: '2px 8px',
-                      borderRadius: 9999,
-                      background: isDark
-                        ? 'rgba(255,255,255,0.08)'
-                        : 'rgba(0,0,0,0.06)',
                       color: 'var(--text-muted)',
-                      fontWeight: 600,
                     }}
                   >
                     {alert.region}
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 9,
                       color: 'var(--text-muted)',
                     }}
                   >

@@ -1,8 +1,7 @@
 'use client';
 
 import { useTheme } from '@/components/layout/ThemeProvider';
-import { formatPrice } from '@/components/panels/shared';
-import { chartColors } from '@/components/panels/shared';
+import { formatPrice, chartColors } from '@/components/panels/shared';
 import {
   ComposedChart,
   Area,
@@ -42,11 +41,10 @@ function formatBudget(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-function subsidyPctColor(pct: number): string {
-  if (pct >= 80) return '#22c55e';
-  if (pct >= 60) return '#84cc16';
-  if (pct >= 40) return '#f59e0b';
-  if (pct >= 20) return '#f97316';
+function budgetColor(subsidyPct: number): string {
+  if (subsidyPct >= 80) return 'var(--text-primary)';
+  if (subsidyPct >= 60) return '#f59e0b';
+  if (subsidyPct >= 40) return '#f97316';
   return '#ef4444';
 }
 
@@ -66,12 +64,18 @@ export function SecurityBudgetSection({
     year: b.year,
     subsidy: b.dailySubsidyUsd,
     fees: b.dailyFeesUsd,
-    conservative: conservative[i]?.dailyTotalUsd ?? 0,
-    base: b.dailyTotalUsd,
-    optimistic: optimistic[i]?.dailyTotalUsd ?? 0,
+    baseTotal: b.dailyTotalUsd,
+    conservativeTotal: conservative[i]?.dailyTotalUsd ?? 0,
+    optimisticTotal: optimistic[i]?.dailyTotalUsd ?? 0,
   }));
 
   const halvingYears = [2028, 2032, 2036, 2040];
+
+  // Key halving rows for sidebar projections
+  const projectionYears = [2024, 2028, 2032, 2036, 2040];
+  const projectionRows = projectionYears
+    .map((yr) => base.find((b) => b.year === yr))
+    .filter((r): r is SecurityBudgetProjection => r != null);
 
   return (
     <div>
@@ -86,65 +90,153 @@ export function SecurityBudgetSection({
           fontFamily: FONT,
         }}
       >
-        NETWORK SECURITY BUDGET — POST-SUBSIDY TRAJECTORY
+        SECURITY BUDGET — POST-SUBSIDY TRAJECTORY
       </div>
 
-      {/* Current state hero row */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 24,
-          alignItems: 'center',
-          marginBottom: 24,
-          flexWrap: 'wrap',
-        }}
-      >
-        {/* Daily budget */}
+      {/* Two-column grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, alignItems: 'start' }}>
+        {/* Left column — chart */}
         <div>
-          <div
-            style={{
-              fontSize: 9,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--text-muted)',
-              marginBottom: 4,
-              fontFamily: FONT,
-            }}
-          >
-            DAILY SECURITY BUDGET
-          </div>
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
-            }}
-          >
-            {formatPrice(current.dailyTotalUsd)}
-          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.gridLine} />
+              <XAxis
+                dataKey="year"
+                tick={{ fontSize: 9, fill: colors.axisTick }}
+                tickLine={false}
+                axisLine={{ stroke: colors.gridLine }}
+                fontFamily={FONT}
+              />
+              <YAxis
+                tickFormatter={(value: unknown) => formatBudget(Number(value))}
+                tick={{ fontSize: 9, fill: colors.axisTick }}
+                tickLine={false}
+                axisLine={{ stroke: colors.gridLine }}
+                fontFamily={FONT}
+                width={56}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: colors.tooltipBg,
+                  border: `1px solid ${colors.tooltipBorder}`,
+                  borderRadius: 0,
+                  fontSize: 11,
+                  fontFamily: FONT,
+                  color: colors.tooltipText,
+                }}
+                formatter={(value: unknown, name: unknown) => [
+                  formatBudget(Number(value)),
+                  String(name).charAt(0).toUpperCase() + String(name).slice(1),
+                ]}
+                labelFormatter={(label) => `Year ${label}`}
+              />
+
+              {/* Stacked areas */}
+              <Area
+                type="monotone"
+                dataKey="subsidy"
+                stackId="budget"
+                fill="var(--accent-primary)"
+                fillOpacity={0.2}
+                stroke="none"
+                name="Subsidy"
+              />
+              <Area
+                type="monotone"
+                dataKey="fees"
+                stackId="budget"
+                fill="#f59e0b"
+                fillOpacity={0.2}
+                stroke="none"
+                name="Fees"
+              />
+
+              {/* Scenario lines */}
+              <Line
+                type="monotone"
+                dataKey="baseTotal"
+                stroke="var(--text-primary)"
+                strokeWidth={1.5}
+                dot={false}
+                name="Base"
+              />
+              <Line
+                type="monotone"
+                dataKey="conservativeTotal"
+                stroke="var(--text-muted)"
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                dot={false}
+                name="Conservative"
+              />
+              <Line
+                type="monotone"
+                dataKey="optimisticTotal"
+                stroke="var(--accent-success)"
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                dot={false}
+                name="Optimistic"
+              />
+
+              {/* Halving reference lines */}
+              {halvingYears.map((yr) => (
+                <ReferenceLine
+                  key={yr}
+                  x={yr}
+                  stroke="var(--border-primary)"
+                  strokeDasharray="3 3"
+                  label={{
+                    value: '\u00bd',
+                    position: 'top',
+                    fontSize: 10,
+                    fill: 'var(--text-muted)',
+                    fontFamily: FONT,
+                  }}
+                />
+              ))}
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Subsidy vs Fees bar */}
-        <div style={{ flex: 1, minWidth: 200, maxWidth: 320 }}>
+        {/* Right column — sidebar */}
+        <div>
+          {/* Current state */}
           <div
             style={{
               fontSize: 9,
               textTransform: 'uppercase',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.18em',
               color: 'var(--text-muted)',
-              marginBottom: 6,
+              marginBottom: 8,
               fontFamily: FONT,
             }}
           >
-            SUBSIDY vs FEES
+            CURRENT STATE
           </div>
+
+          {/* Daily budget — large */}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              fontFamily: FONT,
+              fontVariantNumeric: 'tabular-nums',
+              marginBottom: 10,
+            }}
+          >
+            {formatBudget(current.dailyTotalUsd)}
+          </div>
+
+          {/* Proportional bar */}
           <div
             style={{
               display: 'flex',
-              height: 14,
+              height: 8,
               width: '100%',
               overflow: 'hidden',
+              marginBottom: 4,
             }}
           >
             <div
@@ -166,230 +258,104 @@ export function SecurityBudgetSection({
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginTop: 4,
               fontSize: 10,
               fontFamily: FONT,
               color: 'var(--text-muted)',
+              marginBottom: 10,
             }}
           >
             <span>Subsidy {current.subsidyPct.toFixed(1)}%</span>
             <span>Fees {current.feePct.toFixed(1)}%</span>
           </div>
-        </div>
 
-        {/* Current subsidy */}
-        <div>
+          {/* Current subsidy rate */}
           <div
             style={{
-              fontSize: 9,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--text-muted)',
-              marginBottom: 4,
+              fontSize: 11,
+              color: 'var(--text-secondary)',
               fontFamily: FONT,
-            }}
-          >
-            CURRENT SUBSIDY
-          </div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
+              marginBottom: 10,
             }}
           >
             3.125 BTC/block
           </div>
-        </div>
-      </div>
 
-      {/* Chart */}
-      <div style={{ marginBottom: 24 }}>
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}
-            />
-            <XAxis
-              dataKey="year"
-              tick={{ fontSize: 10, fill: colors.axisTick }}
-              tickLine={false}
-              axisLine={{ stroke: colors.gridLine }}
-              fontFamily={FONT}
-            />
-            <YAxis
-              tickFormatter={formatBudget}
-              tick={{ fontSize: 10, fill: colors.axisTick }}
-              tickLine={false}
-              axisLine={{ stroke: colors.gridLine }}
-              fontFamily={FONT}
-              width={60}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: isDark ? '#1a1a2e' : '#fff',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 0,
-                fontSize: 11,
-                fontFamily: FONT,
-              }}
-              formatter={(value: unknown, name: unknown) => [
-                formatBudget(Number(value)),
-                String(name).charAt(0).toUpperCase() + String(name).slice(1),
-              ]}
-              labelFormatter={(label) => `Year ${label}`}
-            />
+          {/* Divider */}
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '10px 0' }} />
 
-            {/* Stacked areas */}
-            <Area
-              type="monotone"
-              dataKey="subsidy"
-              stackId="budget"
-              fill="var(--accent-primary)"
-              fillOpacity={0.3}
-              stroke="none"
-              name="Subsidy"
-            />
-            <Area
-              type="monotone"
-              dataKey="fees"
-              stackId="budget"
-              fill="#f59e0b"
-              fillOpacity={0.3}
-              stroke="none"
-              name="Fees"
-            />
+          {/* Projections */}
+          <div
+            style={{
+              fontSize: 9,
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              color: 'var(--text-muted)',
+              marginBottom: 8,
+              fontFamily: FONT,
+            }}
+          >
+            PROJECTIONS
+          </div>
 
-            {/* Scenario lines */}
-            <Line
-              type="monotone"
-              dataKey="conservative"
-              stroke="#ef4444"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              dot={false}
-              name="Conservative"
-            />
-            <Line
-              type="monotone"
-              dataKey="base"
-              stroke="var(--accent-primary)"
-              strokeWidth={2}
-              dot={false}
-              name="Base"
-            />
-            <Line
-              type="monotone"
-              dataKey="optimistic"
-              stroke="#22c55e"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              dot={false}
-              name="Optimistic"
-            />
-
-            {/* Halving reference lines */}
-            {halvingYears.map((yr) => (
-              <ReferenceLine
-                key={yr}
-                x={yr}
-                stroke={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}
-                strokeDasharray="2 2"
-                label={{
-                  value: '\u00bd',
-                  position: 'top',
-                  fontSize: 11,
-                  fill: 'var(--text-muted)',
-                  fontFamily: FONT,
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {projectionRows.map((row) => (
+              <div
+                key={row.year}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
                 }}
-              />
-            ))}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Projection table */}
-      <div style={{ marginBottom: 16 }}>
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: 12,
-            fontFamily: isDark ? FONT : "'Source Serif 4', 'Georgia', serif",
-          }}
-        >
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-              {['Year', 'Halving Epoch', 'Subsidy (BTC/block)', 'Daily Budget (USD)', 'Subsidy %', 'Fee %'].map(
-                (h) => (
-                  <th
-                    key={h}
-                    style={{
-                      textAlign: h === 'Year' ? 'left' : 'right',
-                      padding: '6px 8px',
-                      fontSize: 9,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      color: 'var(--text-muted)',
-                      fontWeight: 500,
-                      fontFamily: FONT,
-                    }}
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {base.map((row) => (
-              <tr key={row.year} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <td style={{ padding: '6px 8px', color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {row.year}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                  {row.halvingEpoch}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                  {row.subsidyBtc}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {formatBudget(row.dailyTotalUsd)}
-                </td>
-                <td
+              >
+                <span
                   style={{
-                    padding: '6px 8px',
-                    textAlign: 'right',
-                    color: subsidyPctColor(row.subsidyPct),
-                    fontWeight: 600,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    fontFamily: FONT,
+                    fontVariantNumeric: 'tabular-nums',
                   }}
                 >
-                  {row.subsidyPct.toFixed(1)}%
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                  {row.feePct.toFixed(1)}%
-                </td>
-              </tr>
+                  {row.year}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: FONT,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {row.subsidyBtc} BTC
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontFamily: FONT,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: budgetColor(row.subsidyPct),
+                    fontWeight: 500,
+                  }}
+                >
+                  {formatBudget(row.dailyTotalUsd)}
+                </span>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Note */}
-      <div
-        style={{
-          fontSize: 11,
-          color: 'var(--text-muted)',
-          fontFamily: FONT,
-          lineHeight: 1.6,
-          maxWidth: 720,
-        }}
-      >
-        Projections assume constant BTC price ({formatPrice(btcPrice)}) and vary fee assumptions
-        (1x/2x/5x current). Reality will depend on price appreciation, adoption, and fee market
-        maturity.
+          {/* Note */}
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--text-muted)',
+              fontFamily: FONT,
+              lineHeight: 1.5,
+              marginTop: 12,
+            }}
+          >
+            Assumes constant ${formatPrice(btcPrice, 0)} BTC. Fee scenarios: 1x/2x/5x current.
+          </div>
+        </div>
       </div>
     </div>
   );
