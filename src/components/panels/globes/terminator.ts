@@ -3,7 +3,7 @@
  * and returns a GeoJSON circle representing the night hemisphere.
  */
 
-export function getSolarPosition(): { lat: number; lon: number } {
+function getSolarPosition(): { lat: number; lon: number } {
   const now = new Date();
   const JD = now.getTime() / 86400000 + 2440587.5;
   const T = (JD - 2451545.0) / 36525;

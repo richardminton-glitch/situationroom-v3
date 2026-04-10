@@ -67,38 +67,3 @@ export async function fetchJSON<T>(
     throw error;
   }
 }
-
-export function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  return entry ? (entry.data as T) : null;
-}
-
-export function isCacheStale(key: string): boolean {
-  const entry = cache.get(key);
-  return entry?.stale ?? true;
-}
-
-const API_NINJAS_BASE = 'https://api.api-ninjas.com/v1';
-
-export function apiNinjasHeaders(): Record<string, string> {
-  return { 'X-Api-Key': process.env.API_NINJAS_KEY || '' };
-}
-
-export async function fetchApiNinjas<T>(endpoint: string, cacheKey: string, cacheDuration: number): Promise<T> {
-  const data = await fetchJSON<T>(`${API_NINJAS_BASE}${endpoint}`, {
-    headers: apiNinjasHeaders(),
-    cacheKey,
-    cacheDuration,
-  });
-  // API Ninjas returns { error: "..." } on auth failure — purge bad cache
-  if (data && typeof data === 'object' && 'error' in data) {
-    cache.delete(cacheKey);
-    console.error(`[API Ninjas] ${endpoint}: ${(data as { error: string }).error}`);
-    throw new Error(`API Ninjas error: ${(data as { error: string }).error}`);
-  }
-  return data;
-}
-
-export function clearCache() {
-  cache.clear();
-}

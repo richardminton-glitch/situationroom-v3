@@ -103,14 +103,6 @@ export async function handleNewBriefing(headline: string, date: string, threatLe
   await announceBriefing(headline, date, threatLevel);
 }
 
-export async function handleWhaleTx(amountBtc: number, direction: string): Promise<void> {
-  if (amountBtc < 500) return; // only large whales
-  const eventKey = `whale_${Math.floor(Date.now() / 3600000)}_${amountBtc.toFixed(0)}`;
-  if (await isDuplicate('whale_tx', eventKey, 3600000)) return;
-
-  await postBotMessage(`Whale movement detected: ${amountBtc.toLocaleString()} BTC moved ${direction}.`, 'whale_tx');
-}
-
 export async function handleFearGreedExtreme(value: number): Promise<void> {
   if (value > 10) return; // only extreme fear
   const eventKey = `fg_extreme_${Math.floor(Date.now() / 86400000)}`;

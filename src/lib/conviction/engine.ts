@@ -210,23 +210,3 @@ export function calculateConviction(inputs: ConvictionInputs): ConvictionResult 
     calculatedAt: new Date().toISOString(),
   };
 }
-
-/**
- * Apply user overrides — recalculate with user-modified signal scores.
- */
-export function calculateWithOverrides(
-  base: ConvictionResult,
-  overrides: Record<string, number>
-): ConvictionResult {
-  const signals = base.signals.map((sig) => ({
-    ...sig,
-    score: overrides[sig.key] !== undefined ? overrides[sig.key] : sig.score,
-  }));
-
-  const totalWeight = signals.reduce((s, sig) => s + sig.weight, 0);
-  const weightedSum = signals.reduce((s, sig) => s + sig.score * sig.weight, 0);
-  const composite = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
-  const { band, color } = getBand(composite);
-
-  return { ...base, composite, band, bandColor: color, signals };
-}

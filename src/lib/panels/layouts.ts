@@ -219,13 +219,3 @@ export function getDefaultForTheme(theme: string): DashboardLayout {
 export function getPresetByIdForTheme(id: string, theme: string): DashboardLayout | undefined {
   return getPresetsForTheme(theme).find((p) => p.id === id);
 }
-
-// ── Backward-compat exports ────────────────────────────────
-/** @deprecated Use getPresetsForTheme(theme) */
-export const LAYOUT_PRESETS = PARCHMENT_PRESETS;
-/** @deprecated Use getDefaultForTheme(theme) */
-export const DEFAULT_LAYOUT = PARCHMENT_DEFAULT_LAYOUT;
-/** @deprecated Use getPresetByIdForTheme(id, theme) */
-export function getPresetById(id: string): DashboardLayout | undefined {
-  return PARCHMENT_PRESETS.find((p) => p.id === id);
-}

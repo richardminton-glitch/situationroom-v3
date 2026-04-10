@@ -277,14 +277,3 @@ export async function trackChange(
 
   return null;
 }
-
-/**
- * Get all tracked prices for a category (for daily snapshot recording).
- */
-export function getTodayPrices(category: PriceCategory): Record<string, number> {
-  return { ...todayPrices[category] };
-}
-
-export function getPrevDayPrices(category: PriceCategory): Record<string, number> {
-  return { ...prevDayPrices[category] };
-}

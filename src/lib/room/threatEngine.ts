@@ -152,10 +152,3 @@ export function computeDomainContributions(
 
   return contributions;
 }
-
-/**
- * Format a threat state transition for the agent log.
- */
-export function formatStateTransition(from: ThreatState, to: ThreatState): string {
-  return `[SYSTEM] Threat posture updated \u2014 ${from} \u2192 ${to}`;
-}

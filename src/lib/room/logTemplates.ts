@@ -380,7 +380,7 @@ const TAM_EVENT = [
 
 // ── Lookup ───────────────────────────────────────────────────────────────────
 
-export const AMBIENT_TEMPLATES_BY_LEVEL: Record<string, Record<ThreatState, string[]>> = {
+const AMBIENT_TEMPLATES_BY_LEVEL: Record<string, Record<ThreatState, string[]>> = {
   GEOPOLITICAL: GEO_AMBIENT,
   ECONOMIC: ECON_AMBIENT,
   BITCOIN: BTC_AMBIENT,
@@ -390,7 +390,7 @@ export const AMBIENT_TEMPLATES_BY_LEVEL: Record<string, Record<ThreatState, stri
 };
 
 // Flat fallback for backward compatibility
-export const AMBIENT_TEMPLATES: Record<string, string[]> = {
+const AMBIENT_TEMPLATES: Record<string, string[]> = {
   GEOPOLITICAL: GEO_AMBIENT.QUIET,
   ECONOMIC: ECON_AMBIENT.QUIET,
   BITCOIN: BTC_AMBIENT.QUIET,
@@ -399,7 +399,7 @@ export const AMBIENT_TEMPLATES: Record<string, string[]> = {
   COORDINATOR: TAM_AMBIENT.QUIET,
 };
 
-export const EVENT_TEMPLATES: Record<string, string[]> = {
+const EVENT_TEMPLATES: Record<string, string[]> = {
   GEOPOLITICAL: GEO_EVENT,
   ECONOMIC: ECON_EVENT,
   BITCOIN: BTC_EVENT,
@@ -411,7 +411,7 @@ export const EVENT_TEMPLATES: Record<string, string[]> = {
 /**
  * Fill template placeholders.
  */
-export function fillTemplate(
+function fillTemplate(
   template: string,
   vars: Record<string, string | number>,
 ): string {

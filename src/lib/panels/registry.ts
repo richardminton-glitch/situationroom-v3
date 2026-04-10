@@ -470,11 +470,3 @@ export function getPanelById(id: string): PanelRegistryEntry | undefined {
   // UI components use unique instance IDs (e.g. "h-separator-1712345678") — resolve by prefix
   return PANEL_REGISTRY.find((p) => p.uiComponent && id.startsWith(p.id + '-'));
 }
-
-export function getPanelsByCategory(category: PanelCategory): PanelRegistryEntry[] {
-  return PANEL_REGISTRY.filter((p) => p.category === category);
-}
-
-export function getAllPanelIds(): string[] {
-  return PANEL_REGISTRY.map((p) => p.id);
-}

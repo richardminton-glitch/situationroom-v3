@@ -17,7 +17,7 @@ const ROOM_ID     = 'bot';   // bot room — NOT the ops room
 
 // ── Post a message to the Bot Room chat ───────────────────────────────────────
 
-export async function postBotRoomMessage(
+async function postBotRoomMessage(
   content: string,
   eventType: string,
 ): Promise<void> {

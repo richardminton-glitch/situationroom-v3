@@ -362,10 +362,3 @@ export async function getApiNinjasSnapshot(): Promise<ApiNinjasSnapshot> {
 
   return _loading;
 }
-
-/**
- * Get estimated monthly call usage.
- */
-export function getApiNinjasUsage(): MonthlyCounter {
-  return readCounter();
-}

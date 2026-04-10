@@ -9,13 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ln-markets/api": "^3.0.1",
     "@phosphor-icons/react": "^2.1.10",
     "@prisma/client": "^6.19.2",
     "@react-email/components": "^1.0.11",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
-    "bech32": "^2.0.0",
     "d3": "^7.9.0",
     "lightweight-charts": "^5.1.0",
     "next": "16.2.1",
@@ -40,6 +36,7 @@
     "@types/topojson-client": "^3.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "knip": "^5.88.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

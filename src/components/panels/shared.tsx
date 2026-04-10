@@ -259,7 +259,7 @@ function getMarketState(exchange: string, now: Date = new Date()): MarketState |
   return null;
 }
 
-export function isMarketOpen(exchange: string): boolean {
+function isMarketOpen(exchange: string): boolean {
   return getMarketState(exchange)?.open ?? false;
 }
 
@@ -274,7 +274,7 @@ function describeUntil(ms: number): string {
   return rh ? `${d}d ${rh}h` : `${d}d`;
 }
 
-export function getMarketTooltip(exchange: string): string {
+function getMarketTooltip(exchange: string): string {
   const s = SCHEDULES[exchange];
   if (!s) return '';
   const state = getMarketState(exchange);

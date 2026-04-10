@@ -54,15 +54,3 @@ export function extractHeadline(outlookContent: string): { headline: string; cle
 
   return { headline, cleanContent: outlookContent.trim() };
 }
-
-/**
- * Legacy keyword-based threat level computation.
- *
- * @deprecated Replaced by the unified Members Room decay algorithm.
- *   See `computeDecayedScore` in `@/lib/room/threatEngine`. This function is
- *   retained only for historical reference and is no longer called anywhere
- *   in the runtime.
- */
-export function computeThreatLevel(): { level: string; score: number } {
-  return { level: 'QUIET', score: 0 };
-}

@@ -69,12 +69,6 @@ export function brkOffsetToDate(offset: number): string {
   return d.toISOString().split('T')[0];
 }
 
-/** Convert ISO date to BRK day1 offset */
-export function dateToBrkOffset(isoDate: string): number {
-  const d = new Date(isoDate + 'T00:00:00Z');
-  return Math.floor((d.getTime() - BRK_EPOCH.getTime()) / 86_400_000);
-}
-
 // ── File cache ─────────────────────────────────────────────────────────────────
 
 function cachePath(filename: string): string {
@@ -190,13 +184,4 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
 
     throw err;
   }
-}
-
-/**
- * Fetch a special-format BRK endpoint (e.g. cost-basis/all/{date}).
- * Does NOT use the standard probe→bulk pattern.
- */
-export async function fetchBrkSpecial<T>(endpoint: string): Promise<T> {
-  const separator = endpoint.includes('?') ? '&' : '?';
-  return brkFetch<T>(`${BRK_BASE}/${endpoint}${separator}_t=${Math.floor(Date.now() / 1000)}`);
 }

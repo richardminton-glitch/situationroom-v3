@@ -34,8 +34,3 @@ export async function getLiveSatsPerGbp(): Promise<number> {
 export function gbpToSats(gbp: number, satsPerGbp: number): number {
   return Math.round(gbp * satsPerGbp);
 }
-
-/** Convert sats to GBP at the given rate. */
-export function satsToGbp(sats: number, satsPerGbp: number): number {
-  return sats / satsPerGbp;
-}

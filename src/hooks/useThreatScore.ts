@@ -85,10 +85,3 @@ export function useThreatScore(events: AgentEvent[]) {
 
   return status;
 }
-
-/** Utility: check if state is above a threshold */
-export function isElevated(state: ThreatState): boolean {
-  return state === 'ELEVATED' || state === 'ALERT' || state === 'CRITICAL';
-}
-
-export { getStateForScore };

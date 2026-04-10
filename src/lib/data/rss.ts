@@ -638,11 +638,6 @@ export async function fetchRSSAll(): Promise<{ events: RSSEvent[]; headlines: Cl
   return result;
 }
 
-// Keep legacy exports for backward compat
-export async function fetchRSSEvents(): Promise<RSSEvent[]> {
-  return (await fetchRSSAll()).events;
-}
-
 export async function fetchRSSHeadlines(): Promise<ClassifiedArticle[]> {
   return (await fetchRSSAll()).headlines;
 }

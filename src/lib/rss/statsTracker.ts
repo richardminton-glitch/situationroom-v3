@@ -34,7 +34,7 @@ export function checkAndRecordAICall(): boolean {
   return true;
 }
 
-export function getGrokCallsLastHour(): number {
+function getGrokCallsLastHour(): number {
   const windowStart = Date.now() - WINDOW_MS;
   return grokTimestamps.filter((t) => t >= windowStart).length;
 }

@@ -56,7 +56,7 @@ async function relayRequest(method: 'PUT' | 'DELETE', npub: string): Promise<boo
  * Add a user's npub to the relay whitelist.
  * Called on Members+ tier activation.
  */
-export async function addToRelay(userId: string, npub: string): Promise<void> {
+async function addToRelay(userId: string, npub: string): Promise<void> {
   await relayRequest('PUT', npub);
 
   // Upsert in DB
@@ -73,7 +73,7 @@ export async function addToRelay(userId: string, npub: string): Promise<void> {
  * Remove a user's npub from the relay whitelist.
  * Called on tier expiry, downgrade below Members, or npub upgrade.
  */
-export async function removeFromRelay(userId: string, npub: string): Promise<void> {
+async function removeFromRelay(userId: string, npub: string): Promise<void> {
   await relayRequest('DELETE', npub);
 
   try {

@@ -49,7 +49,7 @@ function isLong(side: unknown): boolean {
 
 // ── Pool state fetcher ────────────────────────────────────────────────────────
 
-export async function fetchPoolState(): Promise<PoolState> {
+async function fetchPoolState(): Promise<PoolState> {
   try {
     const bot = getBotClient();
     const [account, trades] = await Promise.all([
