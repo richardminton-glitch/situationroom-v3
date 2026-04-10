@@ -131,34 +131,25 @@ async function brkFetch<T>(url: string): Promise<T> {
  */
 export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesResult> {
   const { series, days, cacheFile, cacheTtl = CACHE_TTL } = opts;
-  const probeSeries = opts.probeSeries ?? series[0];
 
   // 1. Check file cache
   const cached = readCache(cacheFile, cacheTtl);
   if (cached) return cached;
 
   try {
-    // 2. Probe for total available data points
-    // Cache-bust: BRK edge nodes serve stale probe responses (seen 8-day lag).
-    // Appending _t=<epoch_seconds> bypasses the CDN cache.
-    const probeUrl = `${BRK_BASE}/${probeSeries}/day1?limit=1&_t=${Math.floor(Date.now() / 1000)}`;
-    const probe = await brkFetch<{ total: number }>(probeUrl);
-    const total = probe.total;
-    const startOffset = Math.max(0, total - days);
-
-    // 3. Bulk fetch (cache-bust same as probe)
+    // 2. Bulk fetch using relative start offset (BRK supports start=-N for last N days)
     const seriesParam = series.join(',');
-    const fetchUrl = `${BRK_BASE}/bulk?series=${seriesParam}&index=day1&start=${startOffset}&limit=${days}&_t=${Math.floor(Date.now() / 1000)}`;
+    const fetchUrl = `${BRK_BASE}/bulk?series=${seriesParam}&index=day1&start=-${days}`;
     const rawBulk = await brkFetch<BrkBulkEntry | BrkBulkEntry[]>(fetchUrl);
 
     // BRK returns a single object for 1 series, or an array for multiple
     const bulk: BrkBulkEntry[] = Array.isArray(rawBulk) ? rawBulk : [rawBulk];
 
-    // 4. Parse into aligned arrays
+    // 3. Parse into aligned arrays
     // BRK bulk entries don't include a 'name' field — map by position to requested series
     const seriesData: Record<string, number[]> = {};
     let maxLen = 0;
-    let baseStart = startOffset;
+    let baseStart = 0;
 
     for (let idx = 0; idx < bulk.length; idx++) {
       const entry = bulk[idx];
@@ -170,7 +161,7 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
       }
     }
 
-    // 5. Generate date array
+    // 4. Generate date array
     const dates: string[] = [];
     for (let i = 0; i < maxLen; i++) {
       dates.push(brkOffsetToDate(baseStart + i));
@@ -180,10 +171,10 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
       seriesData,
       dates,
       fromCache: false,
-      totalAvailable: total,
+      totalAvailable: maxLen,
     };
 
-    // 6. Write cache
+    // 5. Write cache
     writeCache(cacheFile, result);
 
     return result;
