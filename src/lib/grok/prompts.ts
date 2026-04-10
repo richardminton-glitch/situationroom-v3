@@ -42,7 +42,7 @@ BITCOIN MARKET
   24h Volume:           $${(snap.volume24h / 1e9).toFixed(1)}B
   Fear & Greed Index:   ${snap.fearGreed} (${snap.fearGreedLabel})
   MVRV Ratio:           ${snap.mvrv.toFixed(2)}
-  Exchange Net Flow:    ${snap.exchangeNetFlow >= 0 ? '+' : ''}${snap.exchangeNetFlow.toFixed(0)} BTC
+  Exchange Net Flow:    ${snap.exchangeNetFlow >= 0 ? '+' : ''}${snap.exchangeNetFlow.toFixed(0)} BTC (${snap.exchangeNetFlow > 0 ? 'net outflow from exchanges — accumulation, bullish' : snap.exchangeNetFlow < 0 ? 'net inflow to exchanges — distribution, bearish' : 'neutral'})
   Exchange Balance:     ${snap.exchangeBalance.toLocaleString()} BTC
 
 NETWORK
