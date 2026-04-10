@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -15,13 +16,16 @@ interface Props {
   onBaseAmountChange: (n: number) => void;       // lifted to DCASignalPage
 }
 
-function compositeColour(composite: number): string {
-  if (composite >= 1.5) return '#00d4c8';  // teal
-  if (composite >= 0.85) return '#c4885a'; // amber
-  return '#d06050';                         // coral
+function compositeColour(composite: number, isDark: boolean): string {
+  if (composite >= 1.5) return isDark ? '#00d4c8' : '#4a7c59';
+  if (composite >= 0.85) return isDark ? '#c4885a' : '#b8860b';
+  return isDark ? '#d06050' : '#9b3232';
 }
 
 export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   const [frequency, setFrequency] = useState<Frequency>('weekly');
 
   // Hydrate frequency from localStorage only
@@ -45,7 +49,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
   }
 
   const recommendedBuy = Math.round(baseAmount * composite);
-  const colour         = compositeColour(composite);
+  const colour         = compositeColour(composite, isDark);
 
   return (
     <div style={{
@@ -54,15 +58,15 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
       alignItems:     'flex-start',
       gap:            12,
       padding:        '24px 28px',
-      background:     'rgba(255,255,255,0.03)',
-      border:         '1px solid rgba(255,255,255,0.07)',
+      background:     'var(--bg-card)',
+      border:         '1px solid var(--border-subtle)',
     }}>
 
       {/* Section label */}
       <span style={{
         fontSize: 11,
         letterSpacing: '0.18em',
-        color:         '#8a9bb0',
+        color:         'var(--text-secondary)',
       }}>
         COMPOSITE SIGNAL
       </span>
@@ -113,9 +117,13 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
                 letterSpacing:    '0.1em',
                 fontFamily:       FONT,
                 cursor:           'pointer',
-                border:           '1px solid rgba(255,255,255,0.12)',
-                background:       frequency === f ? 'rgba(0,212,200,0.15)' : 'transparent',
-                color:            frequency === f ? '#00d4c8' : '#8a9bb0',
+                border:           '1px solid var(--border-primary)',
+                background:       frequency === f
+                  ? (isDark ? 'rgba(0,212,200,0.15)' : 'rgba(74,124,89,0.15)')
+                  : 'transparent',
+                color:            frequency === f
+                  ? (isDark ? '#00d4c8' : '#4a7c59')
+                  : 'var(--text-secondary)',
                 transition:       'none',
                 textTransform:    'uppercase' as const,
               }}
@@ -127,8 +135,8 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
 
         {/* Base amount input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>BASE</span>
-          <span style={{ fontSize: 13, color: '#8a9bb0' }}>$</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>BASE</span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>$</span>
           <input
             type="number"
             min={1}
@@ -140,15 +148,15 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
               width:           112,
               fontSize: 15,
               fontFamily:      FONT,
-              background:      '#0d1520',
-              border:          '1px solid rgba(255,255,255,0.12)',
-              color:           '#e8edf2',
+              background:      'var(--bg-card)',
+              border:          '1px solid var(--border-primary)',
+              color:           'var(--text-primary)',
               padding:         '4px 8px',
               outline:         'none',
               transition:      'none',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = '#00d4c8'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = isDark ? '#00d4c8' : '#4a7c59'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
           />
         </div>
       </div>
@@ -164,14 +172,14 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
           fontSize: 24,
           fontFamily:    FONT,
           fontWeight:    500,
-          color:         '#e8edf2',
+          color:         'var(--text-primary)',
           letterSpacing: '0.02em',
         }}>
           ${recommendedBuy.toLocaleString()}
         </span>
         <span style={{
           fontSize: 12,
-          color:         '#8a9bb0',
+          color:         'var(--text-secondary)',
           letterSpacing: '0.1em',
         }}>
           THIS {frequency === 'weekly' ? 'WEEK' : 'MONTH'}
@@ -179,7 +187,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
       </div>
 
       {/* Context line */}
-      <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.08em' }}>
+      <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
         {composite.toFixed(2)}× your ${baseAmount.toLocaleString()} base · signal-adjusted DCA
       </span>
 

@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_EMAIL = 'sr-dca-signup-email';
@@ -13,6 +14,9 @@ interface Props {
 }
 
 export function SignalEmailSignup({ baseAmount }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   const [email,     setEmail]     = useState('');
   const [frequency, setFrequency] = useState<Frequency>('weekly');
   const [status,    setStatus]    = useState<Status>('idle');
@@ -62,12 +66,15 @@ export function SignalEmailSignup({ baseAmount }: Props) {
     }
   }
 
+  const signalColor = isDark ? '#00d4c8' : '#4a7c59';
+
   // Confirmed via URL param
   if (confirmed) {
     return (
       <SuccessBox
         message="You're subscribed! Your first signal email is on its way."
         sub="Check your inbox — signal emails land every Monday (weekly) or first of month."
+        isDark={isDark}
       />
     );
   }
@@ -78,6 +85,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
       <SuccessBox
         message="Check your inbox — confirm your subscription."
         sub={`Sent to ${email} · click the link to activate.`}
+        isDark={isDark}
       />
     );
   }
@@ -88,6 +96,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
       <SuccessBox
         message="Preferences updated."
         sub={`${frequency === 'weekly' ? 'Weekly' : 'Monthly'} signal emails for ${email}.`}
+        isDark={isDark}
       />
     );
   }
@@ -95,7 +104,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
   return (
     <div style={{
       paddingTop:  16,
-      borderTop:   '1px solid rgba(255,255,255,0.06)',
+      borderTop:   '1px solid var(--border-subtle)',
       fontFamily:  FONT,
     }}>
 
@@ -104,7 +113,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
         display:       'block',
         fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#8a9bb0',
+        color:         'var(--text-secondary)',
         marginBottom:  10,
       }}>
         SIGNAL EMAIL
@@ -112,10 +121,10 @@ export function SignalEmailSignup({ baseAmount }: Props) {
 
       <div style={{
         padding:    '16px 18px',
-        background: 'rgba(255,255,255,0.025)',
-        border:     '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--bg-card)',
+        border:     '1px solid var(--border-subtle)',
       }}>
-        <p style={{ fontSize: 12, color: '#8aaba6', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
           Receive this signal by email on a {frequency === 'weekly' ? 'weekly' : 'monthly'} basis —
           with your recommended buy, both indicator readings, and how it compares to vanilla DCA.
         </p>
@@ -135,9 +144,11 @@ export function SignalEmailSignup({ baseAmount }: Props) {
                   letterSpacing: '0.1em',
                   fontFamily:    FONT,
                   cursor:        'pointer',
-                  border:        '1px solid rgba(255,255,255,0.12)',
-                  background:    frequency === f ? 'rgba(0,212,200,0.15)' : 'transparent',
-                  color:         frequency === f ? '#00d4c8' : '#8a9bb0',
+                  border:        '1px solid var(--border-primary)',
+                  background:    frequency === f
+                    ? (isDark ? 'rgba(0,212,200,0.15)' : 'rgba(74,124,89,0.15)')
+                    : 'transparent',
+                  color:         frequency === f ? signalColor : 'var(--text-secondary)',
                   transition:    'none',
                   textTransform: 'uppercase' as const,
                 }}
@@ -159,15 +170,15 @@ export function SignalEmailSignup({ baseAmount }: Props) {
                 flex:         1,
                 fontSize: 13,
                 fontFamily:   FONT,
-                background:   '#0d1520',
-                border:       '1px solid rgba(255,255,255,0.12)',
-                color:        '#e8edf2',
+                background:   'var(--bg-card)',
+                border:       '1px solid var(--border-primary)',
+                color:        'var(--text-primary)',
                 padding:      '6px 10px',
                 outline:      'none',
                 transition:   'none',
               }}
-              onFocus={e  => { e.currentTarget.style.borderColor = '#00d4c8'; }}
-              onBlur={e   => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+              onFocus={e  => { e.currentTarget.style.borderColor = isDark ? '#00d4c8' : '#4a7c59'; }}
+              onBlur={e   => { e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
             />
             <button
               type="submit"
@@ -178,8 +189,8 @@ export function SignalEmailSignup({ baseAmount }: Props) {
                 letterSpacing: '0.12em',
                 fontFamily:    FONT,
                 cursor:        status === 'loading' ? 'wait' : 'pointer',
-                background:    '#00d4c8',
-                color:         '#090d12',
+                background:    signalColor,
+                color:         isDark ? '#090d12' : '#ffffff',
                 border:        'none',
                 fontWeight:    600,
                 textTransform: 'uppercase' as const,
@@ -193,13 +204,13 @@ export function SignalEmailSignup({ baseAmount }: Props) {
 
           {/* Error */}
           {status === 'error' && (
-            <span style={{ fontSize: 11, color: '#d06050', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 11, color: isDark ? '#d06050' : '#9b3232', letterSpacing: '0.08em' }}>
               {errorMsg || 'Subscription failed — try again'}
             </span>
           )}
 
           {/* Context line */}
-          <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
             Double opt-in confirmation email sent · unsubscribe any time · not financial advice
           </span>
 
@@ -209,34 +220,35 @@ export function SignalEmailSignup({ baseAmount }: Props) {
   );
 }
 
-function SuccessBox({ message, sub }: { message: string; sub: string }) {
+function SuccessBox({ message, sub, isDark }: { message: string; sub: string; isDark: boolean }) {
+  const signalColor = isDark ? '#00d4c8' : '#4a7c59';
   return (
     <div style={{
       paddingTop:  16,
-      borderTop:   '1px solid rgba(255,255,255,0.06)',
+      borderTop:   '1px solid var(--border-subtle)',
       fontFamily:  FONT,
     }}>
       <span style={{
         display:       'block',
         fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#8a9bb0',
+        color:         'var(--text-secondary)',
         marginBottom:  10,
       }}>
         SIGNAL EMAIL
       </span>
       <div style={{
         padding:    '14px 18px',
-        background: 'rgba(0,212,200,0.07)',
-        border:     '1px solid rgba(0,212,200,0.2)',
+        background: isDark ? 'rgba(0,212,200,0.07)' : 'rgba(74,124,89,0.07)',
+        border:     `1px solid ${isDark ? 'rgba(0,212,200,0.2)' : 'rgba(74,124,89,0.2)'}`,
         display:    'flex',
         flexDirection: 'column',
         gap:        4,
       }}>
-        <span style={{ fontSize: 13, color: '#00d4c8', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 13, color: signalColor, fontWeight: 600, letterSpacing: '0.04em' }}>
           {message}
         </span>
-        <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>
           {sub}
         </span>
       </div>

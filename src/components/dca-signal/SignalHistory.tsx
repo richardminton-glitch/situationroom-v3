@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import type { BtcSignalResponse } from '@/app/api/btc-signal/route';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT    = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_KEY  = 'sr-dca-signal-history';
@@ -42,10 +43,10 @@ function weekString(d: Date): string {
   return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
-function compositeColour(composite: number): string {
-  if (composite >= 1.5) return '#00d4c8';
-  if (composite >= 0.85) return '#c4885a';
-  return '#d06050';
+function compositeColour(composite: number, isDark: boolean): string {
+  if (composite >= 1.5) return isDark ? '#00d4c8' : '#4a7c59';
+  if (composite >= 0.85) return isDark ? '#c4885a' : '#b8860b';
+  return isDark ? '#d06050' : '#9b3232';
 }
 
 interface Props {
@@ -53,6 +54,9 @@ interface Props {
 }
 
 export function SignalHistory({ data }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   const [snapshots, setSnapshots] = useState<SignalSnapshot[]>([]);
 
   useEffect(() => {
@@ -100,7 +104,7 @@ export function SignalHistory({ data }: Props) {
   return (
     <div style={{
       paddingTop:  16,
-      borderTop:   '1px solid rgba(255,255,255,0.06)',
+      borderTop:   '1px solid var(--border-subtle)',
       fontFamily:  FONT,
     }}>
 
@@ -109,7 +113,7 @@ export function SignalHistory({ data }: Props) {
         display:       'block',
         fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#8a9bb0',
+        color:         'var(--text-secondary)',
         marginBottom:  12,
       }}>
         SIGNAL HISTORY
@@ -123,7 +127,7 @@ export function SignalHistory({ data }: Props) {
           letterSpacing:   '0.06em',
         }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <tr style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}` }}>
               {['WEEK', 'DATE', 'SIGNAL', 'TIER', 'BUY (AT $100)', 'BTC PRICE'].map(h => (
                 <th key={h} style={{
                   textAlign:     'left',
@@ -131,7 +135,7 @@ export function SignalHistory({ data }: Props) {
                   paddingRight:  16,
                   fontSize: 10,
                   letterSpacing: '0.14em',
-                  color:         '#6b7a8d',
+                  color:         'var(--text-muted)',
                   fontWeight:    600,
                 }}>
                   {h}
@@ -143,24 +147,24 @@ export function SignalHistory({ data }: Props) {
             {snapshots.map((s, i) => (
               <tr
                 key={s.week}
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'}` }}
               >
-                <td style={{ padding: '6px 16px 6px 0', color: i === 0 ? '#e8edf2' : '#8a9bb0' }}>
+                <td style={{ padding: '6px 16px 6px 0', color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                   {s.week}
                 </td>
-                <td style={{ padding: '6px 16px 6px 0', color: '#8a9bb0' }}>
+                <td style={{ padding: '6px 16px 6px 0', color: 'var(--text-secondary)' }}>
                   {s.date}
                 </td>
-                <td style={{ padding: '6px 16px 6px 0', color: compositeColour(s.composite), fontWeight: 600 }}>
+                <td style={{ padding: '6px 16px 6px 0', color: compositeColour(s.composite, isDark), fontWeight: 600 }}>
                   {s.composite.toFixed(2)}×
                 </td>
-                <td style={{ padding: '6px 16px 6px 0', color: compositeColour(s.composite) }}>
+                <td style={{ padding: '6px 16px 6px 0', color: compositeColour(s.composite, isDark) }}>
                   {s.tier}
                 </td>
-                <td style={{ padding: '6px 16px 6px 0', color: '#e8edf2' }}>
+                <td style={{ padding: '6px 16px 6px 0', color: 'var(--text-primary)' }}>
                   ${s.recommendedBuy}
                 </td>
-                <td style={{ padding: '6px 0 6px 0', color: '#8aaba6' }}>
+                <td style={{ padding: '6px 0 6px 0', color: 'var(--text-secondary)' }}>
                   ${s.btcPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                 </td>
               </tr>
@@ -172,7 +176,7 @@ export function SignalHistory({ data }: Props) {
       <p style={{
         marginTop:     8,
         fontSize: 10,
-        color:         '#6b7a8d',
+        color:         'var(--text-muted)',
         letterSpacing: '0.08em',
       }}>
         STORED LOCALLY · CLEARS WITH BROWSER CACHE · SHOWS LAST {MAX_ROWS} WEEKS

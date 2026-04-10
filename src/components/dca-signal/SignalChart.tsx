@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
   ComposedChart,
@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { CompositeRow } from '@/lib/signals/dca-engine';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -41,40 +42,49 @@ function getMonthTicks(data: CompositeRow[]): string[] {
   return ticks;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-
-  const composite = payload.find((p: any) => p.dataKey === 'normalisedComposite');
-  const price     = payload.find((p: any) => p.dataKey === 'price');
-
-  return (
-    <div style={{
-      background:    'rgba(21,29,37,0.97)',
-      border:        '1px solid rgba(255,255,255,0.1)',
-      padding:       '8px 12px',
-      fontFamily:    FONT,
-      fontSize: 12,
-      color:         '#e8edf2',
-      letterSpacing: '0.06em',
-      lineHeight:    1.8,
-    }}>
-      <div style={{ color: '#8a9bb0', marginBottom: 4 }}>{label}</div>
-      {composite && (
-        <div style={{ color: '#00d4c8' }}>
-          SIGNAL  {Number(composite.value).toFixed(3)}×
-        </div>
-      )}
-      {price && (
-        <div style={{ color: '#8aaba6' }}>
-          BTC     {formatPrice(Number(price.value))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function SignalChart({ chartData }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
+  const signalColor = isDark ? '#00d4c8' : '#4a7c59';
+  const tooltipBg   = isDark ? 'rgba(21,29,37,0.97)' : 'rgba(248,241,227,0.97)';
+  const priceStroke = isDark ? 'rgba(200,230,227,0.35)' : 'rgba(60,80,60,0.3)';
+  const gridStroke  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+  const axisStroke  = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function CustomTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+
+    const composite = payload.find((p: any) => p.dataKey === 'normalisedComposite');
+    const price     = payload.find((p: any) => p.dataKey === 'price');
+
+    return (
+      <div style={{
+        background:    tooltipBg,
+        border:        `1px solid ${axisStroke}`,
+        padding:       '8px 12px',
+        fontFamily:    FONT,
+        fontSize: 12,
+        color:         'var(--text-primary)',
+        letterSpacing: '0.06em',
+        lineHeight:    1.8,
+      }}>
+        <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</div>
+        {composite && (
+          <div style={{ color: signalColor }}>
+            SIGNAL  {Number(composite.value).toFixed(3)}×
+          </div>
+        )}
+        {price && (
+          <div style={{ color: 'var(--text-secondary)' }}>
+            BTC     {formatPrice(Number(price.value))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (!chartData || chartData.length === 0) {
     return (
       <div style={{
@@ -83,7 +93,7 @@ export function SignalChart({ chartData }: Props) {
         alignItems:  'center',
         justifyContent: 'center',
         fontFamily:  FONT,
-        color:       '#6b7a8d',
+        color:       'var(--text-muted)',
         fontSize: 12,
         letterSpacing: '0.1em',
       }}>
@@ -97,14 +107,14 @@ export function SignalChart({ chartData }: Props) {
   return (
     <div style={{
       padding:    '16px 0 8px',
-      borderTop:  '1px solid rgba(255,255,255,0.06)',
+      borderTop:  '1px solid var(--border-subtle)',
     }}>
       {/* Section label */}
       <span style={{
         display:       'block',
         fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#8a9bb0',
+        color:         'var(--text-secondary)',
         fontFamily:    FONT,
         marginBottom:  12,
       }}>
@@ -118,7 +128,7 @@ export function SignalChart({ chartData }: Props) {
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="rgba(255,255,255,0.04)"
+            stroke={gridStroke}
             vertical={false}
           />
 
@@ -126,8 +136,8 @@ export function SignalChart({ chartData }: Props) {
             dataKey="date"
             ticks={monthTicks}
             tickFormatter={formatXTick}
-            tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0', letterSpacing: 1 }}
-            axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-secondary)', letterSpacing: 1 }}
+            axisLine={{ stroke: axisStroke }}
             tickLine={false}
           />
 
@@ -136,7 +146,7 @@ export function SignalChart({ chartData }: Props) {
             yAxisId="left"
             domain={[0, 'auto']}
             tickFormatter={v => v.toFixed(1)}
-            tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-secondary)' }}
             axisLine={false}
             tickLine={false}
             width={32}
@@ -147,7 +157,7 @@ export function SignalChart({ chartData }: Props) {
             yAxisId="right"
             orientation="right"
             tickFormatter={formatPrice}
-            tick={{ fontFamily: FONT, fontSize: 11, fill: '#6b7a8d' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-muted)' }}
             axisLine={false}
             tickLine={false}
             width={44}
@@ -160,18 +170,18 @@ export function SignalChart({ chartData }: Props) {
             yAxisId="right"
             type="monotone"
             dataKey="price"
-            stroke="rgba(200,230,227,0.35)"
+            stroke={priceStroke}
             strokeWidth={1}
             dot={false}
             isAnimationActive={false}
           />
 
-          {/* Composite signal — prominent, teal */}
+          {/* Composite signal — prominent */}
           <Line
             yAxisId="left"
             type="monotone"
             dataKey="normalisedComposite"
-            stroke="#00d4c8"
+            stroke={signalColor}
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
@@ -187,14 +197,14 @@ export function SignalChart({ chartData }: Props) {
         fontFamily: FONT,
         fontSize: 11,
         letterSpacing: '0.1em',
-        color:      '#8a9bb0',
+        color:      'var(--text-secondary)',
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'inline-block', width: 16, height: 2, background: '#00d4c8' }} />
+          <span style={{ display: 'inline-block', width: 16, height: 2, background: signalColor }} />
           COMPOSITE SIGNAL
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'inline-block', width: 16, height: 1, background: 'rgba(200,230,227,0.35)' }} />
+          <span style={{ display: 'inline-block', width: 16, height: 1, background: priceStroke }} />
           BTC PRICE
         </span>
       </div>

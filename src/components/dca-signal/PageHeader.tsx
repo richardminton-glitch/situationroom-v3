@@ -1,4 +1,6 @@
-﻿'use client';
+'use client';
+
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -8,6 +10,9 @@ interface Props {
 }
 
 export function PageHeader({ btcPrice, timestamp }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   const updatedTime = new Date(timestamp).toUTCString().replace(/:\d\d GMT/, ' UTC');
   const shortTime   = new Date(timestamp).toISOString().slice(11, 16) + ' UTC';
   const today       = new Date().toLocaleDateString('en-GB', {
@@ -31,7 +36,7 @@ export function PageHeader({ btcPrice, timestamp }: Props) {
       alignItems:     'center',
       justifyContent: 'space-between',
       paddingBottom:  16,
-      borderBottom:   '1px solid rgba(255,255,255,0.06)',
+      borderBottom:   '1px solid var(--border-subtle)',
       fontFamily:     FONT,
     }}>
 
@@ -39,7 +44,7 @@ export function PageHeader({ btcPrice, timestamp }: Props) {
       <span style={{
         fontSize: 11,
         letterSpacing: '0.18em',
-        color:         '#00d4c8',
+        color:         isDark ? '#00d4c8' : '#4a7c59',
         fontWeight:    600,
       }}>
         DCA SIGNAL ENGINE
@@ -49,19 +54,19 @@ export function PageHeader({ btcPrice, timestamp }: Props) {
       <span style={{
         fontSize: 17,
         letterSpacing: '0.04em',
-        color:         '#e8edf2',
+        color:         'var(--text-primary)',
         fontWeight:    500,
       }}>
         {priceFormatted}
-        <span style={{ fontSize: 11, color: '#8a9bb0', marginLeft: 6, letterSpacing: '0.1em' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 6, letterSpacing: '0.1em' }}>
           BTC/USD
         </span>
       </span>
 
       {/* Right — date + last updated */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-        <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>{today}</span>
-        <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.1em' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>{today}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
           UPDATED {shortTime}
         </span>
       </div>

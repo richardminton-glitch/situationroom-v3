@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useTier }         from '@/hooks/useTier';
+import { useTheme }        from '@/components/layout/ThemeProvider';
 import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
@@ -43,19 +44,25 @@ function crossoverPct(): number {
   return spectrumPct(DCA_CROSSOVER);
 }
 
-function modeInfo(composite: number): {
+function modeInfo(composite: number, isDark: boolean): {
   label: string;
   sublabel: string;
   colour: string;
 } {
-  if (composite >= 1.5) return { label: 'ACCUMULATE',       sublabel: 'Signal strongly in buy zone',       colour: '#00d4c8' };
-  if (composite >= 1.15) return { label: 'DCA NORMALLY',    sublabel: 'Signal in buy zone',                colour: '#00d4c8' };
-  if (composite >= 0.85) return { label: 'MILD DCA',        sublabel: 'Buy zone, approaching crossover',   colour: '#8aaba6' };
-  if (composite >= DCA_CROSSOVER) return { label: 'APPROACHING CROSSOVER', sublabel: 'Reduce buy size — exits may start soon', colour: '#c4885a' };
-  if (composite >= 0.55) return { label: 'LIGHT EXITS',     sublabel: 'Just past crossover — begin exiting', colour: '#c4885a' };
-  if (composite >= 0.40) return { label: 'BUILD EXITS',     sublabel: 'Distribution territory — increase exits', colour: '#d08060' };
-  if (composite >= 0.25) return { label: 'INCREASE EXITS',  sublabel: 'Signal deep in distribution zone',  colour: '#d06050' };
-  return                         { label: 'HEAVY DISTRIBUTION', sublabel: 'Maximum exit signal',            colour: '#d06050' };
+  const teal    = isDark ? '#00d4c8' : '#4a7c59';
+  const neutral = isDark ? '#8aaba6' : '#5a4e3c';
+  const amber   = isDark ? '#c4885a' : '#b8860b';
+  const midDang = isDark ? '#d08060' : '#a05020';
+  const coral   = isDark ? '#d06050' : '#9b3232';
+
+  if (composite >= 1.5) return { label: 'ACCUMULATE',       sublabel: 'Signal strongly in buy zone',       colour: teal };
+  if (composite >= 1.15) return { label: 'DCA NORMALLY',    sublabel: 'Signal in buy zone',                colour: teal };
+  if (composite >= 0.85) return { label: 'MILD DCA',        sublabel: 'Buy zone, approaching crossover',   colour: neutral };
+  if (composite >= DCA_CROSSOVER) return { label: 'APPROACHING CROSSOVER', sublabel: 'Reduce buy size — exits may start soon', colour: amber };
+  if (composite >= 0.55) return { label: 'LIGHT EXITS',     sublabel: 'Just past crossover — begin exiting', colour: amber };
+  if (composite >= 0.40) return { label: 'BUILD EXITS',     sublabel: 'Distribution territory — increase exits', colour: midDang };
+  if (composite >= 0.25) return { label: 'INCREASE EXITS',  sublabel: 'Signal deep in distribution zone',  colour: coral };
+  return                         { label: 'HEAVY DISTRIBUTION', sublabel: 'Maximum exit signal',            colour: coral };
 }
 
 function formatUsd(v: number, compact = false): string {
@@ -99,23 +106,6 @@ function formatXTick(dateStr: string, period: Period): string {
   return String(d.getUTCFullYear());
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const sig  = payload.find((p: any) => p.dataKey === 'weeklyUsd');
-  const prc  = payload.find((p: any) => p.dataKey === 'price');
-  const comp = payload.find((p: any) => p.dataKey === 'composite');
-  return (
-    <div style={{ background: 'rgba(21,29,37,0.97)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', fontFamily: FONT, fontSize: 12, color: '#e8edf2', letterSpacing: '0.06em', lineHeight: 1.8 }}>
-      <div style={{ color: '#8a9bb0', marginBottom: 4 }}>{label}</div>
-      {comp && <div style={{ color: comp.value < DCA_CROSSOVER ? '#d06050' : '#00d4c8' }}>COMPOSITE  {Number(comp.value).toFixed(3)}×</div>}
-      {sig  && sig.value > 0 && <div style={{ color: '#c4885a' }}>EXITS      {formatUsd(Number(sig.value))}</div>}
-      {sig  && sig.value === 0 && <div style={{ color: '#6b7a8d' }}>NO EXIT (accumulate zone)</div>}
-      {prc  && <div style={{ color: '#8aaba6' }}>BTC        {formatPrice(Number(prc.value))}</div>}
-    </div>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -125,6 +115,9 @@ interface Props {
 
 export function DCAOutSection({ data, baseAmount }: Props) {
   const { canAccess, loading: tierLoading } = useTier();
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   const isVip = canAccess('vip');
 
   const [period, setPeriod] = useState<Period>('5Y');
@@ -167,7 +160,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const composite    = data.composite;
   const sellMult     = compositeToSellMult(composite);
   const exitTier     = compositeToExitTier(composite);
-  const mode         = modeInfo(composite);
+  const mode         = modeInfo(composite, isDark);
   const inExitZone   = composite < DCA_CROSSOVER;
   const nearCrossover = !inExitZone && composite < 0.85;
 
@@ -176,6 +169,36 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
   const cPct   = spectrumPct(composite);
   const xPct   = crossoverPct();
+
+  // Theme-derived colors
+  const tealColor   = isDark ? '#00d4c8' : '#4a7c59';
+  const amberColor  = isDark ? '#c4885a' : '#b8860b';
+  const coralColor  = isDark ? '#d06050' : '#9b3232';
+  const tooltipBg   = isDark ? 'rgba(21,29,37,0.97)' : 'rgba(248,241,227,0.97)';
+  const gridStroke  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+  const axisStroke  = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
+  const priceStroke = isDark ? 'rgba(200,230,227,0.2)' : 'rgba(60,80,60,0.2)';
+  const crossoverMarker = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+  const vipOverlayBg = isDark ? 'rgba(9,13,18,0.45)' : 'rgba(248,241,227,0.6)';
+  const periodActiveBg = isDark ? 'rgba(0,212,200,0.12)' : 'rgba(74,124,89,0.12)';
+
+  // ── ChartTooltip — defined inside component to access isDark ──────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function ChartTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    const sig  = payload.find((p: any) => p.dataKey === 'weeklyUsd');
+    const prc  = payload.find((p: any) => p.dataKey === 'price');
+    const comp = payload.find((p: any) => p.dataKey === 'composite');
+    return (
+      <div style={{ background: tooltipBg, border: `1px solid ${axisStroke}`, padding: '8px 12px', fontFamily: FONT, fontSize: 12, color: 'var(--text-primary)', letterSpacing: '0.06em', lineHeight: 1.8 }}>
+        <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</div>
+        {comp && <div style={{ color: comp.value < DCA_CROSSOVER ? coralColor : tealColor }}>COMPOSITE  {Number(comp.value).toFixed(3)}×</div>}
+        {sig  && sig.value > 0 && <div style={{ color: amberColor }}>EXITS      {formatUsd(Number(sig.value))}</div>}
+        {sig  && sig.value === 0 && <div style={{ color: 'var(--text-muted)' }}>NO EXIT (accumulate zone)</div>}
+        {prc  && <div style={{ color: 'var(--text-secondary)' }}>BTC        {formatPrice(Number(prc.value))}</div>}
+      </div>
+    );
+  }
 
   // ── Chart data ─────────────────────────────────────────────────────────────
   const history = data.distributionHistory ?? [];
@@ -216,21 +239,21 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   if (tierLoading) return null;
 
   return (
-    <div style={{ paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: FONT }}>
+    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-subtle)', fontFamily: FONT }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-secondary)' }}>
           DCA EXIT STRATEGY
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {effAdvPct > 0 && (
-            <span style={{ fontSize: 10, color: '#00d4c8', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.08em' }}>
               +{effAdvPct.toFixed(1)}% MORE $ PER BTC (ALL-TIME)
             </span>
           )}
           {!isVip && (
-            <span style={{ fontSize: 10, color: '#c4885a', letterSpacing: '0.1em', padding: '2px 8px', border: '1px solid rgba(196,136,90,0.3)', background: 'rgba(196,136,90,0.06)' }}>
+            <span style={{ fontSize: 10, color: amberColor, letterSpacing: '0.1em', padding: '2px 8px', border: '1px solid rgba(196,136,90,0.3)', background: 'rgba(196,136,90,0.06)' }}>
               VIP ONLY
             </span>
           )}
@@ -240,9 +263,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
       {/* ── POSITION SPECTRUM — always visible ─────────────────────────────── */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 10, letterSpacing: '0.1em' }}>
-          <span style={{ color: '#d06050' }}>DISTRIBUTE</span>
-          <span style={{ color: '#8a9bb0' }}>CROSSOVER {DCA_CROSSOVER.toFixed(2)}×</span>
-          <span style={{ color: '#00d4c8' }}>ACCUMULATE</span>
+          <span style={{ color: coralColor }}>DISTRIBUTE</span>
+          <span style={{ color: 'var(--text-secondary)' }}>CROSSOVER {DCA_CROSSOVER.toFixed(2)}×</span>
+          <span style={{ color: tealColor }}>ACCUMULATE</span>
         </div>
 
         {/* Spectrum bar */}
@@ -250,7 +273,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           {/* Background gradient: coral → amber → teal */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to right, #d06050 0%, #c4885a 28%, #8aaba6 45%, #00d4c8 100%)',
+            background: `linear-gradient(to right, ${coralColor} 0%, ${amberColor} 28%, ${isDark ? '#8aaba6' : '#5a7a5c'} 45%, ${tealColor} 100%)`,
             opacity: 0.25,
           }} />
           {/* Crossover marker */}
@@ -258,7 +281,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             position: 'absolute', top: -4, bottom: -4,
             left: `${xPct}%`,
             width: 1,
-            background: 'rgba(255,255,255,0.35)',
+            background: crossoverMarker,
           }} />
           {/* Current position marker */}
           <div style={{
@@ -269,20 +292,20 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             width: 14, height: 14,
             borderRadius: '50%',
             background: mode.colour,
-            border: '2px solid #090d12',
+            border: `2px solid var(--bg-primary)`,
             boxShadow: `0 0 8px ${mode.colour}88`,
             zIndex: 2,
           }} />
         </div>
 
         {/* Tick labels */}
-        <div style={{ position: 'relative', height: 16, marginTop: 4, fontSize: 9, color: '#6b7a8d', letterSpacing: '0.06em' }}>
+        <div style={{ position: 'relative', height: 16, marginTop: 4, fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
           {[0, 0.5, DCA_CROSSOVER, 1.0, 1.5, 2.0, 2.5].map(v => (
             <span key={v} style={{
               position: 'absolute',
               left: `${spectrumPct(v)}%`,
               transform: 'translateX(-50%)',
-              color: Math.abs(v - composite) < 0.05 ? mode.colour : '#6b7a8d',
+              color: Math.abs(v - composite) < 0.05 ? mode.colour : 'var(--text-muted)',
             }}>
               {v.toFixed(v === DCA_CROSSOVER ? 2 : 1)}
             </span>
@@ -303,24 +326,24 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           <div style={{ fontSize: 12, color: mode.colour, fontWeight: 600, letterSpacing: '0.1em', marginBottom: 3 }}>
             {mode.label}
           </div>
-          <div style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>
             {mode.sublabel}
           </div>
           {!inExitZone && (
-            <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em', marginTop: 4 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 4 }}>
               Exits begin at {DCA_CROSSOVER.toFixed(2)}× — signal currently at {composite.toFixed(3)}×
               {' '}({(((composite - DCA_CROSSOVER) / DCA_CROSSOVER) * 100).toFixed(0)}% above crossover)
             </div>
           )}
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.08em', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: 2 }}>
             {inExitZone ? 'EXIT MULT' : 'SELL MULT'}
           </div>
-          <div style={{ fontSize: 24, color: inExitZone ? mode.colour : '#6b7a8d', fontWeight: 600, letterSpacing: '-0.01em' }}>
+          <div style={{ fontSize: 24, color: inExitZone ? mode.colour : 'var(--text-muted)', fontWeight: 600, letterSpacing: '-0.01em' }}>
             {inExitZone ? `${sellMult.toFixed(1)}×` : '—'}
           </div>
-          <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
             {inExitZone ? exitTier : 'no exits'}
           </div>
         </div>
@@ -338,19 +361,19 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
             {/* Base sell input */}
-            <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: 10, color: '#8a9bb0', letterSpacing: '0.1em', marginBottom: 8 }}>BASE SELL / WEEK</div>
+            <div style={{ padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>BASE SELL / WEEK</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#8a9bb0' }}>$</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>$</span>
                 <input
                   type="number" min={1} max={9999999} value={baseSell}
                   onChange={e => handleSellChange(e.target.value)}
-                  style={{ width: 112, fontSize: 15, fontFamily: FONT, background: '#0d1520', border: '1px solid rgba(255,255,255,0.12)', color: '#e8edf2', padding: '4px 8px', outline: 'none', transition: 'none' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#00d4c8'; }}
-                  onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                  style={{ width: 112, fontSize: 15, fontFamily: FONT, background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', padding: '4px 8px', outline: 'none', transition: 'none' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = isDark ? '#00d4c8' : '#4a7c59'; }}
+                  onBlur={e  => { e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
                 />
               </div>
-              <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
                 Your base weekly distribution amount · multiplied by exit signal
               </div>
             </div>
@@ -358,16 +381,16 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             {/* This week recommendation */}
             <div style={{
               padding: '14px 16px',
-              background: inExitZone ? 'rgba(196,136,90,0.05)' : 'rgba(255,255,255,0.02)',
-              border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid rgba(255,255,255,0.06)',
+              background: inExitZone ? 'rgba(196,136,90,0.05)' : 'var(--bg-card)',
+              border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid var(--border-subtle)',
             }}>
-              <div style={{ fontSize: 10, color: '#8a9bb0', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
               {inExitZone ? (
                 <>
-                  <div style={{ fontSize: 24, fontWeight: 500, color: '#e8edf2', letterSpacing: '0.02em', marginBottom: 4 }}>
+                  <div style={{ fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '0.02em', marginBottom: 4 }}>
                     {formatUsd(recommendedSell)}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8a9bb0' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                     ≈ {recommendedBtc.toFixed(4)} BTC · {sellMult.toFixed(1)}× your ${baseSell.toLocaleString()} base
                   </div>
                   <div style={{ fontSize: 10, color: mode.colour, letterSpacing: '0.08em', marginTop: 6 }}>
@@ -376,13 +399,13 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 20, color: '#6b7a8d', letterSpacing: '0.02em', marginBottom: 4 }}>
+                  <div style={{ fontSize: 20, color: 'var(--text-muted)', letterSpacing: '0.02em', marginBottom: 4 }}>
                     $0
                   </div>
-                  <div style={{ fontSize: 11, color: '#6b7a8d' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     Signal in accumulate zone — no exits this week
                   </div>
-                  <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em', marginTop: 6 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 6 }}>
                     Exits begin when composite falls below {DCA_CROSSOVER.toFixed(2)}×
                   </div>
                 </>
@@ -394,18 +417,18 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div>
-                <span style={{ fontSize: 11, letterSpacing: '0.12em', color: '#8a9bb0' }}>
+                <span style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-secondary)' }}>
                   WEEKLY EXIT AMOUNTS · WHEN SIGNAL CROSSED BELOW {DCA_CROSSOVER.toFixed(2)}×
                 </span>
                 {totalWeeks > 0 && (
-                  <span style={{ fontSize: 10, color: '#6b7a8d', marginLeft: 12, letterSpacing: '0.06em' }}>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 12, letterSpacing: '0.06em' }}>
                     {exitWeeks} / {totalWeeks} weeks had exits ({((exitWeeks / totalWeeks) * 100).toFixed(0)}%)
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 0 }}>
                 {PERIODS.map(p => (
-                  <button key={p.label} onClick={() => handlePeriod(p.label)} style={{ padding: '3px 9px', fontSize: 11, letterSpacing: '0.1em', fontFamily: FONT, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', background: period === p.label ? 'rgba(0,212,200,0.12)' : 'transparent', color: period === p.label ? '#00d4c8' : '#6b7a8d', transition: 'none' }}>
+                  <button key={p.label} onClick={() => handlePeriod(p.label)} style={{ padding: '3px 9px', fontSize: 11, letterSpacing: '0.1em', fontFamily: FONT, cursor: 'pointer', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`, background: period === p.label ? periodActiveBg : 'transparent', color: period === p.label ? tealColor : 'var(--text-muted)', transition: 'none' }}>
                     {p.label}
                   </button>
                 ))}
@@ -415,25 +438,25 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <ComposedChart data={chartData} margin={{ top: 4, right: 52, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
                   <XAxis
                     dataKey="date"
                     ticks={xTicks}
                     tickFormatter={v => formatXTick(v, period)}
-                    tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0', letterSpacing: 1 }}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-secondary)', letterSpacing: 1 }}
+                    axisLine={{ stroke: axisStroke }}
                     tickLine={false}
                   />
                   <YAxis
                     yAxisId="left" domain={[0, 'auto']}
                     tickFormatter={v => formatUsd(v * scale, true)}
-                    tick={{ fontFamily: FONT, fontSize: 10, fill: '#8a9bb0' }}
+                    tick={{ fontFamily: FONT, fontSize: 10, fill: 'var(--text-secondary)' }}
                     axisLine={false} tickLine={false} width={52}
                   />
                   <YAxis
                     yAxisId="right" orientation="right"
                     tickFormatter={formatPrice}
-                    tick={{ fontFamily: FONT, fontSize: 11, fill: '#6b7a8d' }}
+                    tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-muted)' }}
                     axisLine={false} tickLine={false} width={52}
                   />
                   {/* Crossover reference line on composite axis — we use a ref for context */}
@@ -441,30 +464,30 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                   {/* BTC price — muted context */}
                   <Line
                     yAxisId="right" type="monotone" dataKey="price"
-                    stroke="rgba(200,230,227,0.2)" strokeWidth={1} dot={false} isAnimationActive={false}
+                    stroke={priceStroke} strokeWidth={1} dot={false} isAnimationActive={false}
                   />
                   {/* Weekly exit amounts — amber bars when exits happened, invisible otherwise */}
                   <Bar
                     yAxisId="left" dataKey="weeklyUsd"
-                    fill="#c4885a" opacity={0.75}
+                    fill={amberColor} opacity={0.75}
                     isAnimationActive={false}
                     maxBarSize={6}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7a8d', fontSize: 11, letterSpacing: '0.1em' }}>
+              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 11, letterSpacing: '0.1em' }}>
                 NO EXIT DATA FOR PERIOD
               </div>
             )}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-            <p style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em', margin: 0 }}>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', margin: 0 }}>
               EXITS TRIGGER WHEN COMPOSITE DROPS BELOW {DCA_CROSSOVER.toFixed(2)}× · SAME SIGNAL, INVERTED LOGIC · NOT FINANCIAL ADVICE
             </p>
             {effAdvPct > 0 && (
-              <span style={{ fontSize: 10, color: '#00d4c8', letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
+              <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
                 SIGNAL EXITS: +{effAdvPct.toFixed(1)}% MORE $ PER BTC vs VANILLA
               </span>
             )}
@@ -477,7 +500,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
         {/* VIP overlay */}
         {!isVip && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(9,13,18,0.45)' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: vipOverlayBg }}>
             <UpgradePrompt requiredTier="vip" featureName="DCA Exit Strategy" variant="overlay" />
           </div>
         )}

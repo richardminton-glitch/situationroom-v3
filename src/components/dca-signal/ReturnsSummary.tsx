@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
 import type { BacktestPeriod } from '@/lib/data/daily-snapshot';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -21,6 +22,9 @@ function formatUsd(v: number): string {
 }
 
 export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
   if (!backtestSummary || backtestSummary.length === 0) return null;
 
   // Scale portfolio values by baseAmount if different from $100 base
@@ -29,16 +33,16 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
   return (
     <div style={{
       paddingTop:  16,
-      borderTop:   '1px solid rgba(255,255,255,0.06)',
+      borderTop:   '1px solid var(--border-subtle)',
       fontFamily:  FONT,
     }}>
 
       {/* Section label */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-secondary)' }}>
           SIGNAL DCA vs VANILLA DCA
         </span>
-        <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
           BACKTESTED · ${baseAmount}/WEEK BASE
         </span>
       </div>
@@ -56,7 +60,9 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
           const vanValue   = btcVanilla * btcPrice;
           const advantage  = period.advantagePct; // percentage advantage is scale-invariant
 
-          const advColour = advantage > 0 ? '#00d4c8' : '#d06050';
+          const advColour = advantage > 0
+            ? (isDark ? '#00d4c8' : '#4a7c59')
+            : (isDark ? '#d06050' : '#9b3232');
 
           return (
             <div
@@ -66,25 +72,25 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
                 flexDirection: 'column',
                 gap:           8,
                 padding:       '12px 14px',
-                background:    'rgba(255,255,255,0.025)',
-                border:        '1px solid rgba(255,255,255,0.06)',
+                background:    'var(--bg-card)',
+                border:        '1px solid var(--border-subtle)',
               }}
             >
               {/* Period label */}
-              <span style={{ fontSize: 10, letterSpacing: '0.14em', color: '#8a9bb0', fontWeight: 600 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--text-secondary)', fontWeight: 600 }}>
                 {period.label.toUpperCase()}
               </span>
-              <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em' }}>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
                 since {period.startDate}
               </span>
 
               {/* Advantage callout */}
-              <div style={{ paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>ADVANTAGE</span>
+              <div style={{ paddingTop: 4, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>ADVANTAGE</span>
                 <div style={{ fontSize: 20, color: advColour, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                   +{advantage.toFixed(1)}%
                 </div>
-                <div style={{ fontSize: 10, color: '#8a9bb0', letterSpacing: '0.08em' }}>MORE BTC</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>MORE BTC</div>
               </div>
 
               {/* Signal vs vanilla */}
@@ -92,16 +98,16 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
 
                 {/* Signal */}
                 <div>
-                  <div style={{ fontSize: 10, color: '#00d4c8', letterSpacing: '0.1em', marginBottom: 2 }}>SIGNAL DCA</div>
-                  <div style={{ fontSize: 13, color: '#e8edf2', fontWeight: 500 }}>{formatBtc(btcSignal)}</div>
-                  <div style={{ fontSize: 11, color: '#8a9bb0' }}>{formatUsd(portValue)}</div>
+                  <div style={{ fontSize: 10, color: isDark ? '#00d4c8' : '#4a7c59', letterSpacing: '0.1em', marginBottom: 2 }}>SIGNAL DCA</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{formatBtc(btcSignal)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{formatUsd(portValue)}</div>
                 </div>
 
                 {/* Vanilla */}
                 <div>
-                  <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.1em', marginBottom: 2 }}>VANILLA DCA</div>
-                  <div style={{ fontSize: 13, color: '#8aaba6', fontWeight: 500 }}>{formatBtc(btcVanilla)}</div>
-                  <div style={{ fontSize: 11, color: '#6b7a8d' }}>{formatUsd(vanValue)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 2 }}>VANILLA DCA</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{formatBtc(btcVanilla)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatUsd(vanValue)}</div>
                 </div>
 
               </div>
@@ -114,7 +120,7 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
       <p style={{
         marginTop:     8,
         fontSize: 10,
-        color:         '#6b7a8d',
+        color:         'var(--text-muted)',
         letterSpacing: '0.08em',
       }}>
         BACKTESTED WEEKLY DCA · SIGNAL V3 (200W MA + PUELL) · NOT FINANCIAL ADVICE

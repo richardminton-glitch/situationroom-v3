@@ -1,4 +1,6 @@
-﻿'use client';
+'use client';
+
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -14,6 +16,13 @@ function zone(mult: number): 'bull' | 'neutral' | 'bear' {
 }
 
 export function ConfluenceBar({ maMult, puellMult }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
+
+  const bullColour    = isDark ? '#00d4c8' : '#4a7c59';
+  const neutralColour = isDark ? '#c4885a' : '#b8860b';
+  const bearColour    = isDark ? '#d06050' : '#9b3232';
+
   const zones  = [zone(maMult), zone(puellMult)];
   const bull   = zones.filter(z => z === 'bull').length;
   const neutral = zones.filter(z => z === 'neutral').length;
@@ -28,13 +37,13 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
   let statusColour: string;
   if (bull === 2) {
     statusLabel  = 'Signals aligned — accumulate';
-    statusColour = '#00d4c8';
+    statusColour = bullColour;
   } else if (bear === 2) {
     statusLabel  = 'Headwinds';
-    statusColour = '#d06050';
+    statusColour = bearColour;
   } else {
     statusLabel  = 'Mixed signal';
-    statusColour = '#c4885a';
+    statusColour = neutralColour;
   }
 
   return (
@@ -44,13 +53,13 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
       justifyContent: 'center',
       gap:           16,
       padding:       '14px 16px',
-      background:    'rgba(255,255,255,0.025)',
-      border:        '1px solid rgba(255,255,255,0.06)',
+      background:    'var(--bg-card)',
+      border:        '1px solid var(--border-subtle)',
       fontFamily:    FONT,
     }}>
 
       {/* Section label */}
-      <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
+      <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-secondary)' }}>
         CONFLUENCE
       </span>
 
@@ -65,21 +74,21 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
         {bullPct > 0 && (
           <div style={{
             width:      `${bullPct}%`,
-            background: '#00d4c8',
+            background: bullColour,
             transition: 'none',
           }} />
         )}
         {neutralPct > 0 && (
           <div style={{
             width:      `${neutralPct}%`,
-            background: '#c4885a',
+            background: neutralColour,
             transition: 'none',
           }} />
         )}
         {bearPct > 0 && (
           <div style={{
             width:      `${bearPct}%`,
-            background: '#d06050',
+            background: bearColour,
             transition: 'none',
           }} />
         )}
@@ -88,17 +97,17 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
       {/* Counts */}
       <div style={{ display: 'flex', gap: 12 }}>
         {bull > 0 && (
-          <span style={{ fontSize: 11, color: '#00d4c8', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: bullColour, letterSpacing: '0.1em' }}>
             {bull} BULL
           </span>
         )}
         {neutral > 0 && (
-          <span style={{ fontSize: 11, color: '#c4885a', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: neutralColour, letterSpacing: '0.1em' }}>
             {neutral} NEUTRAL
           </span>
         )}
         {bear > 0 && (
-          <span style={{ fontSize: 11, color: '#d06050', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: bearColour, letterSpacing: '0.1em' }}>
             {bear} BEAR
           </span>
         )}
@@ -122,11 +131,11 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
           { label: 'PUELL MULTIPLE', z: zone(puellMult), mult: puellMult },
         ].map(({ label, z, mult }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>{label}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>{label}</span>
             <span style={{
               fontSize: 11,
               letterSpacing: '0.1em',
-              color: z === 'bull' ? '#00d4c8' : z === 'neutral' ? '#c4885a' : '#d06050',
+              color: z === 'bull' ? bullColour : z === 'neutral' ? neutralColour : bearColour,
               fontWeight:    600,
             }}>
               {z.toUpperCase()} · {mult.toFixed(1)}×
