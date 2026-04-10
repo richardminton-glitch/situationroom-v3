@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { BacktestPeriod } from '@/lib/data/daily-snapshot';
 
@@ -35,10 +35,10 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
 
       {/* Section label */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-        <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d' }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
           SIGNAL DCA vs VANILLA DCA
         </span>
-        <span style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em' }}>
           BACKTESTED · ${baseAmount}/WEEK BASE
         </span>
       </div>
@@ -71,20 +71,20 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
               }}
             >
               {/* Period label */}
-              <span style={{ fontSize: 8, letterSpacing: '0.14em', color: '#6b7a8d', fontWeight: 600 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.14em', color: '#8a9bb0', fontWeight: 600 }}>
                 {period.label.toUpperCase()}
               </span>
-              <span style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.06em' }}>
+              <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.06em' }}>
                 since {period.startDate}
               </span>
 
               {/* Advantage callout */}
               <div style={{ paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.1em' }}>ADVANTAGE</span>
-                <div style={{ fontSize: 18, color: advColour, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>ADVANTAGE</span>
+                <div style={{ fontSize: 20, color: advColour, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                   +{advantage.toFixed(1)}%
                 </div>
-                <div style={{ fontSize: 8, color: '#6b7a8d', letterSpacing: '0.08em' }}>MORE BTC</div>
+                <div style={{ fontSize: 10, color: '#8a9bb0', letterSpacing: '0.08em' }}>MORE BTC</div>
               </div>
 
               {/* Signal vs vanilla */}
@@ -92,16 +92,16 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
 
                 {/* Signal */}
                 <div>
-                  <div style={{ fontSize: 8, color: '#00d4c8', letterSpacing: '0.1em', marginBottom: 2 }}>SIGNAL DCA</div>
-                  <div style={{ fontSize: 11, color: '#e8edf2', fontWeight: 500 }}>{formatBtc(btcSignal)}</div>
-                  <div style={{ fontSize: 9, color: '#6b7a8d' }}>{formatUsd(portValue)}</div>
+                  <div style={{ fontSize: 10, color: '#00d4c8', letterSpacing: '0.1em', marginBottom: 2 }}>SIGNAL DCA</div>
+                  <div style={{ fontSize: 13, color: '#e8edf2', fontWeight: 500 }}>{formatBtc(btcSignal)}</div>
+                  <div style={{ fontSize: 11, color: '#8a9bb0' }}>{formatUsd(portValue)}</div>
                 </div>
 
                 {/* Vanilla */}
                 <div>
-                  <div style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.1em', marginBottom: 2 }}>VANILLA DCA</div>
-                  <div style={{ fontSize: 11, color: '#8aaba6', fontWeight: 500 }}>{formatBtc(btcVanilla)}</div>
-                  <div style={{ fontSize: 9, color: '#4a5568' }}>{formatUsd(vanValue)}</div>
+                  <div style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.1em', marginBottom: 2 }}>VANILLA DCA</div>
+                  <div style={{ fontSize: 13, color: '#8aaba6', fontWeight: 500 }}>{formatBtc(btcVanilla)}</div>
+                  <div style={{ fontSize: 11, color: '#6b7a8d' }}>{formatUsd(vanValue)}</div>
                 </div>
 
               </div>
@@ -113,8 +113,8 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
 
       <p style={{
         marginTop:     8,
-        fontSize:      8,
-        color:         '#4a5568',
+        fontSize: 10,
+        color:         '#6b7a8d',
         letterSpacing: '0.08em',
       }}>
         BACKTESTED WEEKLY DCA · SIGNAL V3 (200W MA + PUELL) · NOT FINANCIAL ADVICE

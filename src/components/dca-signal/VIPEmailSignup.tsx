@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 
@@ -106,7 +106,7 @@ export function VIPEmailSignup({ baseAmount }: Props) {
       {/* Section label */}
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
         color:         '#c4885a',
         marginBottom:  10,
@@ -119,7 +119,7 @@ export function VIPEmailSignup({ baseAmount }: Props) {
         background: 'rgba(196,136,90,0.04)',
         border:     '1px solid rgba(196,136,90,0.15)',
       }}>
-        <p style={{ fontSize: 10, color: '#b89878', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
+        <p style={{ fontSize: 12, color: '#b89878', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
           Receive the combined buy <em>and</em> exit signal by email — including your weekly
           recommendation whether to accumulate or distribute, and the exit multiplier tier
           when the signal crosses below 0.70×.
@@ -136,13 +136,13 @@ export function VIPEmailSignup({ baseAmount }: Props) {
                 onClick={() => setFrequency(f)}
                 style={{
                   padding:       '4px 12px',
-                  fontSize:      9,
+                  fontSize: 11,
                   letterSpacing: '0.1em',
                   fontFamily:    FONT,
                   cursor:        'pointer',
                   border:        '1px solid rgba(196,136,90,0.25)',
                   background:    frequency === f ? 'rgba(196,136,90,0.18)' : 'transparent',
-                  color:         frequency === f ? '#c4885a' : '#6b7a8d',
+                  color:         frequency === f ? '#c4885a' : '#8a9bb0',
                   transition:    'none',
                   textTransform: 'uppercase' as const,
                 }}
@@ -162,7 +162,7 @@ export function VIPEmailSignup({ baseAmount }: Props) {
               onChange={e => setEmail(e.target.value)}
               style={{
                 flex:       1,
-                fontSize:   11,
+                fontSize: 13,
                 fontFamily: FONT,
                 background: '#0d1520',
                 border:     '1px solid rgba(196,136,90,0.2)',
@@ -179,7 +179,7 @@ export function VIPEmailSignup({ baseAmount }: Props) {
               disabled={status === 'loading'}
               style={{
                 padding:       '6px 16px',
-                fontSize:      9,
+                fontSize: 11,
                 letterSpacing: '0.12em',
                 fontFamily:    FONT,
                 cursor:        status === 'loading' ? 'wait' : 'pointer',
@@ -198,13 +198,13 @@ export function VIPEmailSignup({ baseAmount }: Props) {
 
           {/* Error */}
           {status === 'error' && (
-            <span style={{ fontSize: 9, color: '#d06050', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 11, color: '#d06050', letterSpacing: '0.08em' }}>
               {errorMsg || 'Subscription failed — try again'}
             </span>
           )}
 
           {/* Context */}
-          <span style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.08em' }}>
+          <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em' }}>
             Double opt-in confirmation · confirmation email includes unsubscribe links for both signals · not financial advice
           </span>
 
@@ -224,7 +224,7 @@ function VipSuccessBox({ message, sub }: { message: string; sub: string }) {
     }}>
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
         color:         '#c4885a',
         marginBottom:  10,
@@ -239,10 +239,10 @@ function VipSuccessBox({ message, sub }: { message: string; sub: string }) {
         flexDirection: 'column',
         gap:           4,
       }}>
-        <span style={{ fontSize: 11, color: '#c4885a', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 13, color: '#c4885a', fontWeight: 600, letterSpacing: '0.04em' }}>
           {message}
         </span>
-        <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.08em' }}>
           {sub}
         </span>
       </div>

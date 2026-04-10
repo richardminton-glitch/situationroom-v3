@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 
@@ -60,9 +60,9 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
 
       {/* Section label */}
       <span style={{
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.18em',
-        color:         '#6b7a8d',
+        color:         '#8a9bb0',
       }}>
         COMPOSITE SIGNAL
       </span>
@@ -70,7 +70,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
       {/* Large composite number */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{
-          fontSize:      56,
+          fontSize: 58,
           lineHeight:    1,
           fontFamily:    FONT,
           fontWeight:    600,
@@ -80,12 +80,12 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
         }}>
           {composite.toFixed(2)}
         </span>
-        <span style={{ fontSize: 18, color: colour, letterSpacing: '0.04em' }}>×</span>
+        <span style={{ fontSize: 20, color: colour, letterSpacing: '0.04em' }}>×</span>
       </div>
 
       {/* Tier label */}
       <span style={{
-        fontSize:      11,
+        fontSize: 13,
         letterSpacing: '0.12em',
         color:         colour,
         fontWeight:    600,
@@ -109,13 +109,13 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
               onClick={() => handleFreqChange(f)}
               style={{
                 padding:          '4px 10px',
-                fontSize:         9,
+                fontSize: 11,
                 letterSpacing:    '0.1em',
                 fontFamily:       FONT,
                 cursor:           'pointer',
                 border:           '1px solid rgba(255,255,255,0.12)',
                 background:       frequency === f ? 'rgba(0,212,200,0.15)' : 'transparent',
-                color:            frequency === f ? '#00d4c8' : '#6b7a8d',
+                color:            frequency === f ? '#00d4c8' : '#8a9bb0',
                 transition:       'none',
                 textTransform:    'uppercase' as const,
               }}
@@ -127,8 +127,8 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
 
         {/* Base amount input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.1em' }}>BASE</span>
-          <span style={{ fontSize: 11, color: '#6b7a8d' }}>$</span>
+          <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>BASE</span>
+          <span style={{ fontSize: 13, color: '#8a9bb0' }}>$</span>
           <input
             type="number"
             min={1}
@@ -138,7 +138,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
             onChange={e => handleAmountChange(e.target.value)}
             style={{
               width:           112,
-              fontSize:        13,
+              fontSize: 15,
               fontFamily:      FONT,
               background:      '#0d1520',
               border:          '1px solid rgba(255,255,255,0.12)',
@@ -161,7 +161,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
         marginTop:  4,
       }}>
         <span style={{
-          fontSize:      22,
+          fontSize: 24,
           fontFamily:    FONT,
           fontWeight:    500,
           color:         '#e8edf2',
@@ -170,8 +170,8 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
           ${recommendedBuy.toLocaleString()}
         </span>
         <span style={{
-          fontSize:      10,
-          color:         '#6b7a8d',
+          fontSize: 12,
+          color:         '#8a9bb0',
           letterSpacing: '0.1em',
         }}>
           THIS {frequency === 'weekly' ? 'WEEK' : 'MONTH'}
@@ -179,7 +179,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
       </div>
 
       {/* Context line */}
-      <span style={{ fontSize: 9, color: '#4a5568', letterSpacing: '0.08em' }}>
+      <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.08em' }}>
         {composite.toFixed(2)}× your ${baseAmount.toLocaleString()} base · signal-adjusted DCA
       </span>
 

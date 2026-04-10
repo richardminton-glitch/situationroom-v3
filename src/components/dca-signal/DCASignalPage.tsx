@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import type { BtcSignalResponse } from '@/app/api/btc-signal/route';
@@ -48,7 +48,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
         height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
         backgroundColor: '#090d12', fontFamily: FONT,
       }}>
-        <p style={{ color: '#6b7a8d', fontSize: 11, letterSpacing: '0.16em' }}>COMPUTING SIGNALS...</p>
+        <p style={{ color: '#8a9bb0', fontSize: 13, letterSpacing: '0.16em' }}>COMPUTING SIGNALS...</p>
       </div>
     );
   }
@@ -61,8 +61,8 @@ export function DCASignalPage({ data, loading, error }: Props) {
         alignItems: 'center', justifyContent: 'center',
         backgroundColor: '#090d12', fontFamily: FONT, gap: 8,
       }}>
-        <p style={{ color: '#d06050', fontSize: 11, letterSpacing: '0.14em' }}>SIGNAL ERROR</p>
-        <p style={{ color: '#6b7a8d', fontSize: 10 }}>{error ?? 'No data returned'}</p>
+        <p style={{ color: '#d06050', fontSize: 13, letterSpacing: '0.14em' }}>SIGNAL ERROR</p>
+        <p style={{ color: '#8a9bb0', fontSize: 12 }}>{error ?? 'No data returned'}</p>
       </div>
     );
   }
@@ -129,13 +129,13 @@ export function DCASignalPage({ data, loading, error }: Props) {
         borderTop:  '1px solid rgba(255,255,255,0.06)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
       }}>
-        <span style={{ fontSize: 9, color: '#4a5568', letterSpacing: '0.1em' }}>
+        <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.1em' }}>
           DATA: COINGECKO · BITVIEW.SPACE
         </span>
-        <span style={{ fontSize: 9, color: '#4a5568', letterSpacing: '0.1em' }}>
+        <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.1em' }}>
           NOT FINANCIAL ADVICE
         </span>
-        <span style={{ fontSize: 9, color: '#4a5568', letterSpacing: '0.1em' }}>
+        <span style={{ fontSize: 11, color: '#6b7a8d', letterSpacing: '0.1em' }}>
           ENGINE V3 · 200W MA + PUELL MULTIPLE
         </span>
       </div>

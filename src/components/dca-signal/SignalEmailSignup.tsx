@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 
@@ -102,9 +102,9 @@ export function SignalEmailSignup({ baseAmount }: Props) {
       {/* Section label */}
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#6b7a8d',
+        color:         '#8a9bb0',
         marginBottom:  10,
       }}>
         SIGNAL EMAIL
@@ -115,7 +115,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
         background: 'rgba(255,255,255,0.025)',
         border:     '1px solid rgba(255,255,255,0.06)',
       }}>
-        <p style={{ fontSize: 10, color: '#8aaba6', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
+        <p style={{ fontSize: 12, color: '#8aaba6', margin: '0 0 14px', lineHeight: 1.6, letterSpacing: '0.04em' }}>
           Receive this signal by email on a {frequency === 'weekly' ? 'weekly' : 'monthly'} basis —
           with your recommended buy, both indicator readings, and how it compares to vanilla DCA.
         </p>
@@ -131,13 +131,13 @@ export function SignalEmailSignup({ baseAmount }: Props) {
                 onClick={() => setFrequency(f)}
                 style={{
                   padding:       '4px 12px',
-                  fontSize:      9,
+                  fontSize: 11,
                   letterSpacing: '0.1em',
                   fontFamily:    FONT,
                   cursor:        'pointer',
                   border:        '1px solid rgba(255,255,255,0.12)',
                   background:    frequency === f ? 'rgba(0,212,200,0.15)' : 'transparent',
-                  color:         frequency === f ? '#00d4c8' : '#6b7a8d',
+                  color:         frequency === f ? '#00d4c8' : '#8a9bb0',
                   transition:    'none',
                   textTransform: 'uppercase' as const,
                 }}
@@ -157,7 +157,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
               onChange={e => setEmail(e.target.value)}
               style={{
                 flex:         1,
-                fontSize:     11,
+                fontSize: 13,
                 fontFamily:   FONT,
                 background:   '#0d1520',
                 border:       '1px solid rgba(255,255,255,0.12)',
@@ -174,7 +174,7 @@ export function SignalEmailSignup({ baseAmount }: Props) {
               disabled={status === 'loading'}
               style={{
                 padding:       '6px 16px',
-                fontSize:      9,
+                fontSize: 11,
                 letterSpacing: '0.12em',
                 fontFamily:    FONT,
                 cursor:        status === 'loading' ? 'wait' : 'pointer',
@@ -193,13 +193,13 @@ export function SignalEmailSignup({ baseAmount }: Props) {
 
           {/* Error */}
           {status === 'error' && (
-            <span style={{ fontSize: 9, color: '#d06050', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 11, color: '#d06050', letterSpacing: '0.08em' }}>
               {errorMsg || 'Subscription failed — try again'}
             </span>
           )}
 
           {/* Context line */}
-          <span style={{ fontSize: 8, color: '#4a5568', letterSpacing: '0.08em' }}>
+          <span style={{ fontSize: 10, color: '#6b7a8d', letterSpacing: '0.08em' }}>
             Double opt-in confirmation email sent · unsubscribe any time · not financial advice
           </span>
 
@@ -218,9 +218,9 @@ function SuccessBox({ message, sub }: { message: string; sub: string }) {
     }}>
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#6b7a8d',
+        color:         '#8a9bb0',
         marginBottom:  10,
       }}>
         SIGNAL EMAIL
@@ -233,10 +233,10 @@ function SuccessBox({ message, sub }: { message: string; sub: string }) {
         flexDirection: 'column',
         gap:        4,
       }}>
-        <span style={{ fontSize: 11, color: '#00d4c8', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 13, color: '#00d4c8', fontWeight: 600, letterSpacing: '0.04em' }}>
           {message}
         </span>
-        <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.08em' }}>
           {sub}
         </span>
       </div>

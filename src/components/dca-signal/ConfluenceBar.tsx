@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -50,7 +50,7 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
     }}>
 
       {/* Section label */}
-      <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d' }}>
+      <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
         CONFLUENCE
       </span>
 
@@ -88,17 +88,17 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
       {/* Counts */}
       <div style={{ display: 'flex', gap: 12 }}>
         {bull > 0 && (
-          <span style={{ fontSize: 9, color: '#00d4c8', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: '#00d4c8', letterSpacing: '0.1em' }}>
             {bull} BULL
           </span>
         )}
         {neutral > 0 && (
-          <span style={{ fontSize: 9, color: '#c4885a', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: '#c4885a', letterSpacing: '0.1em' }}>
             {neutral} NEUTRAL
           </span>
         )}
         {bear > 0 && (
-          <span style={{ fontSize: 9, color: '#d06050', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 11, color: '#d06050', letterSpacing: '0.1em' }}>
             {bear} BEAR
           </span>
         )}
@@ -106,7 +106,7 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
 
       {/* Status label */}
       <span style={{
-        fontSize:      11,
+        fontSize: 13,
         letterSpacing: '0.06em',
         color:         statusColour,
         fontWeight:    600,
@@ -122,9 +122,9 @@ export function ConfluenceBar({ maMult, puellMult }: Props) {
           { label: 'PUELL MULTIPLE', z: zone(puellMult), mult: puellMult },
         ].map(({ label, z, mult }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 9, color: '#6b7a8d', letterSpacing: '0.1em' }}>{label}</span>
+            <span style={{ fontSize: 11, color: '#8a9bb0', letterSpacing: '0.1em' }}>{label}</span>
             <span style={{
-              fontSize:      9,
+              fontSize: 11,
               letterSpacing: '0.1em',
               color: z === 'bull' ? '#00d4c8' : z === 'neutral' ? '#c4885a' : '#d06050',
               fontWeight:    600,

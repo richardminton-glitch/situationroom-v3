@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import type { BtcSignalResponse } from '@/app/api/btc-signal/route';
@@ -107,9 +107,9 @@ export function SignalHistory({ data }: Props) {
       {/* Section label */}
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#6b7a8d',
+        color:         '#8a9bb0',
         marginBottom:  12,
       }}>
         SIGNAL HISTORY
@@ -119,7 +119,7 @@ export function SignalHistory({ data }: Props) {
         <table style={{
           width:           '100%',
           borderCollapse:  'collapse',
-          fontSize:        10,
+          fontSize: 12,
           letterSpacing:   '0.06em',
         }}>
           <thead>
@@ -129,9 +129,9 @@ export function SignalHistory({ data }: Props) {
                   textAlign:     'left',
                   paddingBottom: 6,
                   paddingRight:  16,
-                  fontSize:      8,
+                  fontSize: 10,
                   letterSpacing: '0.14em',
-                  color:         '#4a5568',
+                  color:         '#6b7a8d',
                   fontWeight:    600,
                 }}>
                   {h}
@@ -145,10 +145,10 @@ export function SignalHistory({ data }: Props) {
                 key={s.week}
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
               >
-                <td style={{ padding: '6px 16px 6px 0', color: i === 0 ? '#e8edf2' : '#6b7a8d' }}>
+                <td style={{ padding: '6px 16px 6px 0', color: i === 0 ? '#e8edf2' : '#8a9bb0' }}>
                   {s.week}
                 </td>
-                <td style={{ padding: '6px 16px 6px 0', color: '#6b7a8d' }}>
+                <td style={{ padding: '6px 16px 6px 0', color: '#8a9bb0' }}>
                   {s.date}
                 </td>
                 <td style={{ padding: '6px 16px 6px 0', color: compositeColour(s.composite), fontWeight: 600 }}>
@@ -171,8 +171,8 @@ export function SignalHistory({ data }: Props) {
 
       <p style={{
         marginTop:     8,
-        fontSize:      8,
-        color:         '#4a5568',
+        fontSize: 10,
+        color:         '#6b7a8d',
         letterSpacing: '0.08em',
       }}>
         STORED LOCALLY · CLEARS WITH BROWSER CACHE · SHOWS LAST {MAX_ROWS} WEEKS

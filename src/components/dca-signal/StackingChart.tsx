@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import {
@@ -101,14 +101,14 @@ function CustomTooltip({ active, payload, label, scale }: any) {
       border:        '1px solid rgba(255,255,255,0.1)',
       padding:       '8px 12px',
       fontFamily:    FONT,
-      fontSize:      10,
+      fontSize: 12,
       color:         '#e8edf2',
       letterSpacing: '0.06em',
       lineHeight:    1.8,
     }}>
-      <div style={{ color: '#6b7a8d', marginBottom: 4 }}>{label}</div>
+      <div style={{ color: '#8a9bb0', marginBottom: 4 }}>{label}</div>
       {signal  && <div style={{ color: '#00d4c8' }}>SIGNAL  {formatBtc(Number(signal.value))}</div>}
-      {vanilla && <div style={{ color: '#4a5568' }}>VANILLA {formatBtc(Number(vanilla.value))}</div>}
+      {vanilla && <div style={{ color: '#6b7a8d' }}>VANILLA {formatBtc(Number(vanilla.value))}</div>}
       {price   && <div style={{ color: '#8aaba6' }}>BTC     {formatPrice(Number(price.value))}</div>}
     </div>
   );
@@ -170,7 +170,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
         marginBottom:   12,
         fontFamily:     FONT,
       }}>
-        <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#6b7a8d' }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8a9bb0' }}>
           BTC STACKING · SIGNAL vs VANILLA DCA
         </span>
 
@@ -182,13 +182,13 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
               onClick={() => setPeriod(p.label)}
               style={{
                 padding:       '3px 9px',
-                fontSize:      9,
+                fontSize: 11,
                 letterSpacing: '0.1em',
                 fontFamily:    FONT,
                 cursor:        'pointer',
                 border:        '1px solid rgba(255,255,255,0.1)',
                 background:    period === p.label ? 'rgba(0,212,200,0.12)' : 'transparent',
-                color:         period === p.label ? '#00d4c8' : '#4a5568',
+                color:         period === p.label ? '#00d4c8' : '#6b7a8d',
                 transition:    'none',
               }}
             >
@@ -209,8 +209,8 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
               <stop offset="95%" stopColor="#00d4c8" stopOpacity={0.01} />
             </linearGradient>
             <linearGradient id="vanillaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor="#4a5568" stopOpacity={0.25} />
-              <stop offset="95%" stopColor="#4a5568" stopOpacity={0.01} />
+              <stop offset="5%"  stopColor="#6b7a8d" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#6b7a8d" stopOpacity={0.01} />
             </linearGradient>
           </defs>
 
@@ -224,7 +224,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
             dataKey="date"
             ticks={xTicks}
             tickFormatter={v => formatXTick(v, period)}
-            tick={{ fontFamily: FONT, fontSize: 9, fill: '#6b7a8d', letterSpacing: 1 }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0', letterSpacing: 1 }}
             axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
             tickLine={false}
           />
@@ -234,7 +234,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
             yAxisId="left"
             domain={[0, 'auto']}
             tickFormatter={v => formatBtc(v)}
-            tick={{ fontFamily: FONT, fontSize: 8, fill: '#6b7a8d' }}
+            tick={{ fontFamily: FONT, fontSize: 10, fill: '#8a9bb0' }}
             axisLine={false}
             tickLine={false}
             width={56}
@@ -245,7 +245,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
             yAxisId="right"
             orientation="right"
             tickFormatter={formatPrice}
-            tick={{ fontFamily: FONT, fontSize: 9, fill: '#4a5568' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: '#6b7a8d' }}
             axisLine={false}
             tickLine={false}
             width={52}
@@ -297,9 +297,9 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
         alignItems:     'center',
         marginTop:      8,
         fontFamily:     FONT,
-        fontSize:       9,
+        fontSize: 11,
         letterSpacing:  '0.08em',
-        color:          '#6b7a8d',
+        color:          '#8a9bb0',
       }}>
         <div style={{ display: 'flex', gap: 16 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -311,7 +311,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
             VANILLA DCA · {formatBtc(vanillaBtc)}
           </span>
         </div>
-        <span style={{ color: advPct >= 0 ? '#00d4c8' : '#d06050', fontSize: 9 }}>
+        <span style={{ color: advPct >= 0 ? '#00d4c8' : '#d06050', fontSize: 11 }}>
           {advPct >= 0 ? '+' : ''}{advPct.toFixed(1)}% MORE BTC
         </span>
       </div>

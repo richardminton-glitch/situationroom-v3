@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { BtcSignalResponse } from '@/app/api/btc-signal/route';
 import { SignalCard } from './SignalCard';

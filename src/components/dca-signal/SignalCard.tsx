@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -44,17 +44,17 @@ export function SignalCard({ label, sublabel, value, multiplier }: Props) {
       {/* Label row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.14em', color: '#8aaba6', fontWeight: 600 }}>
+          <span style={{ fontSize: 11, letterSpacing: '0.14em', color: '#8aaba6', fontWeight: 600 }}>
             {label}
           </span>
-          <span style={{ fontSize: 8, letterSpacing: '0.1em', color: '#4a5568' }}>
+          <span style={{ fontSize: 10, letterSpacing: '0.1em', color: '#6b7a8d' }}>
             {sublabel}
           </span>
         </div>
 
         {/* Current value */}
         <span style={{
-          fontSize:      20,
+          fontSize: 22,
           color:         '#e8edf2',
           fontWeight:    500,
           letterSpacing: '-0.01em',
@@ -66,7 +66,7 @@ export function SignalCard({ label, sublabel, value, multiplier }: Props) {
       {/* Multiplier + state */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{
-          fontSize:      9,
+          fontSize: 11,
           letterSpacing: '0.1em',
           color:         accent,
           fontWeight:    600,
@@ -75,7 +75,7 @@ export function SignalCard({ label, sublabel, value, multiplier }: Props) {
           {state}
         </span>
         <span style={{
-          fontSize:      13,
+          fontSize: 15,
           color:         accent,
           fontWeight:    500,
           letterSpacing: '0.02em',

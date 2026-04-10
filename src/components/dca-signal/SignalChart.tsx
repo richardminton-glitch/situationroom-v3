@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   ComposedChart,
@@ -54,12 +54,12 @@ function CustomTooltip({ active, payload, label }: any) {
       border:        '1px solid rgba(255,255,255,0.1)',
       padding:       '8px 12px',
       fontFamily:    FONT,
-      fontSize:      10,
+      fontSize: 12,
       color:         '#e8edf2',
       letterSpacing: '0.06em',
       lineHeight:    1.8,
     }}>
-      <div style={{ color: '#6b7a8d', marginBottom: 4 }}>{label}</div>
+      <div style={{ color: '#8a9bb0', marginBottom: 4 }}>{label}</div>
       {composite && (
         <div style={{ color: '#00d4c8' }}>
           SIGNAL  {Number(composite.value).toFixed(3)}×
@@ -83,8 +83,8 @@ export function SignalChart({ chartData }: Props) {
         alignItems:  'center',
         justifyContent: 'center',
         fontFamily:  FONT,
-        color:       '#4a5568',
-        fontSize:    10,
+        color:       '#6b7a8d',
+        fontSize: 12,
         letterSpacing: '0.1em',
       }}>
         NO CHART DATA
@@ -102,9 +102,9 @@ export function SignalChart({ chartData }: Props) {
       {/* Section label */}
       <span style={{
         display:       'block',
-        fontSize:      9,
+        fontSize: 11,
         letterSpacing: '0.14em',
-        color:         '#6b7a8d',
+        color:         '#8a9bb0',
         fontFamily:    FONT,
         marginBottom:  12,
       }}>
@@ -126,7 +126,7 @@ export function SignalChart({ chartData }: Props) {
             dataKey="date"
             ticks={monthTicks}
             tickFormatter={formatXTick}
-            tick={{ fontFamily: FONT, fontSize: 9, fill: '#6b7a8d', letterSpacing: 1 }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0', letterSpacing: 1 }}
             axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
             tickLine={false}
           />
@@ -136,7 +136,7 @@ export function SignalChart({ chartData }: Props) {
             yAxisId="left"
             domain={[0, 'auto']}
             tickFormatter={v => v.toFixed(1)}
-            tick={{ fontFamily: FONT, fontSize: 9, fill: '#6b7a8d' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: '#8a9bb0' }}
             axisLine={false}
             tickLine={false}
             width={32}
@@ -147,7 +147,7 @@ export function SignalChart({ chartData }: Props) {
             yAxisId="right"
             orientation="right"
             tickFormatter={formatPrice}
-            tick={{ fontFamily: FONT, fontSize: 9, fill: '#4a5568' }}
+            tick={{ fontFamily: FONT, fontSize: 11, fill: '#6b7a8d' }}
             axisLine={false}
             tickLine={false}
             width={44}
@@ -185,9 +185,9 @@ export function SignalChart({ chartData }: Props) {
         gap:        20,
         marginTop:  8,
         fontFamily: FONT,
-        fontSize:   9,
+        fontSize: 11,
         letterSpacing: '0.1em',
-        color:      '#6b7a8d',
+        color:      '#8a9bb0',
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ display: 'inline-block', width: 16, height: 2, background: '#00d4c8' }} />
