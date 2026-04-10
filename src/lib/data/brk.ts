@@ -139,7 +139,9 @@ export async function fetchBrkSeries(opts: BrkFetchOptions): Promise<BrkSeriesRe
 
   try {
     // 2. Probe for total available data points
-    const probeUrl = `${BRK_BASE}/${probeSeries}/day1?limit=1`;
+    // Cache-bust: BRK edge nodes serve stale probe responses (seen 8-day lag).
+    // Appending _t=<epoch_seconds> bypasses the CDN cache.
+    const probeUrl = `${BRK_BASE}/${probeSeries}/day1?limit=1&_t=${Math.floor(Date.now() / 1000)}`;
     const probe = await brkFetch<{ total: number }>(probeUrl);
     const total = probe.total;
     const startOffset = Math.max(0, total - days);
