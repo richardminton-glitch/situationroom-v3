@@ -20,17 +20,33 @@ export interface DayPrice {
   price: number;
 }
 
-const CSV_PATH          = path.join(process.cwd(), 'data', 'btc-price-history.csv');
+// Candidate paths — checked in order. Primary is src/lib/data/ (git-tracked, deployed
+// with the repo). Fallback is data/ (gitignored runtime dir, used during local dev or
+// if the CSV was manually scp'd to the server before the tracked version was in place).
+const CSV_CANDIDATES = [
+  path.join(process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
+  path.join(process.cwd(), 'data', 'btc-price-history.csv'),
+];
 const CG_CACHE_KEY      = 'cgHistoryRecent';
 const CG_CACHE_DURATION = 24 * 60 * 60 * 1000;
 const FETCH_DAYS        = 1500;
 
 // ── CSV reader ────────────────────────────────────────────────────────────────
 
-/** Parse data/btc-price-history.csv → DayPrice[], ascending by date */
+/** Parse btc-price-history.csv → DayPrice[], ascending by date */
 function readCsvPrices(): DayPrice[] {
+  // Try each candidate path in order
+  let raw: string | null = null;
+  for (const candidate of CSV_CANDIDATES) {
+    try {
+      raw = fs.readFileSync(candidate, 'utf-8');
+      break;
+    } catch { /* try next */ }
+  }
+  if (!raw) return [];
+
   try {
-    const raw  = fs.readFileSync(CSV_PATH, 'utf-8').replace(/^\uFEFF/, ''); // strip BOM
+    raw = raw.replace(/^\uFEFF/, ''); // strip BOM
     const rows = raw.trim().split('\n');
     const result: DayPrice[] = [];
 
