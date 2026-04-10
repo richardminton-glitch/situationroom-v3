@@ -15,7 +15,7 @@ import { useTier }         from '@/hooks/useTier';
 import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
-import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier } from '@/lib/data/daily-snapshot';
+import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier } from '@/lib/signals/dca-exit-utils';
 
 const FONT      = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_SELL   = 'sr-dca-base-sell';

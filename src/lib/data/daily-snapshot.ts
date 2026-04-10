@@ -307,36 +307,9 @@ export function computeBacktestSummary(
   return results;
 }
 
-// ── Combined strategy crossover ───────────────────────────────────────────────
-//
-// The same composite signal drives BOTH the DCA-in and DCA-out strategies.
-// Above CROSSOVER: use the buy multiplier table (accumulate).
-// Below CROSSOVER: the signal naturally transitions into distribution territory —
-//   buying drops to near-zero, then creeps into active selling as composite falls.
-//
-//   composite ≥ 0.70 (CROSSOVER): buy zone → 0 selling
-//   composite 0.55-0.70:           barely buying → light exits begin (0.3×)
-//   composite 0.40-0.55:           buy nothing → moderate exits (0.7×)
-//   composite 0.25-0.40:           increase exits (1.2×)
-//   composite < 0.25:              heavy distribution (2.0×)
-
-export const DCA_CROSSOVER = 0.70;  // exported so components can use the same constant
-
-export function compositeToSellMult(composite: number): number {
-  if (composite >= DCA_CROSSOVER) return 0;    // still in accumulate zone
-  if (composite >= 0.55) return 0.3;           // just past crossover — light exits
-  if (composite >= 0.40) return 0.7;           // building distribution
-  if (composite >= 0.25) return 1.2;           // increase exits
-  return 2.0;                                   // heavy distribution
-}
-
-export function compositeToExitTier(composite: number): string {
-  if (composite >= DCA_CROSSOVER) return 'Accumulate zone';
-  if (composite >= 0.55) return 'Light exits';
-  if (composite >= 0.40) return 'Building distribution';
-  if (composite >= 0.25) return 'Increase exits';
-  return 'Heavy distribution';
-}
+// ── Combined strategy crossover (shared with client via dca-exit-utils.ts) ───
+import { DCA_CROSSOVER, compositeToSellMult } from '@/lib/signals/dca-exit-utils';
+export { DCA_CROSSOVER, compositeToSellMult } from '@/lib/signals/dca-exit-utils';
 
 // ── Stacking history helper (shared with API route) ───────────────────────────
 
