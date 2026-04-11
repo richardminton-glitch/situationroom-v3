@@ -4,12 +4,15 @@
  * Reads the long-term BTC price CSV, samples weekly, computes a 200-week
  * moving-average ratio for each point, maps that ratio to a heat colour
  * (green ↔ yellow ↔ orange ↔ red), and returns pre-calculated SVG segment
- * coordinates for the Archimedean spiral.
+ * coordinates for the spiral.
  *
- * Colour logic mirrors the "200-week MA Heatmap" concept:
- *   price/MA  < 1.0  →  green family (undervalued)
- *   price/MA  ~ 1.0  →  yellow (fair value)
- *   price/MA  > 2.0  →  orange → red (overvalued)
+ * Radius encoding: log-normalised BTC price — the spiral arm expands
+ * outward on bull runs and contracts inward during bear markets, creating
+ * a visible "channel" effect that traces actual price history.
+ *
+ * Colour logic: percentile-rank of price/200wMA across all history, so the
+ * colour distribution is always balanced — exactly 50% of points in the
+ * green half regardless of current cycle position.
  */
 
 import * as fs   from 'fs';
@@ -19,8 +22,9 @@ import { NextResponse } from 'next/server';
 // ── SVG geometry constants ────────────────────────────────────────────────────
 const SPIRAL_CX          = 170;
 const SPIRAL_CY          = 170;
-const SPIRAL_MAX_R       = 135;    // outer edge of spiral arm
-const SPIRAL_REVOLUTIONS = 5;      // full turns from centre to edge
+const R_MIN              = 58;     // innermost radius (just outside centre disc)
+const SPIRAL_MAX_R       = 132;   // outermost radius
+const SPIRAL_REVOLUTIONS = 4;     // ~one per halving cycle (4 years each)
 
 // ── Sampling / MA ─────────────────────────────────────────────────────────────
 const SAMPLE_DAYS = 7;    // one point per week
@@ -72,46 +76,52 @@ function readCsv(): DayPrice[] {
   return [];
 }
 
-// ── Colour mapping ────────────────────────────────────────────────────────────
+// ── Colour mapping (percentile-based) ────────────────────────────────────────
 /**
- * Maps price / 200-week MA ratio to an HSL heat colour.
+ * Maps a 0–1 percentile rank of price/200wMA to an HSL heat colour.
+ * Using percentile ranking guarantees a balanced colour distribution:
+ * the bottom 50% of all historical readings map to the green family,
+ * and the top 50% map to the orange/red family.
  *
- *  ratio  ≤ 0.3  →  deep teal-green  (hsl 155, 72%, 35%)
- *  ratio  = 1.0  →  golden yellow    (hsl 48,  85%, 48%)
- *  ratio  ≥ 4.0  →  deep red         (hsl 0,   88%, 38%)
+ *  pct = 0.00  →  deep teal-green  (hsl 155, 72%, 35%)
+ *  pct = 0.50  →  golden yellow    (hsl 48,  85%, 48%)
+ *  pct = 1.00  →  deep red         (hsl 0,   88%, 38%)
  */
-function ratioToHsl(ratio: number): string {
+function percentileToHsl(pct: number): string {
   let h: number, s: number, l: number;
 
-  if (ratio <= 0.3) {
-    h = 155; s = 72; l = 35;
-  } else if (ratio <= 1.0) {
-    const t = (ratio - 0.3) / 0.7;          // 0→1
-    h = Math.round(155 - t * (155 - 48));    // 155→48
-    s = Math.round(72  - t * (72  - 85));    // 72→85
-    l = Math.round(35  + t * (48  - 35));    // 35→48
-  } else if (ratio <= 2.0) {
-    const t = (ratio - 1.0) / 1.0;
-    h = Math.round(48  - t * (48  - 18));    // 48→18
-    s = Math.round(85  + t * (90  - 85));    // 85→90
-    l = Math.round(48  - t * (48  - 50));    // 48→50
-  } else if (ratio <= 4.0) {
-    const t = (ratio - 2.0) / 2.0;
-    h = Math.round(18  - t * 18);            // 18→0
-    s = 90;
-    l = Math.round(50  - t * (50  - 38));    // 50→38
+  if (pct <= 0.5) {
+    const t = pct / 0.5;                              // 0→1
+    h = Math.round(155 - t * (155 - 48));             // 155→48
+    s = Math.round(72  + t * (85  - 72));             // 72→85
+    l = Math.round(35  + t * (48  - 35));             // 35→48
   } else {
-    h = 0; s = 90; l = 38;
+    const t = (pct - 0.5) / 0.5;                      // 0→1
+    h = Math.round(48  - t * 48);                     // 48→0
+    s = Math.round(85  + t * (90  - 85));             // 85→90
+    l = Math.round(48  - t * (48  - 38));             // 48→38
   }
 
   return `hsl(${h},${s}%,${l}%)`;
 }
 
-// ── Spiral point math ─────────────────────────────────────────────────────────
-function spiralXY(i: number, n: number): { x: number; y: number } {
+// ── Spiral point math (price-encoded radius) ──────────────────────────────────
+/**
+ * Converts a weekly sample index to (x, y), where:
+ *  - theta progresses uniformly around the spiral (time → angle)
+ *  - r is derived from log-normalised price (price → radius)
+ *
+ * This creates a channel that visibly expands on bull runs and
+ * contracts during bear markets.
+ */
+function spiralXY(
+  i: number,
+  n: number,
+  logNormPrice: number,   // 0–1, log-normalised price for this point
+): { x: number; y: number } {
   const t     = i / (n - 1);
   const theta = t * SPIRAL_REVOLUTIONS * 2 * Math.PI - Math.PI / 2; // start at top
-  const r     = t * SPIRAL_MAX_R;
+  const r     = R_MIN + (SPIRAL_MAX_R - R_MIN) * logNormPrice;
   return {
     x: +(SPIRAL_CX + r * Math.cos(theta)).toFixed(2),
     y: +(SPIRAL_CY + r * Math.sin(theta)).toFixed(2),
@@ -142,12 +152,41 @@ function compute(): SpiralGaugeData {
     ma[i] = windowSum / Math.min(i + 1, MA_WIN);
   }
 
+  // Compute price/MA ratios for ALL points
+  const ratios: number[] = new Array(N);
+  for (let i = 0; i < N; i++) {
+    ratios[i] = ma[i] > 0 ? weekly[i].price / ma[i] : 1;
+  }
+
+  // Sort ratios for percentile lookup
+  const sortedRatios = [...ratios].sort((a, b) => a - b);
+
+  function getPercentile(r: number): number {
+    // Binary search for position in sorted array
+    let lo = 0, hi = sortedRatios.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sortedRatios[mid] < r) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo / (sortedRatios.length - 1);
+  }
+
+  // Log-normalise prices for radius encoding
+  const prices    = weekly.map(w => w.price);
+  const logMin    = Math.log(Math.min(...prices));
+  const logMax    = Math.log(Math.max(...prices));
+  const logRange  = logMax - logMin;
+
   // Build (x,y,color) per sample
   const pts: { x: number; y: number; color: string }[] = [];
   for (let i = 0; i < N; i++) {
-    const { x, y } = spiralXY(i, N);
-    const ratio     = ma[i] > 0 ? weekly[i].price / ma[i] : 1;
-    pts.push({ x, y, color: ratioToHsl(ratio) });
+    const logNorm = logRange > 0
+      ? (Math.log(weekly[i].price) - logMin) / logRange
+      : 0.5;
+    const { x, y } = spiralXY(i, N, logNorm);
+    const pct = getPercentile(ratios[i]);
+    pts.push({ x, y, color: percentileToHsl(pct) });
   }
 
   // Build segments (each segment = line between adjacent points)

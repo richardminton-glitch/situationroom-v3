@@ -15,7 +15,7 @@ const SIZE         = 340;
 const SPIRAL_CX    = 170;
 const SPIRAL_CY    = 170;
 const SPIRAL_MAX_R = 135;
-const SPIRAL_SW    = 15;
+const SPIRAL_SW    = 9;
 const R_CENTER     = 54;   // centre disc radius (holds score text)
 
 const FONT_MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
