@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ComposedChart,
   Line,
@@ -696,6 +696,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             </div>
           )}
 
+          {/* FAQ */}
+          <DCAFaqSection isDark={isDark} />
+
           {/* VIP email signup — receive combined in/out signal by email */}
           <VIPEmailSignup baseAmount={baseSell} />
 
@@ -707,6 +710,155 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             <UpgradePrompt requiredTier="vip" featureName="DCA Exit Strategy" variant="overlay" />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+
+const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
+  {
+    q: 'What is this DCA in/out strategy?',
+    a: 'The DCA Signal is a composite on-chain indicator that scores Bitcoin\'s current valuation on a scale of roughly 0–2.5. Values above 0.70× indicate an accumulation environment — you buy. Values below 0.70× indicate an overheated or distribution environment — you begin taking profits. The goal is to buy more when Bitcoin is cheap relative to its own history, and to systematically recycle profits when the market overheats — compounding both your BTC stack and your USD reserves over each cycle.',
+  },
+  {
+    q: 'What powers the composite score?',
+    a: (
+      <>
+        Two on-chain indicators are blended in a 5:1 weighted ratio:
+        <br /><br />
+        <strong>200-Week Moving Average Ratio</strong> — your price divided by the 200-week (≈4-year) rolling average. Ratios at or below 1.0× have historically marked deep value. Ratios above 2–3× have historically marked overvaluation and preceded major corrections.
+        <br /><br />
+        <strong>Puell Multiple</strong> — the USD value of daily miner issuance divided by its 365-day moving average. Low values (&lt;0.8×) mean miners are earning far below average — a historically reliable accumulation signal. High values (&gt;2.0×) mean miners are earning well above average — a historically reliable distribution signal.
+        <br /><br />
+        The two are combined, normalised against their own expanding historical mean, to produce a single composite score that dampens noise and anchors to context.
+      </>
+    ),
+  },
+  {
+    q: 'How is the weekly buy amount calculated?',
+    a: 'The composite maps onto a stepped multiplier table calibrated against historical Bitcoin cycles. When the composite is high (deep value), the multiplier increases — you buy more. When it is low (overheated), the multiplier decreases — you buy less or nothing. Your BASE BUY/WEEK × that week\'s multiplier = your recommended weekly purchase. Setting your base to a comfortable recurring amount means the signal scales it automatically without any manual decision-making.',
+  },
+  {
+    q: 'When do exits begin, and how are they sized?',
+    a: 'Exits trigger when the composite falls below 0.70× — the crossover point where accumulation flips to distribution. The exit multiplier then scales inversely with the composite: the further below 0.70× it falls, the larger the recommended weekly exit. Your BASE SELL/WEEK × that week\'s exit multiplier = your recommended weekly sale. This means exits are small and tentative at the early stages of overheating, and largest at peak exhaustion — the inverse of what most discretionary traders manage to execute.',
+  },
+  {
+    q: 'Why are buy and sell base amounts set separately?',
+    a: 'Your capacity to deploy fresh capital each week (buys) and your appetite to book profits (sells) are usually different numbers. Separating them means you can set a modest DCA-in amount aligned with your income, and a larger or smaller base sell aligned with your position size and profit targets — without either number constraining the other.',
+  },
+  {
+    q: 'Why does the signal strategy outperform vanilla DCA?',
+    a: 'Vanilla DCA buys the same amount every week regardless of price conditions, so it acquires Bitcoin at average cost across cheap and expensive periods equally. The signal buys more when Bitcoin is historically undervalued and less when it is overvalued — structurally lowering your average acquisition cost over time. On the exit side, signal exits are concentrated in periods when the market has genuinely overheated, capturing profits at above-average cycle prices rather than selling randomly or never selling at all. The combined effect is more BTC accumulated per dollar deployed, plus a growing USD reserve locked in at historically favourable exit prices.',
+  },
+  {
+    q: 'What does the combined portfolio chart show?',
+    a: (
+      <>
+        The chart models both sides of the strategy simultaneously, starting from the beginning of the selected period, scaled to your base buy and base sell amounts:
+        <br /><br />
+        <strong>Teal line</strong> — net BTC remaining: BTC accumulated via signal DCA-in, minus BTC sold via signal DCA-out exits.
+        <br />
+        <strong>Grey line</strong> — vanilla BTC: all buys held, no exits ever taken.
+        <br />
+        <strong>Amber dashed line</strong> — USD accumulating from signal exits over the period.
+        <br /><br />
+        The summary cards show end-of-period totals so you can compare total value (BTC × current price + USD cash) between the two approaches.
+      </>
+    ),
+  },
+  {
+    q: 'The signal strategy shows less BTC than vanilla. Does that mean it\'s worse?',
+    a: 'Not at all — it is by design. The signal strategy intentionally sells BTC at peak-zone prices to accumulate USD. A lower BTC count is expected and is always accompanied by a growing USD balance from exits. The correct comparison is total value: (BTC remaining × current price) + (USD from exits). In most historical periods, signal total value exceeds vanilla total value precisely because the exits were timed to overheated markets, not random ones. The summary cards above the chart show this total for both strategies.',
+  },
+  {
+    q: 'How do I use this practically week to week?',
+    a: 'Check the signal once per week — Monday morning works well, since signals are computed from Sunday\'s close. If the composite is above 0.70×, make your DCA-in purchase at the recommended amount. If it is below 0.70×, make your DCA-out sale at the recommended amount (and skip or reduce your buy). The VIP email signal delivers both numbers to your inbox so you never have to remember to check. Set it, follow it consistently, and let compounding and cycle timing do the work.',
+  },
+  {
+    q: 'Is this financial advice?',
+    a: 'No. This is a backtested quantitative signal tool provided for educational and informational purposes only. On-chain indicators do not guarantee future performance. Bitcoin is highly volatile and you can lose the full value of any position. Past cycle behaviour is not a reliable guide to future returns. Never deploy capital you cannot afford to lose, and always conduct your own independent research before making any investment decision.',
+  },
+];
+
+function DCAFaqSection({ isDark }: { isDark: boolean }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  const teal   = isDark ? '#00d4c8' : '#4a7c59';
+  const border = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  const hoverBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border-subtle)' }}>
+      <div style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 16, fontFamily: FONT }}>
+        HOW THE STRATEGY WORKS · FAQ
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {FAQ_ITEMS.map((item, i) => {
+          const isOpen = openIdx === i;
+          return (
+            <div
+              key={i}
+              style={{ borderBottom: `1px solid ${border}` }}
+            >
+              <button
+                onClick={() => setOpenIdx(isOpen ? null : i)}
+                style={{
+                  width:          '100%',
+                  display:        'flex',
+                  justifyContent: 'space-between',
+                  alignItems:     'center',
+                  padding:        '11px 0',
+                  background:     isOpen ? hoverBg : 'transparent',
+                  border:         'none',
+                  cursor:         'pointer',
+                  fontFamily:     FONT,
+                  textAlign:      'left',
+                  gap:            12,
+                  transition:     'none',
+                }}
+              >
+                <span style={{
+                  fontSize:      12,
+                  color:         isOpen ? teal : 'var(--text-primary)',
+                  letterSpacing: '0.04em',
+                  lineHeight:    1.5,
+                }}>
+                  {item.q}
+                </span>
+                <span style={{
+                  fontSize:   14,
+                  color:      isOpen ? teal : 'var(--text-muted)',
+                  flexShrink: 0,
+                  lineHeight: 1,
+                  transform:  isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+                }}>
+                  +
+                </span>
+              </button>
+
+              {isOpen && (
+                <div style={{
+                  paddingBottom: 14,
+                  paddingRight:  24,
+                  fontSize:      12,
+                  fontFamily:    FONT,
+                  color:         'var(--text-secondary)',
+                  letterSpacing: '0.03em',
+                  lineHeight:    1.75,
+                }}>
+                  {item.a}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 14, fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', fontFamily: FONT }}>
+        SIGNALS ARE BACKTESTED AGAINST HISTORICAL BITCOIN CYCLES · NOT FINANCIAL ADVICE · PAST PERFORMANCE IS NOT INDICATIVE OF FUTURE RESULTS
       </div>
     </div>
   );
