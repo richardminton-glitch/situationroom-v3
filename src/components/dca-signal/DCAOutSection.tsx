@@ -587,6 +587,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>TOTAL VALUE</div>
                       <div style={{ fontSize: 15, color: 'var(--text-primary)', fontWeight: 600 }}>{formatUsd(portTotalSig)}</div>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
+                        {formatUsd(portBtcSig * data.btcPrice, true)} BTC + {formatUsd(portUsdSig, true)} exits
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -605,6 +608,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>TOTAL VALUE</div>
                       <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatUsd(portTotalVan)}</div>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
+                        {formatUsd(portTotalVan, true)} BTC only
+                      </div>
                     </div>
                   </div>
                 </div>
