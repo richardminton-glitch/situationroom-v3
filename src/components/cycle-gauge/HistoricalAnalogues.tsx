@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
-import type { CycleHistorianAnnotation } from '@/app/api/ai/cycle-historian/route';
+
+// Inline type — do NOT import from the route file (it imports prisma).
+interface CycleHistorianAnnotation {
+  composite: number; phase: string; btcPrice: number;
+  mvrv: number | null; puell: number | null; piCycleRatio: number | null;
+  rainbowBand: number | null; realisedPriceRatio: number | null;
+  historicalContext: string; priceChange90d: string;
+  priceChange180d: string; priceChange365d: string; caveats: string;
+  weekKey: string; generatedAt: string;
+}
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 

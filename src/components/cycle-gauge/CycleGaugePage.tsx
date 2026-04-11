@@ -1,8 +1,27 @@
 'use client';
 
 import { useTheme } from '@/components/layout/ThemeProvider';
-import type { CycleGaugeResponse } from '@/app/api/cycle-gauge/route';
 import { HeroGauge }          from './HeroGauge';
+
+// Inline types — do NOT import from the route file (it uses fs/path, which
+// Turbopack would bundle into the client if imported from here).
+interface CycleIndicatorResult {
+  name: string; key: string; score: number; weight: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  zone: string; rawValue: number; rawLabel: string; interpretation: string;
+}
+interface ConfidenceBand {
+  level: string; agreementCount: number; dominantDirection: string;
+}
+interface CycleGaugeResponse {
+  composite: number; phase: string; phaseColor: string;
+  btcPrice: number; mvrv: number | null; puell: number | null;
+  piCycleRatio: number | null; rainbowBand: number | null;
+  realisedPriceRatio: number | null;
+  indicators: CycleIndicatorResult[];
+  confidence: ConfidenceBand;
+  timestamp: string;
+}
 import { IndicatorGrid }      from './IndicatorGrid';
 import { ConfidenceDisplay }  from './ConfidenceDisplay';
 import { HistoricalAnalogues } from './HistoricalAnalogues';

@@ -12,7 +12,17 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useTheme } from '@/components/layout/ThemeProvider';
-import type { DrawdownChartResponse, CycleMeta } from '@/app/api/data/drawdown-chart/route';
+
+// Inline types — do NOT import from the route file (it uses fs/path).
+interface CycleMeta {
+  id: string; label: string; athDate: string; athPrice: number;
+  endDate: string; endPrice: number; live: boolean; days: number;
+}
+interface DrawdownChartResponse {
+  data:   Record<string, number | null>[];
+  cycles: CycleMeta[];
+  maxDay: number;
+}
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
