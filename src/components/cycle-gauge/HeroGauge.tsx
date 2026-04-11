@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
-import type { SpiralGaugeData } from '@/app/api/data/spiral-gauge/route';
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface SpiralSegment { x1: number; y1: number; x2: number; y2: number; color: string; date: string; }
+interface SpiralGaugeData {
+  segments: SpiralSegment[];
+  tipX: number; tipY: number; tipColor: string;
+  currentPrice: number; currentDate: string;
+}
 
 // ── Constants (must match the API route) ─────────────────────────────────────
 const SIZE         = 340;
