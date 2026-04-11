@@ -2,7 +2,8 @@
  * GET /api/funding/status
  *
  * Returns monthly revenue vs running costs breakdown.
- * Uses a rolling 30-day window for current revenue.
+ * Uses a cumulative balance model: daily costs are deducted between
+ * payments so the funded amount decays smoothly each day.
  * Costs are computed dynamically from estimated API/AI usage.
  */
 
@@ -52,7 +53,6 @@ function computeCosts(usdToGbp: number) {
 export async function GET() {
   try {
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Live BTC/GBP for sats conversion; USD/GBP is stable enough to hardcode for costs
     const satsPerGbp = await getLiveSatsPerGbp();
@@ -69,15 +69,12 @@ export async function GET() {
     });
 
     let allTimeSats = 0;
-    let rolling30dSats = 0;
     let subscriptionRevenueSats = 0;
     let donationRevenueSats = 0;
     const breakdown = { general: 0, members: 0, vip: 0, donations: 0 };
 
     for (const p of allPayments) {
       allTimeSats += p.amountSats;
-
-      const isRecent = p.activatedAt && p.activatedAt >= thirtyDaysAgo;
 
       if (p.tier === 'donation') {
         donationRevenueSats += p.amountSats;
@@ -88,11 +85,45 @@ export async function GET() {
           breakdown[p.tier as keyof typeof breakdown] += p.amountSats;
         }
       }
-
-      if (isRecent) rolling30dSats += p.amountSats;
     }
 
-    const rolling30dGBP = rolling30dSats / satsPerGbp;
+    // ── Cumulative balance model ───────────────────────────────────────────────
+    // Walk through payments chronologically by activatedAt. Between each pair
+    // of payments, deduct dailyCost per elapsed day. This makes the funded
+    // amount decrease smoothly each day instead of cliff-dropping at 30 days.
+    const dailyCostGBP = costs.total / 30;
+
+    const sortedPayments = [...allPayments].sort((a, b) => {
+      const aDate = (a.activatedAt ?? a.createdAt).getTime();
+      const bDate = (b.activatedAt ?? b.createdAt).getTime();
+      return aDate - bDate;
+    });
+
+    let fundedBalance = 0;
+    let lastPaymentDate: Date | null = null;
+
+    for (const p of sortedPayments) {
+      const paymentDate = p.activatedAt ?? p.createdAt;
+
+      // Deduct daily costs accumulated since the previous payment
+      if (lastPaymentDate) {
+        const daysBetween = Math.max(0,
+          (paymentDate.getTime() - lastPaymentDate.getTime()) / (24 * 60 * 60 * 1000));
+        fundedBalance = Math.max(0, fundedBalance - daysBetween * dailyCostGBP);
+      }
+
+      fundedBalance += p.amountSats / satsPerGbp;
+      lastPaymentDate = paymentDate;
+    }
+
+    // Deduct costs from the last payment to now
+    if (lastPaymentDate) {
+      const daysSinceLast = Math.max(0,
+        (now.getTime() - lastPaymentDate.getTime()) / (24 * 60 * 60 * 1000));
+      fundedBalance = Math.max(0, fundedBalance - daysSinceLast * dailyCostGBP);
+    }
+
+    const rolling30dGBP = fundedBalance;
     const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((rolling30dGBP / costs.total) * 100)) : 0;
 
     // ── Runway calculation ──────────────────────────────────────────────────
