@@ -317,3 +317,72 @@ export function computeBreakevenBtcPrice(
   const dailyBtcMined = subsidyBtc * blocksPerDay;
   return dailyBtcMined > 0 ? dailyEnergyCost / dailyBtcMined : 0;
 }
+
+// ── Hash Ribbon (30d/60d MA crossover) ──────────────────────────────────────
+
+export interface HashRibbonPoint {
+  date: string;
+  hashrate: number;   // EH/s
+  ma30: number;
+  ma60: number;
+}
+
+export interface HashRibbonResult {
+  data: HashRibbonPoint[];
+  signal: 'bullish' | 'bearish' | 'neutral';
+  currentHashrate: number;
+  currentMa30: number;
+  currentMa60: number;
+}
+
+/** Simple moving average */
+function sma(values: number[], window: number): number[] {
+  const result: number[] = new Array(values.length).fill(NaN);
+  for (let i = window - 1; i < values.length; i++) {
+    let sum = 0;
+    for (let j = i - window + 1; j <= i; j++) sum += values[j];
+    result[i] = sum / window;
+  }
+  return result;
+}
+
+/**
+ * Compute hash ribbon from hashrate series (already in EH/s).
+ * Returns 90 display days + 30d/60d MAs + bullish/bearish signal.
+ */
+export function computeHashRibbon(
+  hashratesEH: number[],
+  dates: string[],
+  displayDays: number = 90,
+): HashRibbonResult {
+  const ma30 = sma(hashratesEH, 30);
+  const ma60 = sma(hashratesEH, 60);
+
+  const points: HashRibbonPoint[] = [];
+  const startIdx = Math.max(0, hashratesEH.length - displayDays);
+
+  for (let i = startIdx; i < hashratesEH.length; i++) {
+    if (isNaN(ma30[i]) || isNaN(ma60[i])) continue;
+    points.push({
+      date: dates[i],
+      hashrate: Math.round(hashratesEH[i] * 10) / 10,
+      ma30: Math.round(ma30[i] * 10) / 10,
+      ma60: Math.round(ma60[i] * 10) / 10,
+    });
+  }
+
+  // Signal from latest MA crossover
+  const last = points[points.length - 1];
+  let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (last) {
+    signal = last.ma30 > last.ma60 ? 'bullish' : last.ma30 < last.ma60 ? 'bearish' : 'neutral';
+  }
+
+  return {
+    data: points,
+    signal,
+    currentHashrate: last?.hashrate ?? 0,
+    currentMa30: last?.ma30 ?? 0,
+    currentMa60: last?.ma60 ?? 0,
+  };
+}

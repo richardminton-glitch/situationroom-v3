@@ -1,17 +1,20 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useTheme } from '@/components/layout/ThemeProvider';
-import { formatPrice, formatLargeNumber } from '@/components/panels/shared';
-import type { MiningIntelResponse } from '@/app/api/mining-intel/route';
-import HashrateGeoSection from './HashrateGeoSection';
-import GeoShiftAlerts from './GeoShiftAlerts';
-import { EditorialSection } from './EditorialSection';
+/**
+ * Mining Intelligence Page — "Should I care about miners right now?"
+ *
+ * 5 sections, no Recharts, D3 charts only via ParchmentChart pattern.
+ * Hero = miner margin %. Everything else supports that signal.
+ */
 
-/* Code-split Recharts-heavy sections — load after page shell renders */
-const HashPriceSection = dynamic(() => import('./HashPriceSection'), { ssr: false });
-const GasMiningSection = dynamic(() => import('./GasMiningSection').then(m => ({ default: m.GasMiningSection })), { ssr: false });
-const SecurityBudgetSection = dynamic(() => import('./SecurityBudgetSection').then(m => ({ default: m.SecurityBudgetSection })), { ssr: false });
+import { useTheme } from '@/components/layout/ThemeProvider';
+import type { MiningIntelResponse } from '@/app/api/mining-intel/route';
+import { MinerProfitHero } from './MinerProfitHero';
+import { HashPriceChart } from './HashPriceChart';
+import { HashRibbonChart } from './HashRibbonChart';
+import { MiningConfluence } from './MiningConfluence';
+import { HashrateDistribution } from './HashrateDistribution';
+import { SecurityOutlook } from './SecurityOutlook';
 
 const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -25,8 +28,7 @@ export function MiningPage({ data, loading, error }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
 
-  /* ── Loading / Error ──────────────────────────────────────────────── */
-
+  /* ── Loading ──────────────────────────────────────────────── */
   if (loading) {
     return (
       <div style={{
@@ -40,6 +42,7 @@ export function MiningPage({ data, loading, error }: Props) {
     );
   }
 
+  /* ── Error ────────────────────────────────────────────────── */
   if (error || !data) {
     return (
       <div style={{
@@ -55,185 +58,96 @@ export function MiningPage({ data, loading, error }: Props) {
     );
   }
 
-  /* ── Derived values ───────────────────────────────────────────────── */
+  /* ── Find 2028 halving projection for SecurityOutlook ────── */
+  const nextHalving = data.securityBudget.base.find(p => p.year === 2028) ?? null;
 
-  const signalColor =
-    data.hashPrice.signal === 'profitable' ? 'var(--accent-success)' :
-    data.hashPrice.signal === 'marginal' ? 'var(--accent-warning)' :
-    'var(--accent-danger)';
-
-  const signalLabel =
-    data.hashPrice.signal === 'profitable' ? 'PROFITABLE' :
-    data.hashPrice.signal === 'marginal' ? 'MARGINAL' : 'UNPROFITABLE';
-
-  const dailyBudget = data.securityBudget.current.dailyTotalUsd;
-  const subsidyPct  = data.securityBudget.current.subsidyPct;
-
-  /* ── Render ───────────────────────────────────────────────────────── */
-
+  /* ── Render ───────────────────────────────────────────────── */
   return (
     <div style={{
       height: '100%', overflowY: 'auto',
       backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)',
     }}>
       <div style={{
-        maxWidth: 960, margin: '0 auto', width: '100%',
+        maxWidth: 920, margin: '0 auto', width: '100%',
         padding: '28px 36px 56px',
+        display: 'flex', flexDirection: 'column', gap: 0,
       }}>
 
-        {/* ═══ HEADER ═══════════════════════════════════════════════ */}
-        <header style={{ marginBottom: 28 }}>
-          <div style={{
-            fontSize: 9, fontFamily: MONO, textTransform: 'uppercase',
-            letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: 6,
-          }}>
-            SITUATION ROOM
-          </div>
-          <div style={{
-            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: 12,
-          }}>
-            <h1 style={{
-              fontFamily: 'var(--font-heading)', fontSize: 22, fontWeight: 400,
-              color: 'var(--text-primary)', margin: 0, letterSpacing: '0.04em',
-            }}>
-              Energy & Mining Intelligence
-            </h1>
-            <span style={{
-              fontSize: 10, fontFamily: MONO, color: 'var(--text-muted)',
-            }}>
-              {new Date(data.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
-            </span>
-          </div>
-          <div style={{
-            marginTop: 16, borderBottom: '1px solid var(--border-primary)',
-          }} />
-        </header>
+        {/* ═══ 1. HERO — Mining Profitability Signal ════════════ */}
+        <MinerProfitHero
+          marginPct={data.hashPrice.marginPct}
+          signal={data.hashPrice.signal}
+          hashPrice={data.hashPrice.current}
+          breakevenHashPrice={data.hashPrice.breakevenHashPrice}
+          breakevenBtcPrice={data.hashPrice.breakevenBtcPrice}
+          btcPrice={data.btcPrice}
+          hashrateEH={data.hashrateEH}
+          energyValueFair={data.energyValue.fairValue}
+          energyValuePremiumPct={data.energyValue.premiumPct}
+          globalWeightedAvg={data.energyPrices.globalWeightedAvg}
+          efficientMinerJPerTH={data.energyPrices.efficientMinerJPerTH}
+          timestamp={data.timestamp}
+        />
 
-        {/* ═══ HERO STRIP ═══════════════════════════════════════════ */}
-        {/* One dominant metric (hashrate) + supporting row */}
-        <section style={{ marginBottom: 36 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
-            <span style={{
-              fontFamily: 'var(--font-data)', fontSize: 38, fontWeight: 600,
-              color: 'var(--text-primary)', letterSpacing: '-0.02em',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {data.hashrateEH.toFixed(1)}
-            </span>
-            <span style={{
-              fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)',
-              letterSpacing: '0.06em',
-            }}>
-              EH/s
-            </span>
-            <span style={{
-              fontFamily: MONO, fontSize: 11, color: 'var(--text-muted)',
-              marginLeft: 'auto',
-            }}>
-              NETWORK HASHRATE
-            </span>
+        {/* ═══ 2. CHARTS — Hash Price + Hash Ribbon ═════════════ */}
+        <section style={{ marginTop: 36 }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 9, letterSpacing: '0.16em',
+            color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 16,
+          }}>
+            MINER ECONOMICS
           </div>
 
-          {/* Supporting metrics tape — horizontal, divided */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 0,
-            borderTop: '1px solid var(--border-subtle)',
-            borderBottom: '1px solid var(--border-subtle)',
-            padding: '10px 0',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 24,
           }}>
-            {[
-              { label: 'HASH PRICE', value: `$${data.hashPrice.current.toFixed(4)}`, color: signalColor, sub: signalLabel },
-              { label: 'ENERGY VALUE', value: `$${formatPrice(data.energyValue.fairValue, 0)}`, sub: `${data.energyValue.premiumPct > 0 ? '+' : ''}${data.energyValue.premiumPct.toFixed(0)}% vs spot`, color: data.energyValue.premiumPct < 0 ? 'var(--accent-success)' : undefined },
-              { label: 'DIFFICULTY', value: `${data.difficultyT.toFixed(1)} T` },
-              { label: 'SECURITY BUDGET', value: `$${formatLargeNumber(dailyBudget)}/d`, sub: `${subsidyPct.toFixed(0)}% subsidy` },
-              { label: 'BTC', value: `$${formatPrice(data.btcPrice, 0)}` },
-            ].map((m, i) => (
-              <div key={m.label} style={{
-                flex: 1, display: 'flex', flexDirection: 'column', gap: 2,
-                paddingLeft: i > 0 ? 16 : 0, paddingRight: 16,
-                borderLeft: i > 0 ? '1px solid var(--border-subtle)' : 'none',
-              }}>
-                <span style={{
-                  fontFamily: MONO, fontSize: 8, letterSpacing: '0.14em',
-                  color: 'var(--text-muted)', textTransform: 'uppercase',
-                }}>{m.label}</span>
-                <span style={{
-                  fontFamily: 'var(--font-data)', fontSize: 14, fontWeight: 600,
-                  color: m.color || 'var(--text-primary)',
-                  fontVariantNumeric: 'tabular-nums',
-                }}>{m.value}</span>
-                {m.sub && (
-                  <span style={{
-                    fontFamily: MONO, fontSize: 9,
-                    color: m.color || 'var(--text-muted)',
-                    letterSpacing: '0.06em',
-                  }}>{m.sub}</span>
-                )}
-              </div>
-            ))}
+            <HashPriceChart
+              history={data.hashPrice.history}
+              breakevenHashPrice={data.hashPrice.breakevenHashPrice}
+              signal={data.hashPrice.signal}
+              theme={theme}
+            />
+            <HashRibbonChart
+              data={data.hashRibbon.data}
+              signal={data.hashRibbon.signal}
+              currentHashrate={data.hashRibbon.currentHashrate}
+              theme={theme}
+            />
           </div>
         </section>
 
-        {/* ═══ HASHRATE GEOGRAPHY — full width ══════════════════════ */}
-        <section style={{ marginBottom: 40 }}>
-          <HashrateGeoSection
-            regions={data.hashrateGeo.regions}
-            totalHashrateEH={data.hashrateGeo.totalHashrateEH}
-            updatedAt={data.hashrateGeo.updatedAt}
-            energyPrices={data.energyPrices.regions}
-          />
-        </section>
-
-        {/* ═══ GEO ALERTS — compact strip ═══════════════════════════ */}
-        {data.geoAlerts.length > 0 && (
-          <section style={{ marginBottom: 36 }}>
-            <GeoShiftAlerts alerts={data.geoAlerts} />
-          </section>
-        )}
-
-        {/* ═══ HASH PRICE / MINER ECONOMICS — two-column ═══════════ */}
-        <section style={{ marginBottom: 40 }}>
-          <HashPriceSection
-            current={data.hashPrice.current}
-            history={data.hashPrice.history}
-            signal={data.hashPrice.signal}
-            breakevenHashPrice={data.hashPrice.breakevenHashPrice}
+        {/* ═══ 3. CONFLUENCE — 4 Mining Signals ═════════════════ */}
+        <section style={{ marginTop: 32 }}>
+          <MiningConfluence
+            hashPriceSignal={data.hashPrice.signal}
             marginPct={data.hashPrice.marginPct}
-            breakevenBtcPrice={data.hashPrice.breakevenBtcPrice}
-            energyPrices={data.energyPrices.regions}
-            globalWeightedAvg={data.energyPrices.globalWeightedAvg}
-            efficientMinerJPerTH={data.energyPrices.efficientMinerJPerTH}
+            hashRibbonSignal={data.hashRibbon.signal}
+            energyPremiumPct={data.energyValue.premiumPct}
+            subsidyPct={data.securityBudget.current.subsidyPct}
           />
         </section>
 
-        {/* ═══ SECURITY BUDGET — full width ═════════════════════════ */}
-        <section style={{ marginBottom: 40 }}>
-          <SecurityBudgetSection
+        {/* ═══ 4. HASHRATE DISTRIBUTION (top 5) ═════════════════ */}
+        <section style={{ marginTop: 36 }}>
+          <HashrateDistribution
+            regions={data.hashrateGeo.regions.slice(0, 5)}
+            totalHashrateEH={data.hashrateGeo.totalHashrateEH}
+            alerts={data.geoAlerts.slice(0, 2)}
+            updatedAt={data.hashrateGeo.updatedAt}
+          />
+        </section>
+
+        {/* ═══ 5. THE LONG VIEW — Editorial + Security Budget ═══ */}
+        <section style={{ marginTop: 36 }}>
+          <SecurityOutlook
+            editorial={data.editorial}
             current={data.securityBudget.current}
-            conservative={data.securityBudget.conservative}
-            base={data.securityBudget.base}
-            optimistic={data.securityBudget.optimistic}
+            nextHalving={nextHalving}
+            energyValueFair={data.energyValue.fairValue}
+            energyValuePremiumPct={data.energyValue.premiumPct}
             btcPrice={data.btcPrice}
-          />
-        </section>
-
-        {/* ═══ STRANDED ENERGY — two-column ═════════════════════════ */}
-        <section style={{ marginBottom: 40 }}>
-          <GasMiningSection
-            projects={data.gasMining.projects}
-            narrativeHook={data.gasMining.narrativeHook}
-            stats={data.gasMining.stats}
-            flareSites={data.flareSites}
-          />
-        </section>
-
-        {/* ═══ EDITORIAL — full width, constrained ══════════════════ */}
-        <section>
-          <EditorialSection
-            title={data.editorial.title}
-            body={data.editorial.body}
-            updatedAt={data.editorial.updatedAt}
           />
         </section>
 

@@ -21,8 +21,9 @@ import {
   computeSecurityBudgetScenarios,
   computeBreakevenBtcPrice,
   computeEnergyValue,
+  computeHashRibbon,
 } from '@/lib/signals/mining-engine';
-import type { HashPricePoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult } from '@/lib/signals/mining-engine';
+import type { HashPricePoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult, HashRibbonResult } from '@/lib/signals/mining-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,9 @@ export interface MiningIntelResponse {
     body: string;
     updatedAt: string;
   };
+
+  // Hash Ribbon (30d/60d MA crossover)
+  hashRibbon: HashRibbonResult;
 
   // Energy Value Model (Capriole / Fidelity)
   energyValue: EnergyValueResult;
@@ -278,6 +282,9 @@ export async function GET() {
       hashrateEH, fleetEfficiency, circulatingSupply, btcPrice,
     );
 
+    // ── Compute hash ribbon ──
+    const hashRibbonResult = computeHashRibbon(hashrates, dates);
+
     // ── Compute security budget ──
     // Estimate daily fees from recent mempool data (rough: ~50 BTC/day in fees)
     const estimatedDailyFeesUsd = 50 * btcPrice; // conservative estimate
@@ -323,6 +330,7 @@ export async function GET() {
       },
       securityBudget: budgetScenarios,
       editorial: editorialData ?? { title: '', body: '', updatedAt: '' },
+      hashRibbon: hashRibbonResult,
       energyValue: energyValueResult,
       btcPrice,
       hashrateEH,
