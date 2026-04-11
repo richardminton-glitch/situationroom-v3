@@ -780,7 +780,7 @@ const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: 'What if the market never gets overheated in a given period?',
-    a: 'If the composite never drops below 0.70× during the selected window, no exits trigger and the signal simply continues accumulating. The DCA-out section will show &ldquo;no signal exits in period&rdquo; and the teal BTC line will track above vanilla the entire time — reflecting pure accumulation with no distribution yet. The bonus builds and waits for the next overheated cycle to be distributed.',
+    a: 'If the composite never drops below 0.70× during the selected window, no exits trigger and the signal simply continues accumulating. The DCA-out section will show \u201cno signal exits in period\u201d and the teal BTC line will track above vanilla the entire time \u2014 reflecting pure accumulation with no distribution yet. The bonus builds and waits for the next overheated cycle to be distributed.',
   },
   {
     q: 'How do I follow this week to week in practice?',
