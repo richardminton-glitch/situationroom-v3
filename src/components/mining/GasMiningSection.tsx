@@ -1,9 +1,8 @@
 'use client';
 
-import { useTheme } from '@/components/layout/ThemeProvider';
 import { StrandedEnergyMap } from './StrandedEnergyMap';
 
-const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
+const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 interface Props {
   projects: {
@@ -36,15 +35,15 @@ interface Props {
   };
 }
 
-const SRC_COLORS: Record<string, string> = {
+const SRC: Record<string, string> = {
   'flared-gas': '#f59e0b',
   hydro: '#3b82f6',
   geothermal: '#ef4444',
   gas: '#8b5cf6',
 };
 
-function getSourceColor(source: string): string {
-  return SRC_COLORS[source] || '#6b7280';
+function srcColor(source: string): string {
+  return SRC[source] || '#6b7280';
 }
 
 function trendIcon(trend: string): { symbol: string; color: string } {
@@ -53,79 +52,93 @@ function trendIcon(trend: string): { symbol: string; color: string } {
   return { symbol: '\u2192', color: '#6b7280' };
 }
 
-function statusDotColor(status: string): string {
+function statusColor(status: string): string {
   if (status === 'operational') return '#22c55e';
   if (status === 'construction' || status === 'under-construction') return '#f59e0b';
   return '#6b7280';
 }
 
-export function GasMiningSection({ projects, narrativeHook, stats, flareSites }: Props) {
-  const { theme } = useTheme();
-  const isDark = theme !== 'parchment';
+const LABEL: React.CSSProperties = {
+  fontFamily: MONO,
+  fontSize: 9,
+  letterSpacing: '0.16em',
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  marginBottom: 16,
+};
 
+export function GasMiningSection({ projects, narrativeHook, stats, flareSites }: Props) {
   return (
     <div>
       {/* Section label */}
-      <div
-        style={{
-          fontSize: 9,
-          textTransform: 'uppercase',
-          letterSpacing: '0.18em',
-          color: 'var(--text-muted)',
-          marginBottom: 12,
-          fontFamily: FONT,
-        }}
-      >
+      <div style={LABEL}>
         STRANDED ENERGY — MINING OPERATIONS
       </div>
 
-      {/* Stats strip — full width, inline metrics */}
-      <div style={{ display: 'flex', gap: 24, alignItems: 'baseline', marginBottom: 16 }}>
+      {/* Stats tape — full width, horizontal with 1px vertical dividers */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0,
+          borderTop: '1px solid var(--border-subtle)',
+          borderBottom: '1px solid var(--border-subtle)',
+          padding: '10px 0',
+        }}
+      >
         {[
-          { label: 'FLARED', value: `${stats.totalFlaredGasBcm}`, unit: 'bcm' },
-          { label: 'OPERATIONS', value: `${stats.activeMiningOperations}`, unit: '' },
-          { label: 'COUNTRIES', value: `${stats.countriesWithOperations}`, unit: '' },
-        ].map((m) => (
-          <div key={m.label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+          { value: `${stats.totalFlaredGasBcm} bcm`, label: `FLARED GAS (${flareSites.year})` },
+          { value: `${stats.activeMiningOperations}`, label: 'OPERATIONS' },
+          { value: `${stats.countriesWithOperations}`, label: 'COUNTRIES' },
+        ].map((m, i) => (
+          <div
+            key={m.label}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              paddingLeft: i > 0 ? 16 : 0,
+              paddingRight: 16,
+              borderLeft: i > 0 ? '1px solid var(--border-subtle)' : 'none',
+            }}
+          >
             <span
               style={{
-                fontSize: 9,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                color: 'var(--text-muted)',
-                fontFamily: FONT,
-              }}
-            >
-              {m.label}
-            </span>
-            <span
-              style={{
+                fontFamily: 'var(--font-data)',
                 fontSize: 16,
                 fontWeight: 700,
                 color: 'var(--text-primary)',
-                fontFamily: FONT,
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
               {m.value}
             </span>
-            {m.unit && (
-              <span
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-muted)',
-                  fontFamily: FONT,
-                }}
-              >
-                {m.unit}
-              </span>
-            )}
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 8,
+                letterSpacing: '0.14em',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
+              {m.label}
+            </span>
           </div>
         ))}
       </div>
 
-      {/* Two-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, alignItems: 'start' }}>
+      {/* Two-column grid: 5fr 2fr */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '5fr 2fr',
+          gap: 28,
+          alignItems: 'start',
+          marginTop: 20,
+        }}
+      >
         {/* Left column — map + narrative */}
         <div>
           <StrandedEnergyMap
@@ -140,7 +153,7 @@ export function GasMiningSection({ projects, narrativeHook, stats, flareSites }:
                 fontSize: 12,
                 lineHeight: 1.6,
                 color: 'var(--text-muted)',
-                maxWidth: 600,
+                maxWidth: 560,
                 marginTop: 12,
               }}
             >
@@ -149,52 +162,43 @@ export function GasMiningSection({ projects, narrativeHook, stats, flareSites }:
           )}
         </div>
 
-        {/* Right column — compact sidebar */}
+        {/* Right column — compact operational data */}
         <div>
-          {/* Operations sub-label */}
-          <div
-            style={{
-              fontSize: 9,
-              textTransform: 'uppercase',
-              letterSpacing: '0.18em',
-              color: 'var(--text-muted)',
-              marginBottom: 8,
-              fontFamily: FONT,
-            }}
-          >
+          {/* OPERATIONS sub-label */}
+          <div style={{ ...LABEL, marginBottom: 8 }}>
             OPERATIONS
           </div>
 
-          {/* Project list */}
-          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {projects.map((project) => {
-              const srcColor = getSourceColor(project.energySource);
+          {/* Project list — scrollable */}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            {projects.map((p) => {
+              const c = srcColor(p.energySource);
               return (
                 <div
-                  key={`${project.name}-${project.region}`}
+                  key={`${p.name}-${p.region}`}
                   style={{
-                    borderLeft: `2px solid ${srcColor}`,
-                    padding: '6px 8px',
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)',
+                    padding: '6px 0',
+                    borderBottom: '1px solid var(--border-subtle)',
                   }}
                 >
-                  {/* First row: dot + name + capacity badge + status dot */}
+                  {/* Row: color bar + name ... capacity + status dot */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Coloured bar */}
                     <div
                       style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        backgroundColor: srcColor,
+                        width: 2,
+                        height: 14,
+                        backgroundColor: c,
                         flexShrink: 0,
                       }}
                     />
+                    {/* Name */}
                     <span
                       style={{
+                        fontFamily: 'var(--font-data)',
                         fontSize: 11,
                         fontWeight: 600,
                         color: 'var(--text-primary)',
-                        fontFamily: FONT,
                         flex: 1,
                         minWidth: 0,
                         overflow: 'hidden',
@@ -202,118 +206,108 @@ export function GasMiningSection({ projects, narrativeHook, stats, flareSites }:
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {project.name}
+                      {p.name}
                     </span>
-                    {project.capacityMW != null && (
+                    {/* Capacity badge */}
+                    {p.capacityMW != null && (
                       <span
                         style={{
+                          fontFamily: MONO,
                           fontSize: 9,
-                          padding: '1px 4px',
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
                           color: 'var(--text-muted)',
-                          fontFamily: FONT,
                           fontVariantNumeric: 'tabular-nums',
                           flexShrink: 0,
                         }}
                       >
-                        {project.capacityMW} MW
+                        {p.capacityMW} MW
                       </span>
                     )}
+                    {/* Status dot */}
                     <div
                       style={{
-                        width: 4,
-                        height: 4,
+                        width: 5,
+                        height: 5,
                         borderRadius: '50%',
-                        backgroundColor: statusDotColor(project.status),
+                        backgroundColor: statusColor(p.status),
                         flexShrink: 0,
                       }}
                     />
                   </div>
-                  {/* Second row: region + country */}
+                  {/* Region — one line */}
                   <div
                     style={{
-                      fontSize: 10,
+                      fontFamily: MONO,
+                      fontSize: 9,
                       color: 'var(--text-muted)',
-                      fontFamily: FONT,
                       marginTop: 2,
-                      paddingLeft: 12,
+                      paddingLeft: 8,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {project.region}, {project.country}
+                    {p.region}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '10px 0' }} />
+          {/* Gap between sections */}
+          <div style={{ height: 14 }} />
 
-          {/* Top flaring countries */}
-          <div
-            style={{
-              fontSize: 9,
-              textTransform: 'uppercase',
-              letterSpacing: '0.18em',
-              color: 'var(--text-muted)',
-              marginBottom: 8,
-              fontFamily: FONT,
-            }}
-          >
+          {/* TOP FLARING COUNTRIES sub-label */}
+          <div style={{ ...LABEL, marginBottom: 8 }}>
             TOP FLARING COUNTRIES
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {flareSites.topCountries.slice(0, 5).map((row) => {
-              const t = trendIcon(row.trend);
-              return (
-                <div
-                  key={row.country}
+          {/* 5 rows */}
+          {flareSites.topCountries.slice(0, 5).map((row, i) => {
+            const t = trendIcon(row.trend);
+            return (
+              <div
+                key={row.country}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '4px 0',
+                  borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none',
+                }}
+              >
+                <span
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '2px 0',
+                    fontFamily: 'var(--font-data)',
+                    fontSize: 11,
+                    color: 'var(--text-primary)',
                   }}
                 >
+                  {row.name || row.country}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 10,
+                      color: 'var(--text-secondary)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {row.flaredBcm.toFixed(1)}
+                  </span>
                   <span
                     style={{
                       fontSize: 11,
-                      color: 'var(--text-primary)',
-                      fontFamily: FONT,
+                      color: t.color,
+                      fontWeight: 600,
                     }}
                   >
-                    {row.name || row.country}
+                    {t.symbol}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--text-secondary)',
-                        fontFamily: FONT,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
-                      {row.flaredBcm.toFixed(1)}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: t.color,
-                        fontWeight: 600,
-                        fontFamily: FONT,
-                      }}
-                    >
-                      {t.symbol}
-                    </span>
-                  </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

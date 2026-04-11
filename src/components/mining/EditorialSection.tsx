@@ -1,8 +1,6 @@
 'use client';
 
-import { useTheme } from '@/components/layout/ThemeProvider';
-
-const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
+const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 interface Props {
   title: string;
@@ -11,71 +9,74 @@ interface Props {
 }
 
 export function EditorialSection({ title, body, updatedAt }: Props) {
-  const { theme } = useTheme();
-  const isDark = theme !== 'parchment';
-
   const paragraphs = body.split('\n\n');
 
   return (
-    <div>
+    <div
+      style={{
+        borderLeft: '3px solid var(--accent-primary)',
+        paddingLeft: 20,
+      }}
+    >
       {/* Section label */}
       <div
         style={{
+          fontFamily: MONO,
           fontSize: 9,
-          textTransform: 'uppercase',
-          letterSpacing: '0.18em',
+          letterSpacing: '0.16em',
           color: 'var(--text-muted)',
-          marginBottom: 12,
-          fontFamily: FONT,
+          textTransform: 'uppercase',
+          marginBottom: 16,
         }}
       >
-        EDITORIAL
+        ANALYSIS
       </div>
 
       {/* Title */}
       <h2
         style={{
           fontFamily: 'var(--font-heading)',
-          fontSize: 18,
-          fontWeight: 600,
+          fontSize: 20,
+          fontWeight: 400,
           color: 'var(--text-primary)',
           marginTop: 0,
-          marginBottom: 12,
+          marginBottom: 16,
+          letterSpacing: '0.02em',
         }}
       >
         {title}
       </h2>
 
       {/* Body paragraphs */}
-      <div style={{ maxWidth: 680 }}>
+      <div style={{ maxWidth: 640 }}>
         {paragraphs.map((p, i) => (
           <p
             key={i}
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 13,
-              lineHeight: 1.75,
+              fontSize: i === 0 ? 15 : 14,
+              lineHeight: 1.8,
               color: 'var(--text-secondary)',
               marginTop: 0,
-              marginBottom: 12,
+              marginBottom: 14,
             }}
           >
             {p}
           </p>
         ))}
+      </div>
 
-        {/* Updated timestamp — right-aligned within maxWidth */}
-        <div
-          style={{
-            fontSize: 9,
-            color: 'var(--text-muted)',
-            fontFamily: FONT,
-            marginTop: 12,
-            textAlign: 'right',
-          }}
-        >
-          Updated {updatedAt}
-        </div>
+      {/* Updated timestamp */}
+      <div
+        style={{
+          fontFamily: MONO,
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          marginTop: 16,
+          letterSpacing: '0.06em',
+        }}
+      >
+        Updated {updatedAt}
       </div>
     </div>
   );
