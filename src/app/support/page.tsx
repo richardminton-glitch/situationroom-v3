@@ -57,6 +57,9 @@ export default function SupportPage() {
             'AI macro analysis (Grok-powered)',
             'Full daily newsletter delivery',
             'Dark mode',
+            'DCA Signal — weekly composite score, recommended buy & 12-month chart',
+            'BTC stacking comparison — signal vs vanilla DCA',
+            'Signal email — weekly DCA-in signal delivered to your inbox',
           ], cta: 'SUBSCRIBE' },
           { tier: 'Members', price: pricing ? `${formatSats(pricing.tierPricesSats.members)} sats/mo` : '...', color: '#4a6fa5', subtitle: 'Price of a beer', features: [
             'Everything in General',
@@ -74,6 +77,9 @@ export default function SupportPage() {
             'Personalised VIP briefings by topic',
             'Threshold alerts via Nostr DM',
             'VIP newsletter topics',
+            'DCA Exit Strategy — signal-timed profit taking on excess BTC',
+            'Combined portfolio chart — buy + exit simulation with convergence',
+            'VIP signal email — combined DCA in/out weekly signal',
             'Lifetime access — pay once, never expires',
           ], cta: 'SUBSCRIBE' },
         ].map(({ tier, price, color, subtitle, features, cta }) => (
