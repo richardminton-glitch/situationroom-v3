@@ -48,7 +48,6 @@ export function HashrateDistribution({
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const top5 = regions.slice(0, 5);
-  const displayAlerts = alerts.slice(0, 2);
 
   const trendColor = (trend: string) => {
     if (trend === 'up' || trend === 'rising') return isDark ? '#2dd4bf' : '#4a7c59';
@@ -60,12 +59,6 @@ export function HashrateDistribution({
     if (trend === 'up' || trend === 'rising') return '\u25B2';
     if (trend === 'down' || trend === 'falling') return '\u25BC';
     return '\u2014';
-  };
-
-  const severityColor = (severity: string) => {
-    if (severity === 'critical') return 'var(--accent-danger)';
-    if (severity === 'warning') return '#f59e0b';
-    return 'var(--accent-primary)';
   };
 
   return (
@@ -241,45 +234,6 @@ export function HashrateDistribution({
           </div>
         ))}
       </div>
-
-      {/* Inline alerts */}
-      {displayAlerts.length > 0 && (
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {displayAlerts.map((a, i) => (
-            <div
-              key={i}
-              style={{
-                borderLeft: `3px solid ${severityColor(a.severity)}`,
-                padding: '8px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  flex: 1,
-                }}
-              >
-                {a.headline}
-              </div>
-              <div
-                style={{
-                  fontFamily: MONO,
-                  fontSize: 9,
-                  color: 'var(--text-muted)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {a.date}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Updated timestamp */}
       <div

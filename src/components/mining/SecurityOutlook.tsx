@@ -45,8 +45,6 @@ export function SecurityOutlook({
     return `$${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   };
 
-  const paragraphs = editorial.body.split('\n\n');
-
   const subsidyBarWidth = current.dailyTotalUsd > 0
     ? (current.dailySubsidyUsd / current.dailyTotalUsd) * 60
     : 0;
@@ -68,47 +66,6 @@ export function SecurityOutlook({
         }}
       >
         THE LONG VIEW
-      </div>
-
-      {/* Editorial container */}
-      <div
-        style={{
-          borderLeft: '3px solid var(--accent-primary)',
-          paddingLeft: 20,
-          marginBottom: 20,
-        }}
-      >
-        {/* Title */}
-        <div
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 18,
-            fontWeight: 400,
-            letterSpacing: '0.02em',
-            color: 'var(--text-primary)',
-            marginBottom: 14,
-          }}
-        >
-          {editorial.title}
-        </div>
-
-        {/* Body paragraphs */}
-        {paragraphs.map((p, i) => (
-          <p
-            key={i}
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: i === 0 ? 14 : 13,
-              lineHeight: 1.75,
-              color: 'var(--text-secondary)',
-              marginBottom: 12,
-              marginTop: 0,
-              maxWidth: 640,
-            }}
-          >
-            {p}
-          </p>
-        ))}
       </div>
 
       {/* Security budget strip */}
