@@ -10,7 +10,13 @@
 import { useEffect, useState }  from 'react';
 import { useAuth }              from '@/components/layout/AuthProvider';
 import { CycleGaugePage }       from '@/components/cycle-gauge/CycleGaugePage';
-import type { CycleGaugeResponse } from '@/app/api/cycle-gauge/route';
+
+// Inline — do NOT import from the route file (it uses fs/path).
+interface CycleGaugeResponse {
+  composite: number; phase: string; phaseColor: string;
+  btcPrice: number; indicators: unknown[]; confidence: unknown;
+  timestamp: string; [key: string]: unknown;
+}
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
