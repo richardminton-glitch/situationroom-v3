@@ -256,7 +256,13 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const exitWeeks  = periodHistory.filter(r => r.sellMult > 0).length;
   const totalWeeks = periodHistory.length;
 
-  // Combined portfolio chart: buy signal + exit signal merged
+  // Combined portfolio chart — in-period re-simulation.
+  // The all-time distribution history includes exits from pre-period excess
+  // (e.g. 2021 exits clearing 2013-2020 accumulated BTC).  Using it directly
+  // for a period-zeroed chart produces misleading convergence.  Instead we
+  // re-simulate the period from scratch: track only the BTC bought/sold since
+  // the period start and apply compositeToExcessRate() week-by-week so the
+  // teal line genuinely reflects what a fresh-start investor would see.
   const portData = (() => {
     if (!stackHistory.length || !history.length) return [];
     const startIdx = period === 'ALL' || !cutoff
@@ -265,25 +271,34 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     if (startIdx < 0) return [];
 
     const prevStack = startIdx > 0 ? stackHistory[startIdx - 1] : null;
-    const prevDist  = startIdx > 0 ? history[startIdx - 1]      : null;
-
     const sBuyBase  = prevStack?.btcSignal  ?? 0;
     const sVanBase  = prevStack?.btcVanilla ?? 0;
-    const dSoldBase = prevDist?.btcSignal   ?? 0;
-    const uBase     = prevDist?.usdSignal   ?? 0;
+
+    // Re-simulate in-period exits fresh (independent of all-time distribution)
+    let inPeriodSold = 0;
+    let inPeriodUsd  = 0;
 
     return stackHistory.slice(startIdx).map((s, i) => {
       const d = history[startIdx + i];
       if (!d) return null;
-      const deltaBought  = (s.btcSignal  - sBuyBase);
-      const deltaVanilla = (s.btcVanilla - sVanBase);
-      const deltaSold    = (d.btcSignal  - dSoldBase);
-      const deltaUsd     = (d.usdSignal  - uBase);
+
+      const inBought  = s.btcSignal  - sBuyBase;   // BTC bought by signal since period start
+      const inVanilla = s.btcVanilla - sVanBase;    // BTC bought by vanilla since period start
+
+      // In-period excess: signal bought more than vanilla, minus what was already exited
+      const inExcess = Math.max(0, inBought - inVanilla - inPeriodSold);
+
+      // Sell a fraction of in-period excess this week when composite is in exit zone
+      const wExitRate = compositeToExcessRate(d.composite);
+      const soldThisWeek = inExcess * wExitRate;
+      inPeriodSold += soldThisWeek;
+      inPeriodUsd  += soldThisWeek * s.price;
+
       return {
         date:      s.date,
-        netBtcSig: Math.max(0, (deltaBought - deltaSold) * buyScale),
-        netBtcVan: Math.max(0, deltaVanilla * buyScale),
-        usdSig:    deltaUsd * buyScale,
+        netBtcSig: Math.max(0, (inBought - inPeriodSold) * buyScale),
+        netBtcVan: Math.max(0, inVanilla  * buyScale),
+        usdSig:    inPeriodUsd * buyScale,
       };
     }).filter((r): r is NonNullable<typeof r> => r !== null);
   })();
