@@ -135,6 +135,9 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
     );
   }
 
+  // Guard against empty history (e.g. stale cache with no computed data)
+  if (!stackingHistory?.length) return null;
+
   // Filter to selected period
   const lastDate   = stackingHistory[stackingHistory.length - 1].date;
   const cutoff     = period === 'ALL'

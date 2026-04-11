@@ -204,7 +204,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const history = data.distributionHistory ?? [];
   const scale   = baseSell / 100;
   const lastDate = history.at(-1)?.date ?? '';
-  const cutoff   = period === 'ALL' ? '' : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
+  const cutoff   = period === 'ALL' || !lastDate ? '' : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
 
   type ChartRow = DistributionPoint & { weeklyUsd: number };
   const chartData: ChartRow[] = (() => {
