@@ -6,6 +6,7 @@ import { HeroGauge }          from './HeroGauge';
 import { IndicatorGrid }      from './IndicatorGrid';
 import { ConfidenceDisplay }  from './ConfidenceDisplay';
 import { HistoricalAnalogues } from './HistoricalAnalogues';
+import { DrawdownChart }       from './DrawdownChart';
 
 interface Props {
   data:    CycleGaugeResponse | null;
@@ -130,6 +131,11 @@ export function CycleGaugePage({ data, loading, error }: Props) {
         <Divider />
 
         <HistoricalAnalogues />
+
+        <Divider />
+
+        {/* Drawdown chart */}
+        <DrawdownChart />
 
         {/* Footer */}
         <div style={{
