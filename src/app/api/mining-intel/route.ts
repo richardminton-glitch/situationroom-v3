@@ -25,6 +25,7 @@ import {
   computeEnergyGravitySeries,
 } from '@/lib/signals/mining-engine';
 import type { HashPricePoint, EnergyGravityPoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult, HashRibbonResult } from '@/lib/signals/mining-engine';
+// EnergyGravityPoint is used in the response type
 
 export const dynamic = 'force-dynamic';
 
@@ -290,9 +291,11 @@ export async function GET() {
     );
 
     // ── Compute energy gravity ──
-    const energyGravityHistory = computeEnergyGravitySeries(hashPriceHistory, efficiency);
+    const energyGravityHistory = computeEnergyGravitySeries(
+      prices, hashrates, dates, efficiency, globalAvgEnergy,
+    );
     const currentEnergyGravity = energyGravityHistory.length > 0
-      ? energyGravityHistory[energyGravityHistory.length - 1].gravity
+      ? energyGravityHistory[energyGravityHistory.length - 1].gravityKwh
       : 0;
 
     // ── Compute hash ribbon ──

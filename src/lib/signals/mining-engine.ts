@@ -49,31 +49,57 @@ export function computeHashPriceSeries(
 
 export interface EnergyGravityPoint {
   date: string;
-  gravity: number;    // $/kWh — max affordable electricity price
-  hashPrice: number;
+  btcPrice: number;           // actual BTC spot price
+  productionCost: number;     // cost to produce 1 BTC (the "Energy Mass")
+  gravityKwh: number;         // max affordable $/kWh (breakeven electricity)
 }
 
 /**
  * Compute Energy Gravity series (Blockware model).
  *
- * Energy Gravity = the breakeven electricity rate for modern ASICs.
- * Formula: gravity = hashPrice / ((efficiency / 1000) × 24)
+ * The chart shows BTC price vs production cost ("Energy Mass").
+ * Price oscillates around production cost — pulled back like gravity.
  *
- * Where efficiency is J/TH. At 25 J/TH and $0.0345 hash price:
- * gravity = 0.0345 / (0.025 × 24) = $0.0575/kWh
+ * Production Cost per BTC = (hashrate_EH × 1e6 × efficiency_J/TH × energyCost_$/kWh × 24)
+ *                           / (subsidy × blocksPerDay × 1000)
  *
- * When gravity > your electricity cost, mining is profitable.
+ * Also computes the breakeven electricity rate (gravityKwh).
  */
 export function computeEnergyGravitySeries(
-  hashPriceHistory: HashPricePoint[],
+  prices: number[],
+  hashratesEH: number[],
+  dates: string[],
   efficiencyJPerTH: number = 25,
+  energyCostKwh: number = 0.05,
+  subsidyBtc: number = 3.125,
+  blocksPerDay: number = 144,
 ): EnergyGravityPoint[] {
-  const divisor = (efficiencyJPerTH / 1000) * 24; // kWh per TH per day
-  return hashPriceHistory.map(hp => ({
-    date: hp.date,
-    gravity: divisor > 0 ? hp.hashPrice / divisor : 0,
-    hashPrice: hp.hashPrice,
-  }));
+  const len = Math.min(prices.length, hashratesEH.length, dates.length);
+  const result: EnergyGravityPoint[] = [];
+  const dailyBtcMined = subsidyBtc * blocksPerDay;
+
+  for (let i = 0; i < len; i++) {
+    const p = prices[i];
+    const h = hashratesEH[i];
+    if (!p || !h || h <= 0) continue;
+
+    // Network power in kW = hashrate_EH × 1e6 (TH) × efficiency (J/TH) / 1000
+    const networkPowerKW = h * 1e6 * efficiencyJPerTH / 1000;
+    // Daily energy cost = kW × 24h × $/kWh
+    const dailyEnergyCost = networkPowerKW * 24 * energyCostKwh;
+    // Production cost per BTC
+    const productionCost = dailyBtcMined > 0 ? dailyEnergyCost / dailyBtcMined : 0;
+
+    // Breakeven electricity (max affordable $/kWh)
+    const hashPrice = (subsidyBtc * blocksPerDay * p) / (h * 1e6);
+    const gravityKwh = (efficiencyJPerTH / 1000) * 24 > 0
+      ? hashPrice / ((efficiencyJPerTH / 1000) * 24)
+      : 0;
+
+    result.push({ date: dates[i], btcPrice: p, productionCost, gravityKwh });
+  }
+
+  return result;
 }
 
 // ── Margin Signal ───────────────────────────────────────────────────────────

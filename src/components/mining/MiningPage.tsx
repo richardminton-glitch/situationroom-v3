@@ -119,10 +119,10 @@ export function MiningPage({ data, loading, error }: Props) {
           </div>
 
           {/* Energy Gravity — full width below */}
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 24 }}>
             <EnergyGravityChart
               history={data.energyGravity.history}
-              current={data.energyGravity.current}
+              currentGravityKwh={data.energyGravity.current}
               globalAvgKwh={data.energyPrices.globalWeightedAvg}
               theme={theme}
             />
