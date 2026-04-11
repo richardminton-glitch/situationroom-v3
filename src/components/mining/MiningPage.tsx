@@ -141,6 +141,7 @@ export function MiningPage({ data, loading, error }: Props) {
           }}>
             {[
               { label: 'HASH PRICE', value: `$${data.hashPrice.current.toFixed(4)}`, color: signalColor, sub: signalLabel },
+              { label: 'ENERGY VALUE', value: `$${formatPrice(data.energyValue.fairValue, 0)}`, sub: `${data.energyValue.premiumPct > 0 ? '+' : ''}${data.energyValue.premiumPct.toFixed(0)}% vs spot`, color: data.energyValue.premiumPct < 0 ? 'var(--accent-success)' : undefined },
               { label: 'DIFFICULTY', value: `${data.difficultyT.toFixed(1)} T` },
               { label: 'SECURITY BUDGET', value: `$${formatLargeNumber(dailyBudget)}/d`, sub: `${subsidyPct.toFixed(0)}% subsidy` },
               { label: 'BTC', value: `$${formatPrice(data.btcPrice, 0)}` },

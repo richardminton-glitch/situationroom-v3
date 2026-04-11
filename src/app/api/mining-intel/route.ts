@@ -20,8 +20,9 @@ import {
   computeMarginSignal,
   computeSecurityBudgetScenarios,
   computeBreakevenBtcPrice,
+  computeEnergyValue,
 } from '@/lib/signals/mining-engine';
-import type { HashPricePoint, MarginSignal, SecurityBudgetProjection } from '@/lib/signals/mining-engine';
+import type { HashPricePoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult } from '@/lib/signals/mining-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,10 +121,14 @@ export interface MiningIntelResponse {
     updatedAt: string;
   };
 
+  // Energy Value Model (Capriole / Fidelity)
+  energyValue: EnergyValueResult;
+
   // Common
   btcPrice: number;
   hashrateEH: number;
   difficultyT: number;
+  circulatingSupply: number;
   timestamp: string;
 }
 
@@ -226,6 +231,7 @@ export async function GET() {
       naturalGas: { priceMMBtu: number; impliedKwh: number };
       globalWeightedAvg: number;
       efficientMinerJPerTH: number;
+      fleetEfficiencyJPerTH?: number;
     }>('energy-prices-cache.json');
 
     const gasData = readJSON<{
@@ -259,6 +265,14 @@ export async function GET() {
     // Breakeven BTC price
     const breakevenBtcPrice = computeBreakevenBtcPrice(
       hashrateEH, globalAvgEnergy, efficiency,
+    );
+
+    // ── Compute Energy Value (Capriole model) ──
+    // Circulating supply: ~19.85M in Apr 2026, grows ~900/day. Updated quarterly is fine.
+    const circulatingSupply = 19_850_000;
+    const fleetEfficiency = energyData?.fleetEfficiencyJPerTH ?? 30;
+    const energyValueResult = computeEnergyValue(
+      hashrateEH, fleetEfficiency, circulatingSupply, btcPrice,
     );
 
     // ── Compute security budget ──
@@ -306,9 +320,11 @@ export async function GET() {
       },
       securityBudget: budgetScenarios,
       editorial: editorialData ?? { title: '', body: '', updatedAt: '' },
+      energyValue: energyValueResult,
       btcPrice,
       hashrateEH,
       difficultyT,
+      circulatingSupply,
       timestamp: new Date().toISOString(),
     };
 

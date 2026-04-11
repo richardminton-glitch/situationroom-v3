@@ -222,6 +222,75 @@ export function computeSecurityBudgetScenarios(
   };
 }
 
+// ── Energy Value Model (Capriole / Fidelity) ────────────────────────────────
+
+export interface EnergyValueResult {
+  fairValue: number;           // USD — model's estimate of Bitcoin's "fair value"
+  premiumPct: number;          // % — how far spot is above/below fair value
+  fleetEfficiency: number;     // J/TH — the fleet average used
+  energyInputGW: number;       // network power consumption in GW
+  supplyGrowthRate: number;    // fractional growth rate (1/s)
+}
+
+/**
+ * Compute Bitcoin's Energy Value (Charles Edwards / Capriole model).
+ *
+ * Formula: EV = (Hashrate_H × FleetEfficiency_J/H) / SupplyGrowthRate × FiatFactor
+ *
+ * Where:
+ *   - Hashrate in H/s
+ *   - FleetEfficiency = average J per hash across active mining fleet
+ *   - SupplyGrowthRate = (new_coins_per_second) / circulating_supply (1/s)
+ *   - FiatFactor = 2.0 × 10⁻¹⁵ $/J (fixed constant from model)
+ *
+ * The fleet efficiency is the hardest input — it's not the latest ASIC (25 J/TH)
+ * but the weighted average across the active fleet (~30 J/TH in 2026).
+ */
+export function computeEnergyValue(
+  hashrateEH: number,
+  fleetEfficiencyJPerTH: number,
+  circulatingSupply: number,
+  btcPrice: number,
+  subsidyBtc: number = 3.125,
+  blocksPerDay: number = 144,
+): EnergyValueResult {
+  const FIAT_FACTOR = 2.0e-15;
+
+  // Convert hashrate to H/s
+  const hashrateH = hashrateEH * 1e18;
+
+  // Convert fleet efficiency from J/TH to J/H
+  const fleetEfficiencyJPerH = fleetEfficiencyJPerTH * 1e-12;
+
+  // Energy input (Watts = J/s)
+  const energyInputW = hashrateH * fleetEfficiencyJPerH;
+  const energyInputGW = energyInputW / 1e9;
+
+  // Supply growth rate: new coins per second / circulating supply
+  const newCoinsPerSecond = (subsidyBtc * blocksPerDay) / 86400;
+  const supplyGrowthRate = circulatingSupply > 0
+    ? newCoinsPerSecond / circulatingSupply
+    : 0;
+
+  // Energy Value = energy_input / supply_growth_rate × fiat_factor
+  const fairValue = supplyGrowthRate > 0
+    ? (energyInputW / supplyGrowthRate) * FIAT_FACTOR
+    : 0;
+
+  // Premium/discount vs spot
+  const premiumPct = fairValue > 0
+    ? ((btcPrice - fairValue) / fairValue) * 100
+    : 0;
+
+  return {
+    fairValue,
+    premiumPct,
+    fleetEfficiency: fleetEfficiencyJPerTH,
+    energyInputGW,
+    supplyGrowthRate,
+  };
+}
+
 // ── Breakeven BTC Price ─────────────────────────────────────────────────────
 
 /**
