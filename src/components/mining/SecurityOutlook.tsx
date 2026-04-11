@@ -21,6 +21,7 @@ interface Props {
   nextHalving: SecurityBudgetProjection | null;
   energyValueFair: number;
   energyValuePremiumPct: number;
+  fleetEfficiency: number;
   btcPrice: number;
 }
 
@@ -30,6 +31,7 @@ export function SecurityOutlook({
   nextHalving,
   energyValueFair,
   energyValuePremiumPct,
+  fleetEfficiency,
   btcPrice,
 }: Props) {
   const { theme } = useTheme();
@@ -223,9 +225,7 @@ export function SecurityOutlook({
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        Energy Value model: {fmtFairValue(energyValueFair)} fair value (
-        {energyValuePremiumPct > 0 ? '+' : ''}
-        {energyValuePremiumPct.toFixed(0)}% vs spot)
+        Energy Value model: {fmtFairValue(energyValueFair)} fair value — spot {Math.abs(energyValuePremiumPct).toFixed(0)}% {energyValuePremiumPct < 0 ? 'below' : 'above'} fair value (fleet: {fleetEfficiency} J/TH)
       </div>
 
       {/* Updated timestamp */}

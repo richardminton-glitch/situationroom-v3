@@ -158,6 +158,7 @@ export function MiningPage({ data, loading, error }: Props) {
             nextHalving={nextHalving}
             energyValueFair={data.energyValue.fairValue}
             energyValuePremiumPct={data.energyValue.premiumPct}
+            fleetEfficiency={data.energyValue.fleetEfficiency}
             btcPrice={data.btcPrice}
           />
         </section>
