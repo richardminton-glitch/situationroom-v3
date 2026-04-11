@@ -18,11 +18,10 @@ import { useIsMobile }     from '@/hooks/useIsMobile';
 import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
-import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier } from '@/lib/signals/dca-exit-utils';
+import { DCA_CROSSOVER, compositeToSellMult, compositeToExitTier, compositeToExcessRate } from '@/lib/signals/dca-exit-utils';
 import { VIPEmailSignup } from './VIPEmailSignup';
 
 const FONT      = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
-const LS_SELL   = 'sr-dca-base-sell';
 const LS_PERIOD = 'sr-dca-out-period';
 
 type Period = '1Y' | '3Y' | '5Y' | 'ALL';
@@ -130,36 +129,13 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const isVip = canAccess('vip');
 
   const [period, setPeriod] = useState<Period>('5Y');
-  const [baseSell, setBaseSell] = useState(baseAmount);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LS_SELL);
-      if (stored) {
-        const n = parseInt(stored, 10);
-        if (!isNaN(n) && n > 0) { setBaseSell(n); return; }
-      }
-      setBaseSell(baseAmount);
-    } catch { setBaseSell(baseAmount); }
     try {
       const p = localStorage.getItem(LS_PERIOD) as Period | null;
       if (p && PERIODS.some(x => x.label === p)) setPeriod(p);
     } catch { /* noop */ }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keep baseSell in sync when baseAmount changes (unless user has overridden)
-  useEffect(() => {
-    try { if (!localStorage.getItem(LS_SELL)) setBaseSell(baseAmount); }
-    catch { setBaseSell(baseAmount); }
-  }, [baseAmount]);
-
-  function handleSellChange(val: string) {
-    const n = parseInt(val, 10);
-    if (!isNaN(n) && n > 0 && n <= 9_999_999) {
-      setBaseSell(n);
-      try { localStorage.setItem(LS_SELL, String(n)); } catch { /* noop */ }
-    }
-  }
 
   function handlePeriod(p: Period) {
     setPeriod(p);
@@ -169,12 +145,26 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const composite    = data.composite;
   const sellMult     = compositeToSellMult(composite);
   const exitTier     = compositeToExitTier(composite);
+  const exitRate     = compositeToExcessRate(composite);
   const mode         = modeInfo(composite, isDark);
   const inExitZone   = composite < DCA_CROSSOVER;
   const nearCrossover = !inExitZone && composite < 0.85;
 
-  const recommendedSell = Math.round(baseSell * sellMult);
-  const recommendedBtc  = sellMult > 0 ? recommendedSell / data.btcPrice : 0;
+  const stackHistory = data.stackingHistory ?? [];
+  const history      = data.distributionHistory ?? [];
+  const buyScale     = baseAmount / 100;
+
+  // Recommended sell: fraction of excess BTC currently held
+  const latestStack = stackHistory.length > 0 ? stackHistory[stackHistory.length - 1] : null;
+  const latestDist  = history.length > 0 ? history[history.length - 1] : null;
+
+  const excessBtcHeld = latestStack && latestDist
+    ? Math.max(0, latestStack.btcSignal - latestStack.btcVanilla - latestDist.btcSignal) * buyScale
+    : 0;
+
+  const recommendedSellBtc = excessBtcHeld * exitRate;
+  const recommendedSell    = recommendedSellBtc * data.btcPrice;
+  const recommendedBtc     = recommendedSellBtc;
 
   const cPct   = spectrumPct(composite);
   const xPct   = crossoverPct();
@@ -226,8 +216,6 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   }
 
   // ── Chart data ─────────────────────────────────────────────────────────────
-  const history = data.distributionHistory ?? [];
-  const scale   = baseSell / 100;
   const lastDate = history.at(-1)?.date ?? '';
   const cutoff   = period === 'ALL' || !lastDate ? '' : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
 
@@ -245,7 +233,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     return raw.map((r, i) => {
       const prev  = i > 0 ? raw[i - 1] : null;
       const delta = prev ? r.usdSignal - prev.usdSignal : r.usdSignal - baseline;
-      return { ...r, weeklyUsd: Math.max(0, delta) * scale };
+      return { ...r, weeklyUsd: Math.max(0, delta) * buyScale };
     });
   })();
 
@@ -256,46 +244,46 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const periodStart   = cutoff ? history.filter(r => r.date < cutoff).at(-1) : null;
   const periodEnd     = periodHistory.at(-1);
 
-  // Period-aware efficiency: $ received per BTC sold vs vanilla baseline
-  const { effAdvPct, noExitsInPeriod } = (() => {
-    if (!periodEnd) return { effAdvPct: 0, noExitsInPeriod: true };
-    const usdSig = periodEnd.usdSignal  - (periodStart?.usdSignal  ?? 0);
-    const btcSig = periodEnd.btcSignal  - (periodStart?.btcSignal  ?? 0);
-    const usdVan = periodEnd.usdVanilla - (periodStart?.usdVanilla ?? 0);
-    const btcVan = periodEnd.btcVanilla - (periodStart?.btcVanilla ?? 0);
-    const effSig  = btcSig > 0.000001 ? usdSig / btcSig : 0;
-    const effVan  = btcVan > 0.000001 ? usdVan / btcVan : 0;
-    const adv     = effVan > 0 ? ((effSig - effVan) / effVan) * 100 : 0;
-    return { effAdvPct: adv, noExitsInPeriod: btcSig <= 0.000001 };
+  // Period-aware efficiency: total USD captured from excess BTC
+  const { periodUsdSig, periodBtcSig, noExitsInPeriod } = (() => {
+    if (!periodEnd) return { periodUsdSig: 0, periodBtcSig: 0, noExitsInPeriod: true };
+    const usdSig = (periodEnd.usdSignal - (periodStart?.usdSignal ?? 0));
+    const btcSig = (periodEnd.btcSignal - (periodStart?.btcSignal ?? 0));
+    return { periodUsdSig: usdSig, periodBtcSig: btcSig, noExitsInPeriod: btcSig < 0.000001 };
   })();
 
   // Period-aware exit weeks count
   const exitWeeks  = periodHistory.filter(r => r.sellMult > 0).length;
   const totalWeeks = periodHistory.length;
 
-  // Combined portfolio chart: buy signal + sell signal merged
-  const stackHistory   = data.stackingHistory ?? [];
-  const buyScale       = baseAmount / 100;
+  // Combined portfolio chart: buy signal + exit signal merged
   const portData = (() => {
-    if (!stackHistory.length || !history.length || stackHistory.length !== history.length) return [];
+    if (!stackHistory.length || !history.length) return [];
     const startIdx = period === 'ALL' || !cutoff
       ? 0
       : stackHistory.findIndex(s => s.date >= cutoff);
     if (startIdx < 0) return [];
+
     const prevStack = startIdx > 0 ? stackHistory[startIdx - 1] : null;
     const prevDist  = startIdx > 0 ? history[startIdx - 1]      : null;
-    const sBase  = prevStack?.btcSignal  ?? 0;
-    const sVBase = prevStack?.btcVanilla ?? 0;
-    const dBase  = prevDist?.btcSignal   ?? 0;
-    const uBase  = prevDist?.usdSignal   ?? 0;
+
+    const sBuyBase  = prevStack?.btcSignal  ?? 0;
+    const sVanBase  = prevStack?.btcVanilla ?? 0;
+    const dSoldBase = prevDist?.btcSignal   ?? 0;
+    const uBase     = prevDist?.usdSignal   ?? 0;
+
     return stackHistory.slice(startIdx).map((s, i) => {
       const d = history[startIdx + i];
       if (!d) return null;
+      const deltaBought  = (s.btcSignal  - sBuyBase);
+      const deltaVanilla = (s.btcVanilla - sVanBase);
+      const deltaSold    = (d.btcSignal  - dSoldBase);
+      const deltaUsd     = (d.usdSignal  - uBase);
       return {
         date:      s.date,
-        netBtcSig: Math.max(0, (s.btcSignal  - sBase)  * buyScale  - (d.btcSignal  - dBase)  * scale),
-        netBtcVan: Math.max(0, (s.btcVanilla - sVBase) * buyScale),
-        usdSig:    (d.usdSignal - uBase) * scale,
+        netBtcSig: Math.max(0, (deltaBought - deltaSold) * buyScale),
+        netBtcVan: Math.max(0, deltaVanilla * buyScale),
+        usdSig:    deltaUsd * buyScale,
       };
     }).filter((r): r is NonNullable<typeof r> => r !== null);
   })();
@@ -319,9 +307,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           DCA EXIT STRATEGY
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {effAdvPct > 0 && (
+          {!noExitsInPeriod && isVip && (
             <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.08em' }}>
-              +{effAdvPct.toFixed(1)}% MORE $ PER BTC ({period})
+              EXCESS BTC CAPTURED: {formatBtc(periodBtcSig * buyScale)} → {formatUsd(periodUsdSig * buyScale, true)} · {period}
             </span>
           )}
           {noExitsInPeriod && isVip && history.length > 0 && (
@@ -434,60 +422,39 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           pointerEvents: isVip ? 'auto' : 'none',
         }}>
 
-          {/* Calculator row */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
-
-            {/* Base sell input */}
-            <div style={{ padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>BASE SELL / WEEK</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>$</span>
-                <input
-                  type="number" min={1} max={9999999} value={baseSell}
-                  onChange={e => handleSellChange(e.target.value)}
-                  style={{ width: 112, fontSize: 15, fontFamily: FONT, background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', padding: '4px 8px', outline: 'none', transition: 'none' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = isDark ? '#00d4c8' : '#4a7c59'; }}
-                  onBlur={e  => { e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
-                />
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                Your base weekly distribution amount · multiplied by exit signal
-              </div>
-            </div>
-
-            {/* This week recommendation */}
-            <div style={{
-              padding: '14px 16px',
-              background: inExitZone ? 'rgba(196,136,90,0.05)' : 'var(--bg-card)',
-              border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid var(--border-subtle)',
-            }}>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
-              {inExitZone ? (
-                <>
-                  <div style={{ fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '0.02em', marginBottom: 4 }}>
-                    {formatUsd(recommendedSell)}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                    ≈ {recommendedBtc.toFixed(4)} BTC · {sellMult.toFixed(1)}× your ${baseSell.toLocaleString()} base
-                  </div>
-                  <div style={{ fontSize: 10, color: mode.colour, letterSpacing: '0.08em', marginTop: 6 }}>
-                    {exitTier.toUpperCase()}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize: 20, color: 'var(--text-muted)', letterSpacing: '0.02em', marginBottom: 4 }}>
-                    $0
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    Signal in accumulate zone — no exits this week
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 6 }}>
-                    Exits begin when composite falls below {DCA_CROSSOVER.toFixed(2)}×
-                  </div>
-                </>
-              )}
-            </div>
+          {/* This week recommendation */}
+          <div style={{
+            padding: '14px 16px',
+            marginBottom: 16,
+            background: inExitZone ? 'rgba(196,136,90,0.05)' : 'var(--bg-card)',
+            border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid var(--border-subtle)',
+          }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
+            {inExitZone ? (
+              <>
+                <div style={{ fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '0.02em', marginBottom: 4 }}>
+                  {formatUsd(recommendedSell)}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                  ≈ {formatBtc(recommendedBtc)} · {(exitRate * 100).toFixed(0)}% of excess · {formatBtc(excessBtcHeld)} available
+                </div>
+                <div style={{ fontSize: 10, color: mode.colour, letterSpacing: '0.08em', marginTop: 6 }}>
+                  {exitTier.toUpperCase()}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 20, color: 'var(--text-muted)', letterSpacing: '0.02em', marginBottom: 4 }}>
+                  $0
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Signal in accumulate zone — no exits this week
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 6 }}>
+                  Exits begin when composite falls below {DCA_CROSSOVER.toFixed(2)}×
+                </div>
+              </>
+            )}
           </div>
 
           {/* Chart: weekly exit amounts over time */}
@@ -526,7 +493,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                   />
                   <YAxis
                     yAxisId="left" domain={[0, 'auto']}
-                    tickFormatter={v => formatUsd(v * scale, true)}
+                    tickFormatter={v => formatUsd(v, true)}
                     tick={{ fontFamily: FONT, fontSize: 10, fill: 'var(--text-secondary)' }}
                     axisLine={false} tickLine={false} width={52}
                   />
@@ -563,9 +530,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             <p style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', margin: 0 }}>
               EXITS TRIGGER WHEN COMPOSITE DROPS BELOW {DCA_CROSSOVER.toFixed(2)}× · SAME SIGNAL, INVERTED LOGIC · NOT FINANCIAL ADVICE
             </p>
-            {effAdvPct > 0 && (
+            {!noExitsInPeriod && (
               <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
-                SIGNAL EXITS: +{effAdvPct.toFixed(1)}% MORE $ PER BTC vs VANILLA · {period}
+                EXCESS BTC CAPTURED: {formatBtc(periodBtcSig * buyScale)} → {formatUsd(periodUsdSig * buyScale, true)} · {period}
               </span>
             )}
             {noExitsInPeriod && history.length > 0 && (
@@ -585,7 +552,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                   COMBINED PORTFOLIO · BUY + EXIT SIMULATION
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                  ${baseAmount.toLocaleString()}/week DCA in · ${baseSell.toLocaleString()}/week base sell · at current BTC price
+                  ${baseAmount.toLocaleString()}/week DCA in · exits auto-sized to excess BTC · at current BTC price
                 </div>
               </div>
 
@@ -618,7 +585,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                     </div>
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>USD FROM EXITS</div>
-                      <div style={{ fontSize: 15, color: 'var(--text-muted)', fontWeight: 600 }}>$0</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-muted)', fontWeight: 600 }}>(no exits)</div>
                     </div>
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>TOTAL VALUE</div>
@@ -700,7 +667,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
           <DCAFaqSection isDark={isDark} />
 
           {/* VIP email signup — receive combined in/out signal by email */}
-          <VIPEmailSignup baseAmount={baseSell} />
+          <VIPEmailSignup baseAmount={baseAmount} />
 
         </div>
 
@@ -719,8 +686,18 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
 const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
   {
-    q: 'What is this DCA in/out strategy?',
-    a: 'The DCA Signal is a composite on-chain indicator that scores Bitcoin\'s current valuation on a scale of roughly 0–2.5. Values above 0.70× indicate an accumulation environment — you buy. Values below 0.70× indicate an overheated or distribution environment — you begin taking profits. The goal is to buy more when Bitcoin is cheap relative to its own history, and to systematically recycle profits when the market overheats — compounding both your BTC stack and your USD reserves over each cycle.',
+    q: 'What is the core idea behind this strategy?',
+    a: (
+      <>
+        The strategy has two phases that work as a closed loop:
+        <br /><br />
+        <strong>Phase 1 — Accumulate:</strong> When on-chain signals show Bitcoin is undervalued, the signal buys <em>more</em> than vanilla DCA each week. Over a bear market or early bull, you build up a meaningful &ldquo;bonus&rdquo; BTC stack above what plain weekly buying would have given you.
+        <br /><br />
+        <strong>Phase 2 — Distribute the bonus:</strong> When on-chain signals show the market is overheating, the strategy systematically sells <em>only that bonus BTC</em> — never touching the core vanilla-equivalent position. You end the cycle with roughly the same BTC as if you had just vanilla DCA&rsquo;d the whole time, but you also have significant USD captured from selling the bonus at peak prices.
+        <br /><br />
+        The result: same BTC, extra cash. No timing the market, no discretion required.
+      </>
+    ),
   },
   {
     q: 'What powers the composite score?',
@@ -728,53 +705,65 @@ const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
       <>
         Two on-chain indicators are blended in a 5:1 weighted ratio:
         <br /><br />
-        <strong>200-Week Moving Average Ratio</strong> — your price divided by the 200-week (≈4-year) rolling average. Ratios at or below 1.0× have historically marked deep value. Ratios above 2–3× have historically marked overvaluation and preceded major corrections.
+        <strong>200-Week Moving Average Ratio</strong> — price divided by the 200-week (≈4-year) rolling average. Ratios at or below 1.0× have historically marked deep value. Ratios above 2–3× have historically marked overvaluation and preceded major drawdowns.
         <br /><br />
-        <strong>Puell Multiple</strong> — the USD value of daily miner issuance divided by its 365-day moving average. Low values (&lt;0.8×) mean miners are earning far below average — a historically reliable accumulation signal. High values (&gt;2.0×) mean miners are earning well above average — a historically reliable distribution signal.
+        <strong>Puell Multiple</strong> — the USD value of daily miner issuance divided by its 365-day average. Low values (&lt;0.8×) mean miners are earning far below normal — historically a strong buy signal. High values (&gt;2.0×) mean miners are earning well above normal — historically a reliable distribution signal.
         <br /><br />
-        The two are combined, normalised against their own expanding historical mean, to produce a single composite score that dampens noise and anchors to context.
+        The two are combined and normalised against their own expanding historical mean, producing a single composite score that is anchored to context rather than absolute price levels.
       </>
     ),
   },
   {
-    q: 'How is the weekly buy amount calculated?',
-    a: 'The composite maps onto a stepped multiplier table calibrated against historical Bitcoin cycles. When the composite is high (deep value), the multiplier increases — you buy more. When it is low (overheated), the multiplier decreases — you buy less or nothing. Your BASE BUY/WEEK × that week\'s multiplier = your recommended weekly purchase. Setting your base to a comfortable recurring amount means the signal scales it automatically without any manual decision-making.',
+    q: 'How are weekly buy amounts calculated?',
+    a: 'The composite maps onto a stepped multiplier table calibrated against historical Bitcoin cycles. A high composite (deep value) increases your weekly buy. A low composite (overheated) reduces it. Your BASE BUY/WEEK × that week\'s multiplier = your recommended purchase. The only input you set is a comfortable recurring base amount — the signal handles the rest automatically.',
   },
   {
-    q: 'When do exits begin, and how are they sized?',
-    a: 'Exits trigger when the composite falls below 0.70× — the crossover point where accumulation flips to distribution. The exit multiplier then scales inversely with the composite: the further below 0.70× it falls, the larger the recommended weekly exit. Your BASE SELL/WEEK × that week\'s exit multiplier = your recommended weekly sale. This means exits are small and tentative at the early stages of overheating, and largest at peak exhaustion — the inverse of what most discretionary traders manage to execute.',
+    q: 'How are exit amounts calculated? Is there a separate sell input?',
+    a: (
+      <>
+        No separate sell input is needed. Exits are <em>auto-sized</em> to your actual excess position.
+        <br /><br />
+        When the composite drops below 0.70×, the strategy calculates how much more BTC you hold than vanilla DCA would have accumulated — your &ldquo;excess&rdquo;. Each week in exit territory, it sells a small percentage of that excess, scaling with how far below the crossover the signal has fallen:
+        <br /><br />
+        • <strong>0.55–0.70×</strong> — 4% of excess per week (light exits)
+        <br />
+        • <strong>0.40–0.55×</strong> — 7% per week
+        <br />
+        • <strong>0.25–0.40×</strong> — 11% per week
+        <br />
+        • <strong>below 0.25×</strong> — 15% per week (heavy distribution)
+        <br /><br />
+        The moment your excess reaches zero — meaning your net BTC equals vanilla — exits stop automatically. You cannot accidentally sell below your vanilla baseline.
+      </>
+    ),
   },
   {
-    q: 'Why are buy and sell base amounts set separately?',
-    a: 'Your capacity to deploy fresh capital each week (buys) and your appetite to book profits (sells) are usually different numbers. Separating them means you can set a modest DCA-in amount aligned with your income, and a larger or smaller base sell aligned with your position size and profit targets — without either number constraining the other.',
-  },
-  {
-    q: 'Why does the signal strategy outperform vanilla DCA?',
-    a: 'Vanilla DCA buys the same amount every week regardless of price conditions, so it acquires Bitcoin at average cost across cheap and expensive periods equally. The signal buys more when Bitcoin is historically undervalued and less when it is overvalued — structurally lowering your average acquisition cost over time. On the exit side, signal exits are concentrated in periods when the market has genuinely overheated, capturing profits at above-average cycle prices rather than selling randomly or never selling at all. The combined effect is more BTC accumulated per dollar deployed, plus a growing USD reserve locked in at historically favourable exit prices.',
+    q: 'Why does this produce the same BTC as vanilla at the end?',
+    a: 'Because exits are strictly bounded by the excess. The signal DCA-in built up bonus BTC above the vanilla baseline. The DCA-out only ever sells that bonus. Once the bonus is gone, there is nothing left to sell. You end with the vanilla baseline intact plus whatever USD the bonus generated when it was sold at elevated market prices. The combined portfolio chart shows this directly — teal net BTC converging toward the grey vanilla line as the bonus is distributed.',
   },
   {
     q: 'What does the combined portfolio chart show?',
     a: (
       <>
-        The chart models both sides of the strategy simultaneously, starting from the beginning of the selected period, scaled to your base buy and base sell amounts:
+        The chart models the full strategy from the start of the selected period, scaled to your base weekly buy amount:
         <br /><br />
-        <strong>Teal line</strong> — net BTC remaining: BTC accumulated via signal DCA-in, minus BTC sold via signal DCA-out exits.
+        <strong>Teal line</strong> — signal net BTC: total bought via signal DCA-in, minus BTC sold via exits. This starts above vanilla (bonus accumulation phase) and converges toward it as exits distribute the bonus during overheated periods.
         <br />
-        <strong>Grey line</strong> — vanilla BTC: all buys held, no exits ever taken.
+        <strong>Grey line</strong> — vanilla BTC: same weekly buy amount, held entirely, no exits ever.
         <br />
         <strong>Amber dashed line</strong> — USD accumulating from signal exits over the period.
         <br /><br />
-        The summary cards show end-of-period totals so you can compare total value (BTC × current price + USD cash) between the two approaches.
+        The summary cards show end-of-period totals: signal BTC remaining + USD captured vs vanilla BTC total value.
       </>
     ),
   },
   {
-    q: 'The signal strategy shows less BTC than vanilla. Does that mean it\'s worse?',
-    a: 'Not at all — it is by design. The signal strategy intentionally sells BTC at peak-zone prices to accumulate USD. A lower BTC count is expected and is always accompanied by a growing USD balance from exits. The correct comparison is total value: (BTC remaining × current price) + (USD from exits). In most historical periods, signal total value exceeds vanilla total value precisely because the exits were timed to overheated markets, not random ones. The summary cards above the chart show this total for both strategies.',
+    q: 'What if the market never gets overheated in a given period?',
+    a: 'If the composite never drops below 0.70× during the selected window, no exits trigger and the signal simply continues accumulating. The DCA-out section will show &ldquo;no signal exits in period&rdquo; and the teal BTC line will track above vanilla the entire time — reflecting pure accumulation with no distribution yet. The bonus builds and waits for the next overheated cycle to be distributed.',
   },
   {
-    q: 'How do I use this practically week to week?',
-    a: 'Check the signal once per week — Monday morning works well, since signals are computed from Sunday\'s close. If the composite is above 0.70×, make your DCA-in purchase at the recommended amount. If it is below 0.70×, make your DCA-out sale at the recommended amount (and skip or reduce your buy). The VIP email signal delivers both numbers to your inbox so you never have to remember to check. Set it, follow it consistently, and let compounding and cycle timing do the work.',
+    q: 'How do I follow this week to week in practice?',
+    a: 'Check the signal once per week — Monday works well since signals compute from Sunday\'s close. If the composite is above 0.70×, make your DCA-in purchase at the recommended amount. If it is below 0.70×, make your DCA-out sale at the recommended amount (and consider skipping or reducing your buy that week). The VIP email signal delivers both numbers directly to your inbox so you never need to remember to check. Set a base amount, subscribe, and let the signal handle the scaling.',
   },
   {
     q: 'Is this financial advice?',

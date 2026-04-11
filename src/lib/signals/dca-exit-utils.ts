@@ -25,3 +25,16 @@ export function compositeToExitTier(composite: number): string {
   if (composite >= 0.25) return 'Increase exits';
   return 'Heavy distribution';
 }
+
+/**
+ * Returns the fraction of held excess BTC to sell per week.
+ * Excess BTC = (signal accumulated - vanilla accumulated) - already sold.
+ * Returns 0 when composite >= DCA_CROSSOVER (accumulate zone — no exits).
+ */
+export function compositeToExcessRate(composite: number): number {
+  if (composite >= DCA_CROSSOVER) return 0;     // accumulate zone — no exits
+  if (composite >= 0.55) return 0.04;            // light exits — 4%/week of excess
+  if (composite >= 0.40) return 0.07;            // building distribution — 7%/week
+  if (composite >= 0.25) return 0.11;            // increase exits — 11%/week
+  return 0.15;                                   // heavy distribution — 15%/week
+}

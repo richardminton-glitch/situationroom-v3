@@ -308,8 +308,8 @@ export function computeBacktestSummary(
 }
 
 // ── Combined strategy crossover (shared with client via dca-exit-utils.ts) ───
-import { DCA_CROSSOVER, compositeToSellMult } from '@/lib/signals/dca-exit-utils';
-export { DCA_CROSSOVER, compositeToSellMult } from '@/lib/signals/dca-exit-utils';
+import { DCA_CROSSOVER, compositeToSellMult, compositeToExcessRate } from '@/lib/signals/dca-exit-utils';
+export { DCA_CROSSOVER, compositeToSellMult, compositeToExcessRate } from '@/lib/signals/dca-exit-utils';
 
 // ── Stacking history helper (shared with API route) ───────────────────────────
 
@@ -370,32 +370,57 @@ export interface DistributionPoint {
  *
  * Signal exits ONLY activate when composite drops below DCA_CROSSOVER (0.70).
  * Above the crossover: the signal is in accumulate territory — no selling.
- * Below the crossover: exits scale up progressively as composite falls further.
- * Vanilla comparison: $100/week flat selling throughout.
+ * Below the crossover: exits sell a fraction of held excess BTC each week.
+ * Excess BTC = (signal accumulated - vanilla accumulated) - already sold.
+ * When excess hits zero, exits stop automatically.
  *
- * Base: $100/week — component scales by user's baseSell.
+ * Base: $100/week — component scales by user's buyScale (baseAmount / 100).
+ * Vanilla never exits — the comparison is BTC accumulated vs BTC retained.
  */
-export function computeDistributionHistory(allRows: CompositeRow[]): DistributionPoint[] {
+export function computeDistributionHistory(
+  allRows: CompositeRow[],
+  stackPts: StackingPoint[],
+): DistributionPoint[] {
   const weeklyRows = sampleWeekly(allRows);
 
-  let usdSignal  = 0;
-  let usdVanilla = 0;
-  let btcSignal  = 0;
-  let btcVanilla = 0;
+  // Build a date→StackingPoint map for O(1) lookup
+  const stackMap = new Map<string, StackingPoint>();
+  for (const sp of stackPts) stackMap.set(sp.date, sp);
+
+  let btcSignalSold  = 0;
+  let usdSignalTotal = 0;
   const result: DistributionPoint[] = [];
 
   for (const row of weeklyRows) {
     const c        = row.normalisedComposite;
-    const sellMult = compositeToSellMult(c);   // 0 above crossover
-    const spend    = 100 * sellMult;            // $0 in accumulate zone
-    usdSignal  += spend;
-    usdVanilla += 100;
-    btcSignal  += spend      / row.price;
-    btcVanilla += 100        / row.price;
+    const exitRate = compositeToExcessRate(c);   // fraction of excess BTC to sell this week
+    const sellMult = compositeToSellMult(c);     // keep for tier display in UI
+
+    let btcSoldThisWeek = 0;
+    let usdThisWeek     = 0;
+
+    if (exitRate > 0) {
+      const sp = stackMap.get(row.date);
+      if (sp) {
+        // Excess BTC currently held = (signal bought - vanilla bought) - already sold
+        const excessHeld = Math.max(0, sp.btcSignal - sp.btcVanilla - btcSignalSold);
+        btcSoldThisWeek  = excessHeld * exitRate;
+        usdThisWeek      = btcSoldThisWeek * row.price;
+      }
+    }
+
+    btcSignalSold  += btcSoldThisWeek;
+    usdSignalTotal += usdThisWeek;
+
     result.push({
-      date: row.date, price: row.price,
-      composite: c, sellMult,
-      usdSignal, usdVanilla, btcSignal, btcVanilla,
+      date:       row.date,
+      price:      row.price,
+      composite:  c,
+      sellMult,
+      usdSignal:  usdSignalTotal,
+      usdVanilla: 0,   // vanilla never exits
+      btcSignal:  btcSignalSold,
+      btcVanilla: 0,
     });
   }
 

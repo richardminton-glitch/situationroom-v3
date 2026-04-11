@@ -76,7 +76,7 @@ export async function GET() {
     const chartData          = compositeRows.slice(-365);
     const backtestSummary    = computeBacktestSummary(compositeRows, latest.price);
     const stackingHistory    = computeStackingHistory(compositeRows);
-    const distributionHistory = computeDistributionHistory(compositeRows);
+    const distributionHistory = computeDistributionHistory(compositeRows, stackingHistory);
 
     const response: BtcSignalResponse = {
       composite:       latest.normalisedComposite,
