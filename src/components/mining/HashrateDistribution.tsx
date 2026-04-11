@@ -102,7 +102,7 @@ export function HashrateDistribution({
               cursor: 'default',
             }}
           >
-            {r.share > 6 && (
+            {r.share > 0.06 && (
               <span
                 style={{
                   fontFamily: MONO,
@@ -112,7 +112,7 @@ export function HashrateDistribution({
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {r.share.toFixed(0)}%
+                {(r.share * 100).toFixed(0)}%
               </span>
             )}
           </div>
@@ -149,7 +149,7 @@ export function HashrateDistribution({
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              {r.name} {r.share.toFixed(1)}%
+              {r.name} {(r.share * 100).toFixed(1)}%
             </span>
           </div>
         ))}
@@ -203,7 +203,7 @@ export function HashrateDistribution({
                 textAlign: 'right',
               }}
             >
-              {r.share.toFixed(1)}%
+              {(r.share * 100).toFixed(1)}%
             </div>
 
             {/* Hashrate EH/s */}
