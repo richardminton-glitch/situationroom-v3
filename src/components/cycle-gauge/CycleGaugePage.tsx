@@ -91,12 +91,12 @@ export function CycleGaugePage({ data, loading, error }: Props) {
   return (
     <div style={{ minHeight: '100%', backgroundColor: bgPrimary, fontFamily: FONT, overflowY: 'auto' }}>
       <div style={{
-        maxWidth:      900,
+        maxWidth:      1100,
         margin:        '0 auto',
-        padding:       '24px 32px 48px',
+        padding:       '20px 28px 48px',
         display:       'flex',
         flexDirection: 'column',
-        gap:           24,
+        gap:           20,
       }}>
 
         {/* Page header */}
@@ -123,29 +123,30 @@ export function CycleGaugePage({ data, loading, error }: Props) {
 
         <Divider />
 
-        {/* Hero gauge */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* Two-column: spiral (left) + signals (right) */}
+        <div style={{
+          display:             'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap:                 32,
+          alignItems:          'start',
+        }}>
+          {/* Left: log-polar spiral */}
           <HeroGauge
             composite={data.composite}
             phase={data.phase}
             phaseColor={data.phaseColor}
             confidence={data.confidence}
           />
+
+          {/* Right: signal breakdown + confidence */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p style={{ fontSize: 9, letterSpacing: '0.14em', color: textMuted, margin: 0, textTransform: 'uppercase' }}>
+              Signal Breakdown
+            </p>
+            <IndicatorGrid indicators={data.indicators} columns="repeat(2, 1fr)" />
+            <ConfidenceDisplay confidence={data.confidence} indicators={data.indicators} />
+          </div>
         </div>
-
-        <Divider />
-
-        {/* Indicator grid */}
-        <div>
-          <p style={{ fontSize: 9, letterSpacing: '0.14em', color: textMuted, margin: '0 0 12px', textTransform: 'uppercase' }}>
-            Signal Breakdown
-          </p>
-          <IndicatorGrid indicators={data.indicators} />
-        </div>
-
-        <Divider />
-
-        <ConfidenceDisplay confidence={data.confidence} indicators={data.indicators} />
 
         <Divider />
 

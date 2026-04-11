@@ -5,6 +5,7 @@ import type { CycleIndicatorResult } from '@/lib/signals/cycle-engine';
 
 interface Props {
   indicators: CycleIndicatorResult[];
+  columns?:   string;
 }
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
@@ -63,11 +64,11 @@ function IndicatorCard({ indicator: ind }: { indicator: CycleIndicatorResult }) 
   );
 }
 
-export function IndicatorGrid({ indicators }: Props) {
+export function IndicatorGrid({ indicators, columns }: Props) {
   return (
     <div style={{
       display:             'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+      gridTemplateColumns: columns ?? 'repeat(auto-fit, minmax(260px, 1fr))',
       gap:                 12,
     }}>
       {indicators.map(ind => (
