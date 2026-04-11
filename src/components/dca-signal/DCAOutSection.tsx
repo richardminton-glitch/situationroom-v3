@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Area,
 } from 'recharts';
 import { useTier }         from '@/hooks/useTier';
 import { useTheme }        from '@/components/layout/ThemeProvider';
@@ -81,13 +82,19 @@ function formatPrice(v: number): string {
   return '$' + v.toFixed(0);
 }
 
+function formatBtc(v: number): string {
+  if (v >= 1)    return v.toFixed(3) + ' BTC';
+  if (v >= 0.01) return v.toFixed(4) + ' BTC';
+  return v.toFixed(6) + ' BTC';
+}
+
 function shiftYears(dateStr: string, years: number): string {
   const d = new Date(dateStr + 'T00:00:00Z');
   d.setUTCFullYear(d.getUTCFullYear() - years);
   return d.toISOString().slice(0, 10);
 }
 
-function getXTicks(data: DistributionPoint[], period: Period): string[] {
+function getXTicks(data: { date: string }[], period: Period): string[] {
   const seen = new Set<string>();
   const ticks: string[] = [];
   for (const row of data) {
@@ -202,6 +209,22 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function PortfolioTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    const btcSig = payload.find((p: any) => p.dataKey === 'netBtcSig');
+    const btcVan = payload.find((p: any) => p.dataKey === 'netBtcVan');
+    const usdS   = payload.find((p: any) => p.dataKey === 'usdSig');
+    return (
+      <div style={{ background: tooltipBg, border: `1px solid ${axisStroke}`, padding: '8px 12px', fontFamily: FONT, fontSize: 10, color: 'var(--text-primary)', letterSpacing: '0.06em', lineHeight: 1.8 }}>
+        <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</div>
+        {btcSig && <div style={{ color: tealColor }}>SIGNAL BTC  {formatBtc(Number(btcSig.value))}</div>}
+        {btcVan && <div style={{ color: 'var(--text-muted)' }}>VANILLA BTC {formatBtc(Number(btcVan.value))}</div>}
+        {usdS   && <div style={{ color: amberColor }}>USD EXITS   {formatUsd(Number(usdS.value))}</div>}
+      </div>
+    );
+  }
+
   // ── Chart data ─────────────────────────────────────────────────────────────
   const history = data.distributionHistory ?? [];
   const scale   = baseSell / 100;
@@ -228,15 +251,62 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
   const xTicks = getXTicks(chartData, period);
 
-  // All-time USD/BTC efficiency advantage
-  const allLast    = history.at(-1);
-  const effSignal  = allLast && allLast.btcSignal  > 0 ? allLast.usdSignal  / allLast.btcSignal  : 0;
-  const effVanilla = allLast && allLast.btcVanilla > 0 ? allLast.usdVanilla / allLast.btcVanilla : 0;
-  const effAdvPct  = effVanilla > 0 ? ((effSignal - effVanilla) / effVanilla) * 100 : 0;
+  // Period-filtered history
+  const periodHistory = period === 'ALL' || !cutoff ? history : history.filter(r => r.date >= cutoff);
+  const periodStart   = cutoff ? history.filter(r => r.date < cutoff).at(-1) : null;
+  const periodEnd     = periodHistory.at(-1);
 
-  // Periods that were in exit territory
-  const exitWeeks = history.filter(r => r.sellMult > 0).length;
-  const totalWeeks = history.length;
+  // Period-aware efficiency: $ received per BTC sold vs vanilla baseline
+  const { effAdvPct, noExitsInPeriod } = (() => {
+    if (!periodEnd) return { effAdvPct: 0, noExitsInPeriod: true };
+    const usdSig = periodEnd.usdSignal  - (periodStart?.usdSignal  ?? 0);
+    const btcSig = periodEnd.btcSignal  - (periodStart?.btcSignal  ?? 0);
+    const usdVan = periodEnd.usdVanilla - (periodStart?.usdVanilla ?? 0);
+    const btcVan = periodEnd.btcVanilla - (periodStart?.btcVanilla ?? 0);
+    const effSig  = btcSig > 0.000001 ? usdSig / btcSig : 0;
+    const effVan  = btcVan > 0.000001 ? usdVan / btcVan : 0;
+    const adv     = effVan > 0 ? ((effSig - effVan) / effVan) * 100 : 0;
+    return { effAdvPct: adv, noExitsInPeriod: btcSig <= 0.000001 };
+  })();
+
+  // Period-aware exit weeks count
+  const exitWeeks  = periodHistory.filter(r => r.sellMult > 0).length;
+  const totalWeeks = periodHistory.length;
+
+  // Combined portfolio chart: buy signal + sell signal merged
+  const stackHistory   = data.stackingHistory ?? [];
+  const buyScale       = baseAmount / 100;
+  const portData = (() => {
+    if (!stackHistory.length || !history.length || stackHistory.length !== history.length) return [];
+    const startIdx = period === 'ALL' || !cutoff
+      ? 0
+      : stackHistory.findIndex(s => s.date >= cutoff);
+    if (startIdx < 0) return [];
+    const prevStack = startIdx > 0 ? stackHistory[startIdx - 1] : null;
+    const prevDist  = startIdx > 0 ? history[startIdx - 1]      : null;
+    const sBase  = prevStack?.btcSignal  ?? 0;
+    const sVBase = prevStack?.btcVanilla ?? 0;
+    const dBase  = prevDist?.btcSignal   ?? 0;
+    const uBase  = prevDist?.usdSignal   ?? 0;
+    return stackHistory.slice(startIdx).map((s, i) => {
+      const d = history[startIdx + i];
+      if (!d) return null;
+      return {
+        date:      s.date,
+        netBtcSig: Math.max(0, (s.btcSignal  - sBase)  * buyScale  - (d.btcSignal  - dBase)  * scale),
+        netBtcVan: Math.max(0, (s.btcVanilla - sVBase) * buyScale),
+        usdSig:    (d.usdSignal - uBase) * scale,
+      };
+    }).filter((r): r is NonNullable<typeof r> => r !== null);
+  })();
+
+  const portEnd      = portData.at(-1);
+  const portBtcSig   = portEnd?.netBtcSig ?? 0;
+  const portBtcVan   = portEnd?.netBtcVan ?? 0;
+  const portUsdSig   = portEnd?.usdSig    ?? 0;
+  const portTotalSig = portBtcSig * data.btcPrice + portUsdSig;
+  const portTotalVan = portBtcVan * data.btcPrice;
+  const portXTicks   = getXTicks(portData, period);
 
   if (tierLoading) return null;
 
@@ -251,7 +321,12 @@ export function DCAOutSection({ data, baseAmount }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {effAdvPct > 0 && (
             <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.08em' }}>
-              +{effAdvPct.toFixed(1)}% MORE $ PER BTC (ALL-TIME)
+              +{effAdvPct.toFixed(1)}% MORE $ PER BTC ({period})
+            </span>
+          )}
+          {noExitsInPeriod && isVip && history.length > 0 && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+              NO EXITS IN {period}
             </span>
           )}
           {!isVip && (
@@ -490,10 +565,136 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             </p>
             {effAdvPct > 0 && (
               <span style={{ fontSize: 10, color: tealColor, letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
-                SIGNAL EXITS: +{effAdvPct.toFixed(1)}% MORE $ PER BTC vs VANILLA
+                SIGNAL EXITS: +{effAdvPct.toFixed(1)}% MORE $ PER BTC vs VANILLA · {period}
+              </span>
+            )}
+            {noExitsInPeriod && history.length > 0 && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                NO SIGNAL EXITS IN {period} PERIOD
               </span>
             )}
           </div>
+
+          {/* ── COMBINED PORTFOLIO CHART ─────────────────────────────────── */}
+          {portData.length > 0 && (
+            <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid var(--border-subtle)` }}>
+
+              {/* Header + summary cards */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  COMBINED PORTFOLIO · BUY + EXIT SIMULATION
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                  ${baseAmount.toLocaleString()}/week DCA in · ${baseSell.toLocaleString()}/week base sell · at current BTC price
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                {/* Signal strategy card */}
+                <div style={{ padding: '10px 14px', background: isDark ? 'rgba(0,212,200,0.04)' : 'rgba(74,124,89,0.05)', border: `1px solid ${isDark ? 'rgba(0,212,200,0.12)' : 'rgba(74,124,89,0.2)'}` }}>
+                  <div style={{ fontSize: 9, color: tealColor, letterSpacing: '0.12em', marginBottom: 8 }}>SIGNAL STRATEGY · {period}</div>
+                  <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>BTC REMAINING</div>
+                      <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>{formatBtc(portBtcSig)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>USD FROM EXITS</div>
+                      <div style={{ fontSize: 15, color: amberColor, fontWeight: 600 }}>{formatUsd(portUsdSig)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>TOTAL VALUE</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-primary)', fontWeight: 600 }}>{formatUsd(portTotalSig)}</div>
+                    </div>
+                  </div>
+                </div>
+                {/* Vanilla comparison card */}
+                <div style={{ padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: 8 }}>VANILLA DCA · {period}</div>
+                  <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>BTC ACCUMULATED</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatBtc(portBtcVan)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>USD FROM EXITS</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-muted)', fontWeight: 600 }}>$0</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>TOTAL VALUE</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatUsd(portTotalVan)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart */}
+              <ResponsiveContainer width="100%" height={200}>
+                <ComposedChart data={portData} margin={{ top: 4, right: 60, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    ticks={portXTicks}
+                    tickFormatter={v => formatXTick(v, period)}
+                    tick={{ fontFamily: FONT, fontSize: 11, fill: 'var(--text-secondary)' }}
+                    axisLine={{ stroke: axisStroke }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    yAxisId="btc" orientation="left"
+                    tickFormatter={v => v >= 0.01 ? v.toFixed(2) : v.toFixed(4)}
+                    tick={{ fontFamily: FONT, fontSize: 10, fill: 'var(--text-secondary)' }}
+                    axisLine={false} tickLine={false} width={52}
+                    label={{ value: 'BTC', angle: -90, position: 'insideLeft', offset: 14, style: { fontFamily: FONT, fontSize: 9, fill: 'var(--text-muted)' } }}
+                  />
+                  <YAxis
+                    yAxisId="usd" orientation="right"
+                    tickFormatter={v => formatUsd(v, true)}
+                    tick={{ fontFamily: FONT, fontSize: 10, fill: 'var(--text-muted)' }}
+                    axisLine={false} tickLine={false} width={60}
+                    label={{ value: 'USD', angle: 90, position: 'insideRight', offset: 14, style: { fontFamily: FONT, fontSize: 9, fill: 'var(--text-muted)' } }}
+                  />
+                  <Tooltip content={<PortfolioTooltip />} />
+                  {/* Vanilla BTC — grey reference */}
+                  <Area
+                    yAxisId="btc" type="monotone" dataKey="netBtcVan"
+                    stroke={isDark ? 'rgba(180,180,180,0.35)' : 'rgba(100,100,100,0.3)'}
+                    fill={isDark ? 'rgba(180,180,180,0.06)' : 'rgba(100,100,100,0.05)'}
+                    strokeWidth={1} dot={false} isAnimationActive={false}
+                  />
+                  {/* Signal net BTC — teal highlight */}
+                  <Area
+                    yAxisId="btc" type="monotone" dataKey="netBtcSig"
+                    stroke={tealColor}
+                    fill={isDark ? 'rgba(0,212,200,0.1)' : 'rgba(74,124,89,0.1)'}
+                    strokeWidth={2} dot={false} isAnimationActive={false}
+                  />
+                  {/* USD from exits — amber dashed line */}
+                  <Line
+                    yAxisId="usd" type="monotone" dataKey="usdSig"
+                    stroke={amberColor} strokeWidth={1.5} strokeDasharray="4 2"
+                    dot={false} isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' as const }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 16, height: 2, background: tealColor }} />
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>SIGNAL NET BTC</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 16, height: 2, background: isDark ? 'rgba(180,180,180,0.5)' : 'rgba(100,100,100,0.4)' }} />
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>VANILLA BTC (NO EXITS)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 16, height: 0, borderBottom: `2px dashed ${amberColor}` }} />
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>SIGNAL USD FROM EXITS</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* VIP email signup — receive combined in/out signal by email */}
           <VIPEmailSignup baseAmount={baseSell} />

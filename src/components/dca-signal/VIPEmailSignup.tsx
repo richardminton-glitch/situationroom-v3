@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT     = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_EMAIL = 'sr-dca-vip-signup-email';
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function VIPEmailSignup({ baseAmount }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme !== 'parchment';
   const [email,     setEmail]     = useState('');
   const [frequency, setFrequency] = useState<Frequency>('weekly');
   const [status,    setStatus]    = useState<Status>('idle');
@@ -164,15 +167,15 @@ export function VIPEmailSignup({ baseAmount }: Props) {
                 flex:       1,
                 fontSize: 13,
                 fontFamily: FONT,
-                background: '#0d1520',
-                border:     '1px solid rgba(196,136,90,0.2)',
-                color:      '#e8edf2',
+                background: 'var(--bg-card)',
+                border:     '1px solid var(--border-primary)',
+                color:      'var(--text-primary)',
                 padding:    '6px 10px',
                 outline:    'none',
                 transition: 'none',
               }}
               onFocus={e => { e.currentTarget.style.borderColor = '#c4885a'; }}
-              onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(196,136,90,0.2)'; }}
+              onBlur={e  => { e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
             />
             <button
               type="submit"
