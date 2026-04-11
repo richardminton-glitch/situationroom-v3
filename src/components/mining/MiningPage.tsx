@@ -1,14 +1,17 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { formatPrice, formatLargeNumber } from '@/components/panels/shared';
 import type { MiningIntelResponse } from '@/app/api/mining-intel/route';
 import HashrateGeoSection from './HashrateGeoSection';
 import GeoShiftAlerts from './GeoShiftAlerts';
-import HashPriceSection from './HashPriceSection';
-import { GasMiningSection } from './GasMiningSection';
-import { SecurityBudgetSection } from './SecurityBudgetSection';
 import { EditorialSection } from './EditorialSection';
+
+/* Code-split Recharts-heavy sections — load after page shell renders */
+const HashPriceSection = dynamic(() => import('./HashPriceSection'), { ssr: false });
+const GasMiningSection = dynamic(() => import('./GasMiningSection').then(m => ({ default: m.GasMiningSection })), { ssr: false });
+const SecurityBudgetSection = dynamic(() => import('./SecurityBudgetSection').then(m => ({ default: m.SecurityBudgetSection })), { ssr: false });
 
 const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 

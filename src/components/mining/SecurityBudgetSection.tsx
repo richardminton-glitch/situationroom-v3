@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { formatPrice, chartColors } from '@/components/panels/shared';
 import {
@@ -52,23 +53,23 @@ export function SecurityBudgetSection({
   const isDark = theme !== 'parchment';
   const colors = chartColors(isDark);
 
-  // Build chart data merging all three scenarios
-  const chartData = base.map((b, i) => ({
+  const chartData = useMemo(() => base.map((b, i) => ({
     year: b.year,
     subsidy: b.dailySubsidyUsd,
     fees: b.dailyFeesUsd,
     baseTotal: b.dailyTotalUsd,
     conservativeTotal: conservative[i]?.dailyTotalUsd ?? 0,
     optimisticTotal: optimistic[i]?.dailyTotalUsd ?? 0,
-  }));
+  })), [base, conservative, optimistic]);
 
   const halvingYears = [2028, 2032, 2036, 2040];
 
-  // Key halving rows for projection table
-  const projectionYears = [2024, 2028, 2032, 2036, 2040];
-  const projectionRows = projectionYears
-    .map((yr) => base.find((b) => b.year === yr))
-    .filter((r): r is SecurityBudgetProjection => r != null);
+  const projectionRows = useMemo(() => {
+    const years = [2024, 2028, 2032, 2036, 2040];
+    return years
+      .map(yr => base.find(b => b.year === yr))
+      .filter((r): r is SecurityBudgetProjection => r != null);
+  }, [base]);
 
   // Inline metrics strip data
   const metricsStrip = [

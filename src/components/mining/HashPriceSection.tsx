@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { formatPrice, chartColors } from '@/components/panels/shared';
 import {
@@ -71,37 +72,22 @@ export default function HashPriceSection({
     return ((current - be) / current) * 100;
   };
 
-  // Build energy display entries: specific regions + global weighted avg
-  const energyEntries: { label: string; priceKwh: number }[] = [];
-  for (const key of DISPLAY_REGIONS) {
-    const ep = energyPrices[key];
-    if (ep) {
-      energyEntries.push({ label: ep.label, priceKwh: ep.priceKwh });
+  const energyEntries = useMemo(() => {
+    const entries: { label: string; priceKwh: number }[] = [];
+    for (const key of DISPLAY_REGIONS) {
+      const ep = energyPrices[key];
+      if (ep) entries.push({ label: ep.label, priceKwh: ep.priceKwh });
     }
-  }
-  if (globalWeightedAvg > 0) {
-    energyEntries.push({ label: 'GLOBAL', priceKwh: globalWeightedAvg });
-  }
+    if (globalWeightedAvg > 0) entries.push({ label: 'GLOBAL', priceKwh: globalWeightedAvg });
+    return entries;
+  }, [energyPrices, globalWeightedAvg]);
 
-  const metricRows: { label: string; value: string; color?: string }[] = [
-    {
-      label: 'MARGIN',
-      value: `${marginPct > 0 ? '+' : ''}${marginPct.toFixed(1)}%`,
-      color: marginColor(marginPct),
-    },
-    {
-      label: 'BREAKEVEN',
-      value: `$${breakevenHashPrice.toFixed(4)}`,
-    },
-    {
-      label: 'BTC BREAKEVEN',
-      value: `$${formatPrice(breakevenBtcPrice, 0)}`,
-    },
-    {
-      label: 'EFFICIENCY',
-      value: `${efficientMinerJPerTH} J/TH`,
-    },
-  ];
+  const metricRows = useMemo(() => [
+    { label: 'MARGIN', value: `${marginPct > 0 ? '+' : ''}${marginPct.toFixed(1)}%`, color: marginColor(marginPct) },
+    { label: 'BREAKEVEN', value: `$${breakevenHashPrice.toFixed(4)}` },
+    { label: 'BTC BREAKEVEN', value: `$${formatPrice(breakevenBtcPrice, 0)}` },
+    { label: 'EFFICIENCY', value: `${efficientMinerJPerTH} J/TH` },
+  ], [marginPct, breakevenHashPrice, breakevenBtcPrice, efficientMinerJPerTH]);
 
   return (
     <section>
