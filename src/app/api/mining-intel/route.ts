@@ -169,7 +169,9 @@ export async function GET() {
   try {
     const row = await prisma.dataCache.findUnique({ where: { key: CACHE_KEY } });
     if (row && row.expiresAt > new Date()) {
-      return NextResponse.json(JSON.parse(row.data) as MiningIntelResponse);
+      return NextResponse.json(JSON.parse(row.data) as MiningIntelResponse, {
+        headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=1800' },
+      });
     }
   } catch { /* DB unavailable */ }
 
@@ -204,7 +206,8 @@ export async function GET() {
 
     if (brkResult.status === 'fulfilled') {
       prices = brkResult.value.seriesData.price ?? [];
-      hashrates = brkResult.value.seriesData.hash_rate ?? [];
+      // BRK hash_rate is in H/s — convert to EH/s (same as hash-ribbon route)
+      hashrates = (brkResult.value.seriesData.hash_rate ?? []).map(v => (v ?? 0) / 1e18);
       dates = brkResult.value.dates;
     }
 
