@@ -120,11 +120,11 @@ export function DCASignalPage({ data, loading, error }: Props) {
         <StackingChart stackingHistory={data.stackingHistory} baseAmount={baseAmount} />
       )}
 
-      {/* Email signup */}
-      <SignalEmailSignup baseAmount={baseAmount} />
-
-      {/* Weekly signal history — below email */}
+      {/* Weekly signal history */}
       <SignalHistory data={data} />
+
+      {/* Email signup — last general-tier item; everything below is VIP */}
+      <SignalEmailSignup baseAmount={baseAmount} />
 
       {/* DCA Exit Strategy — VIP gated, scales with baseAmount */}
       <DCAOutSection data={data} baseAmount={baseAmount} />
