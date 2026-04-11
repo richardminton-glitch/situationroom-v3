@@ -89,6 +89,9 @@ export const metadata: Metadata = {
 // This is the colour browsers use for the address bar / mobile chrome.
 export const viewport: Viewport = {
   themeColor: '#3e2c1a',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

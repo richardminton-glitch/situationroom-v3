@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthProvider';
 import { useTheme } from './ThemeProvider';
 import { useTier } from '@/hooks/useTier';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { TIER_LABELS } from '@/lib/auth/tier';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -33,6 +34,8 @@ import {
   ChartLine,
   Gauge,
   HardHat,
+  List,
+  X,
 } from '@phosphor-icons/react';
 import { FeedbackModal } from '@/components/feedback/FeedbackModal';
 
@@ -115,12 +118,14 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { user, logout, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const { canAccess, userTier } = useTier();
   const pathname = usePathname();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // Mark mounted + hydrate font size from localStorage (avoids SSR mismatch)
   useEffect(() => {
@@ -128,6 +133,11 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
     const stored = localStorage.getItem('sr-font-size');
     if (stored) setFontSize(parseInt(stored, 10));
   }, []);
+
+  // Auto-close mobile drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
@@ -145,14 +155,52 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
     router.push('/support');
   }
 
+  // On mobile, force expanded and use drawer state
+  const showLabels = isMobile ? true : !collapsed;
+
   return (
     <>
+      {/* Mobile hamburger trigger */}
+      {isMobile && !drawerOpen && (
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="fixed top-3 left-3 z-50 flex items-center justify-center rounded"
+          style={{
+            width: '40px',
+            height: '40px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-primary)',
+            color: 'var(--text-primary)',
+          }}
+          aria-label="Open menu"
+        >
+          <List size={20} weight="bold" />
+        </button>
+      )}
+
+      {/* Mobile backdrop */}
+      {isMobile && drawerOpen && (
+        <div
+          className="fixed inset-0 z-[99]"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
       <aside
         className="flex flex-col h-full border-r transition-all duration-300 shrink-0"
         style={{
-          width: collapsed ? '60px' : '220px',
+          width: isMobile ? '280px' : (collapsed ? '60px' : '220px'),
           backgroundColor: 'var(--bg-secondary)',
           borderColor: 'var(--border-primary)',
+          ...(isMobile ? {
+            position: 'fixed' as const,
+            top: 0,
+            bottom: 0,
+            left: drawerOpen ? '0' : '-280px',
+            zIndex: 100,
+            transition: 'left 0.3s ease',
+          } : {}),
         }}
       >
         {/* Logo / collapse toggle */}
@@ -160,7 +208,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
           className="flex items-center justify-between px-4 py-4 border-b"
           style={{ borderColor: 'var(--border-subtle)' }}
         >
-          {!collapsed && (
+          {showLabels && (
             <span
               className="text-sm tracking-tight truncate uppercase"
               style={{ fontFamily: "Georgia, 'Times New Roman', serif", color: 'var(--text-primary)', letterSpacing: '0.12em', fontWeight: 'normal' }}
@@ -168,14 +216,25 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               Situation Room
             </span>
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1 rounded hover:opacity-80 transition-opacity"
-            style={{ color: 'var(--text-muted)' }}
-            title={collapsed ? 'Expand' : 'Collapse'}
-          >
-            {collapsed ? <CaretRight size={16} /> : <CaretLeft size={16} />}
-          </button>
+          {isMobile ? (
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="p-1 rounded hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--text-muted)' }}
+              aria-label="Close menu"
+            >
+              <X size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-1 rounded hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--text-muted)' }}
+              title={collapsed ? 'Expand' : 'Collapse'}
+            >
+              {collapsed ? <CaretRight size={16} /> : <CaretLeft size={16} />}
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -197,10 +256,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                         border: '1px solid transparent',
                         opacity: 0.6,
                       }}
-                      title={collapsed ? `${item.label} (${TIER_LABELS[item.requiredTier]} required)` : undefined}
+                      title={!showLabels ? `${item.label} (${TIER_LABELS[item.requiredTier]} required)` : undefined}
                     >
                       <span className="text-base shrink-0">{item.icon}</span>
-                      {!collapsed && (
+                      {showLabels && (
                         <>
                           <span className="flex-1">{item.label}</span>
                           <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
@@ -223,14 +282,14 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                       color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                       border: active ? '1px solid var(--border-primary)' : '1px solid transparent',
                     }}
-                    title={collapsed ? item.label : undefined}
+                    title={!showLabels ? item.label : undefined}
                   >
                     <span className="text-base shrink-0">{item.icon}</span>
-                    {!collapsed && <span>{item.label}</span>}
+                    {showLabels && <span>{item.label}</span>}
                   </Link>
 
                   {/* Dashboard sub-items: presets + custom dashboards (auth required) */}
-                  {item.href === '/' && active && !collapsed && dashboardControls && user && (
+                  {item.href === '/' && active && showLabels && dashboardControls && user && (
                     <div className="ml-7 mt-1 mb-2 space-y-1">
                       {/* ── Preset dashboards (read-only) ── */}
                       {dashboardControls.presets.map((preset) => {
@@ -475,10 +534,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               backgroundColor: pathname === '/support' ? 'var(--bg-card)' : 'transparent',
               border: pathname === '/support' ? '1px solid var(--border-primary)' : '1px solid transparent',
             }}
-            title={collapsed ? 'Support the project' : undefined}
+            title={!showLabels ? 'Support the project' : undefined}
           >
             <span className="text-base shrink-0"><Heart size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
-            {!collapsed && <span>Support →</span>}
+            {showLabels && <span>Support →</span>}
           </Link>
 
           {/* System section */}
@@ -488,7 +547,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                 className="mt-6 mb-2 px-3"
                 style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}
               >
-                {!collapsed && (
+                {showLabels && (
                   <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                     System
                   </span>
@@ -506,10 +565,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                       color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                       border: active ? '1px solid var(--border-primary)' : '1px solid transparent',
                     }}
-                    title={collapsed ? item.label : undefined}
+                    title={!showLabels ? item.label : undefined}
                   >
                     <span className="text-base shrink-0">{item.icon}</span>
-                    {!collapsed && <span>{item.label}</span>}
+                    {showLabels && <span>{item.label}</span>}
                   </Link>
                 );
               })}
@@ -523,10 +582,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   color: 'var(--text-secondary)',
                   border: '1px solid transparent',
                 }}
-                title={collapsed ? 'Feedback' : undefined}
+                title={!showLabels ? 'Feedback' : undefined}
               >
                 <span className="text-base shrink-0"><Envelope size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
-                {!collapsed && <span>Feedback</span>}
+                {showLabels && <span>Feedback</span>}
               </button>
 
               {/* Admin — only visible to admin users */}
@@ -540,10 +599,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     border: pathname === '/admin' ? '1px solid var(--border-primary)' : '1px solid transparent',
                     opacity: pathname === '/admin' ? 1 : 0.8,
                   }}
-                  title={collapsed ? 'Admin' : undefined}
+                  title={!showLabels ? 'Admin' : undefined}
                 >
                   <span className="text-base shrink-0"><ShieldStar size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
-                  {!collapsed && <span>Admin</span>}
+                  {showLabels && <span>Admin</span>}
                 </Link>
               )}
             </>
@@ -559,15 +618,15 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
           <div>
             <button
               onClick={() => {
-                if (collapsed) setCollapsed(false);
+                if (!isMobile && collapsed) setCollapsed(false);
                 setMenuOpen(!menuOpen);
               }}
               className="flex items-center gap-3 w-full px-3 py-2 rounded text-sm transition-colors"
               style={{ color: 'var(--text-secondary)' }}
-              title={collapsed ? 'Settings' : undefined}
+              title={!showLabels ? 'Settings' : undefined}
             >
               <span className="text-base shrink-0"><GearSix size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
-              {!collapsed && <span>Settings</span>}
+              {showLabels && <span>Settings</span>}
             </button>
 
             {menuOpen && (
@@ -575,7 +634,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                 className="mx-2 mb-1 px-2 py-2 rounded"
                 style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
               >
-                {!collapsed && (
+                {showLabels && (
                   <p className="text-xs mb-2 uppercase tracking-wider" style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
                     Font Size
                   </p>
@@ -586,7 +645,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     className="w-6 h-6 flex items-center justify-center rounded text-sm font-bold transition-opacity hover:opacity-70"
                     style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
                   >−</button>
-                  {!collapsed && (
+                  {showLabels && (
                     <span className="text-xs tabular-nums" style={{ color: 'var(--text-primary)', minWidth: '32px', textAlign: 'center' }}>
                       {fontSize}px
                     </span>
@@ -597,7 +656,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                     style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
                   >+</button>
                 </div>
-                {!collapsed && fontSize !== FONT_DEFAULT && (
+                {showLabels && fontSize !== FONT_DEFAULT && (
                   <button
                     onClick={() => setFontSize(FONT_DEFAULT)}
                     className="block w-full text-center text-xs mt-1 hover:underline"
@@ -636,19 +695,19 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                   }}
                   className="flex items-center gap-3 w-full px-3 py-2 rounded text-sm transition-colors"
                   style={{ color: 'var(--text-secondary)', opacity: darkLocked ? 0.7 : 1 }}
-                  title={collapsed ? (displayTheme === 'parchment' ? 'Dark mode' : 'Parchment') : undefined}
+                  title={!showLabels ? (displayTheme === 'parchment' ? 'Dark mode' : 'Parchment') : undefined}
                 >
                   <span className="text-base shrink-0">{displayTheme === 'parchment' ? <Moon size={ICON_SIZE} weight={ICON_WEIGHT} /> : <Sun size={ICON_SIZE} weight={ICON_WEIGHT} />}</span>
-                  {!collapsed && (
+                  {showLabels && (
                     <span className="flex-1 text-left">{displayTheme === 'parchment' ? 'Dark mode' : 'Parchment'}</span>
                   )}
-                  {!collapsed && darkLocked && (
+                  {showLabels && darkLocked && (
                     <span style={{ fontSize: '9px', color: 'var(--accent-primary)', letterSpacing: '0.06em' }}>
                       GENERAL ↑
                     </span>
                   )}
                 </button>
-                {darkTooltipVisible && !collapsed && (
+                {darkTooltipVisible && showLabels && (
                   <div
                     style={{
                       background: 'var(--bg-card)', border: '1px solid var(--border-primary)',
@@ -676,7 +735,7 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               >
                 {(user.displayName || user.email)[0].toUpperCase()}
               </div>
-              {!collapsed && (
+              {showLabels && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                     {user.displayName || user.email.split('@')[0]}
@@ -699,10 +758,10 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
               href="/login"
               className="flex items-center gap-3 px-3 py-2 rounded text-sm"
               style={{ color: 'var(--accent-primary)' }}
-              title={collapsed ? 'Sign in' : undefined}
+              title={!showLabels ? 'Sign in' : undefined}
             >
               <span className="text-base shrink-0"><SignIn size={ICON_SIZE} weight={ICON_WEIGHT} /></span>
-              {!collapsed && <span>Sign in</span>}
+              {showLabels && <span>Sign in</span>}
             </Link>
           )}
         </div>

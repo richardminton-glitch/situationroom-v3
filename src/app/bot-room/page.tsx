@@ -15,12 +15,14 @@ import { MarketHeatmap } from '@/components/bot-room/MarketHeatmap';
 import { PoolDonateModal } from '@/components/pool/PoolDonateModal';
 import { OpsRoom } from '@/components/chat/OpsRoom';
 import { useUnreadChat } from '@/hooks/useUnreadChat';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { C, FONT } from '@/components/bot-room/constants';
 
 export default function BotRoomPage() {
   const { user, loading } = useAuth();
   const { canAccess } = useTier();
   const pricing = usePricing();
+  const isMobile = useIsMobile();
   const [showDonate, setShowDonate] = useState(false);
   const [opsRoomOpen, setOpsRoomOpen] = useState(false);
   const { unreadCount: chatUnread } = useUnreadChat(opsRoomOpen);
@@ -81,9 +83,10 @@ export default function BotRoomPage() {
         {/* Main grid — frosted when locked */}
         <div style={{
           display: 'grid',
-          gridTemplateRows: '32px 38px 1fr 112px',
-          height: '100%',
-          marginRight: opsRoomOpen ? '320px' : '0',
+          gridTemplateRows: isMobile ? '32px 38px auto 112px' : '32px 38px 1fr 112px',
+          height: isMobile ? 'auto' : '100%',
+          minHeight: isMobile ? '100%' : undefined,
+          marginRight: !isMobile && opsRoomOpen ? '320px' : '0',
           transition: 'margin-right 0.2s ease',
           filter: hasAccess ? undefined : 'blur(6px)',
           pointerEvents: hasAccess ? undefined : 'none',
@@ -97,15 +100,15 @@ export default function BotRoomPage() {
           <StatsBar />
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
             minHeight: 0,
-            overflow: 'hidden',
+            overflow: isMobile ? 'auto' : 'hidden',
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: isMobile ? undefined : 0, borderRight: isMobile ? 'none' : `1px solid ${C.border}` }}>
               <CapitalFlowTopology />
               <OpsChat />
             </div>
-            <div style={{ minHeight: 0, overflow: 'hidden', height: '100%' }}>
+            <div style={{ minHeight: isMobile ? '300px' : 0, overflow: 'hidden', height: isMobile ? '300px' : '100%' }}>
               <ChartPanel />
             </div>
           </div>

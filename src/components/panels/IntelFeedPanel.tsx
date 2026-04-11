@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PanelLoading, timeAgo } from './shared';
 import { useIntelFilter } from '@/components/layout/IntelFilterProvider';
+import { useIsMobile } from '@/hooks/useIsMobile';
+
+const MOBILE_INITIAL_LIMIT = 8;
 
 interface Headline {
   title: string;
@@ -24,7 +27,9 @@ const CATEGORIES = [
 export function IntelFeedPanel() {
   const [headlines, setHeadlines] = useState<Headline[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const { activeCategory: activeFilter, setActiveCategory: setActiveFilter } = useIntelFilter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function load() {
@@ -80,37 +85,67 @@ export function IntelFeedPanel() {
         {filtered.length === 0 ? (
           <p className="text-xs py-4" style={{ color: 'var(--text-muted)' }}>No headlines in this category.</p>
         ) : (
-          filtered.map((h, i) => (
-            <a
-              key={`${h.link}-${i}`}
-              href={h.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block py-2 px-1 hover:opacity-80 transition-opacity"
-              style={{ borderBottom: '1px dotted var(--border-subtle)' }}
-            >
-              <div className="flex items-start gap-2">
-                <span
-                  className="inline-block w-2 h-2 rounded-full mt-1.5 shrink-0"
-                  style={{
-                    backgroundColor:
-                      CATEGORIES.find((c) => c.key === h.category)?.color || '#888',
-                  }}
-                />
-                <div className="min-w-0">
-                  <p
-                    className="leading-snug"
-                    style={{ color: 'var(--text-primary)', fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '12px' }}
-                  >
-                    {h.title}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {h.source} · {timeAgo(h.time)}
-                  </p>
+          <>
+            {(isMobile && !expanded ? filtered.slice(0, MOBILE_INITIAL_LIMIT) : filtered).map((h, i) => (
+              <a
+                key={`${h.link}-${i}`}
+                href={h.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block py-2 px-1 hover:opacity-80 transition-opacity"
+                style={{ borderBottom: '1px dotted var(--border-subtle)' }}
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className="inline-block w-2 h-2 rounded-full mt-1.5 shrink-0"
+                    style={{
+                      backgroundColor:
+                        CATEGORIES.find((c) => c.key === h.category)?.color || '#888',
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className="leading-snug"
+                      style={{ color: 'var(--text-primary)', fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '12px' }}
+                    >
+                      {h.title}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {h.source} · {timeAgo(h.time)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </a>
-          ))
+              </a>
+            ))}
+            {isMobile && !expanded && filtered.length > MOBILE_INITIAL_LIMIT && (
+              <button
+                onClick={() => setExpanded(true)}
+                className="w-full py-3 text-xs text-center"
+                style={{
+                  color: 'var(--accent-primary)',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
+                  borderTop: '1px solid var(--border-subtle)',
+                }}
+              >
+                SHOW {filtered.length - MOBILE_INITIAL_LIMIT} MORE
+              </button>
+            )}
+            {isMobile && expanded && filtered.length > MOBILE_INITIAL_LIMIT && (
+              <button
+                onClick={() => setExpanded(false)}
+                className="w-full py-3 text-xs text-center"
+                style={{
+                  color: 'var(--text-muted)',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
+                  borderTop: '1px solid var(--border-subtle)',
+                }}
+              >
+                SHOW LESS
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

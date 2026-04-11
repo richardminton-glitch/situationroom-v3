@@ -227,3 +227,32 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--border-primary);
   border-radius: 4px;
 }
+
+/* ============================================
+   MOBILE RESPONSIVE BASELINE
+   ============================================ */
+@media (max-width: 768px) {
+  /* Hide parchment grid overlay on mobile — too dense */
+  [data-theme="parchment"] body::before {
+    display: none;
+  }
+
+  /* Minimum touch targets for interactive nav/header elements */
+  nav button,
+  nav a,
+  header button,
+  .panel-card button {
+    min-height: 44px;
+  }
+
+  /* Make parchment panel cards visible on mobile (add subtle card look) */
+  [data-theme="parchment"] .panel-card:not(.panel-bar) {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-subtle) !important;
+  }
+
+  /* Utility classes */
+  .mobile-hide { display: none !important; }
+  .mobile-show { display: block !important; }
+  .mobile-show-flex { display: flex !important; }
+}

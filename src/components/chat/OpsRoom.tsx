@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/components/layout/AuthProvider';
 import { useTier } from '@/hooks/useTier';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface ChatMessage {
   id: string;
@@ -38,6 +39,7 @@ interface OpsRoomProps {
 export function OpsRoom({ open, onClose }: OpsRoomProps) {
   const { user } = useAuth();
   const { canAccess } = useTier();
+  const isMobile = useIsMobile();
   const canPost = canAccess('members');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -111,9 +113,10 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
     <div
       style={{
         position: 'fixed', top: 0, right: 0, bottom: 0,
-        width: '320px', zIndex: 50,
+        left: isMobile ? 0 : undefined,
+        width: isMobile ? '100%' : '320px', zIndex: 50,
         backgroundColor: 'var(--bg-primary)',
-        borderLeft: '1px solid var(--border-primary)',
+        borderLeft: isMobile ? 'none' : '1px solid var(--border-primary)',
         display: 'flex', flexDirection: 'column',
         fontFamily: 'var(--font-mono)',
       }}
@@ -134,7 +137,7 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
         </div>
         <button
           onClick={onClose}
-          style={{ fontSize: '16px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
+          style={{ fontSize: isMobile ? '22px' : '16px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: isMobile ? '8px' : undefined }}
         >
           ×
         </button>

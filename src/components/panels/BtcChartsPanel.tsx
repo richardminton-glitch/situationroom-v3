@@ -58,7 +58,7 @@ export function BtcChartsPanel() {
   if (!data) return <PanelLoading />;
 
   return (
-    <div className="grid grid-cols-2 grid-rows-2 gap-2" style={{ height: '100%', minHeight: '320px' }}>
+    <div className="grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-2" style={{ height: '100%', minHeight: '320px' }}>
       <div style={{ minHeight: '140px' }}>
         <ParchmentChart
           data={data.btcPrice}

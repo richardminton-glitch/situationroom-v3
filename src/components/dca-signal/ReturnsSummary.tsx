@@ -2,6 +2,7 @@
 
 import type { BacktestPeriod } from '@/lib/data/daily-snapshot';
 import { useTheme } from '@/components/layout/ThemeProvider';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -24,6 +25,7 @@ function formatUsd(v: number): string {
 export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
+  const isMobile = useIsMobile();
 
   if (!backtestSummary || backtestSummary.length === 0) return null;
 
@@ -50,7 +52,7 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
       {/* Period cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${Math.min(backtestSummary.length, 4)}, 1fr)`,
+        gridTemplateColumns: `repeat(${Math.min(backtestSummary.length, isMobile ? 2 : 4)}, 1fr)`,
         gap: 10,
       }}>
         {backtestSummary.map(period => {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { useIntelFilter } from '@/components/layout/IntelFilterProvider';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { ParchmentGlobe, type MapEvent } from './globes/ParchmentGlobe';
 import { DarkGlobe } from './globes/DarkGlobe';
 import { ParchmentChart } from './charts/ParchmentChart';
@@ -55,6 +56,7 @@ export function GlobePanel() {
   }, [allEvents, activeCategory]);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const toggleView = useCallback(() => {
     setView((v) => (v === 'globe' ? 'chart' : 'globe'));
@@ -109,13 +111,13 @@ export function GlobePanel() {
         </div>
       )}
 
-      {/* View toggle — always top-left, same position in both views */}
+      {/* View toggle — top-left; on mobile, pushed below legend row */}
       <button
         onClick={toggleView}
         title={view === 'globe' ? 'Switch to BTC chart' : 'Switch to globe'}
         style={{
           position: 'absolute',
-          top: '8px',
+          top: isMobile && legend ? '28px' : '8px',
           left: '8px',
           zIndex: 50,
           width: '28px',

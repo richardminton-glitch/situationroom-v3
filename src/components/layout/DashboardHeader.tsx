@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useData } from './DataProvider';
 import { useTheme } from './ThemeProvider';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import type { ThreatState } from '@/lib/room/threatEngine';
 import { CaretRight, Diamond } from '@phosphor-icons/react';
 
@@ -169,7 +170,121 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
   const fg = data?.fearGreed;
   const threatColors = theme === 'dark' ? THREAT_COLORS_DARK : THREAT_COLORS_PARCHMENT;
   const threatColor = threatColors[threat.level] || '#666';
+  const isMobile = useIsMobile();
 
+  // ── OPS button (shared between mobile and desktop) ──
+  const opsButton = onToggleOpsRoom && (
+    <button
+      onClick={onToggleOpsRoom}
+      style={{
+        fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontSize: isMobile ? '11px' : '10px',
+        backgroundColor: opsRoomOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
+        color: opsRoomOpen ? 'var(--bg-primary)' : 'var(--text-muted)',
+        border: '1px solid var(--border-primary)',
+        padding: isMobile ? '8px 14px' : '2px 10px',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        position: 'relative',
+        animation: chatUnread > 0 && !opsRoomOpen ? 'ops-pulse 2s ease-in-out infinite' : 'none',
+      }}
+    >
+      OPS {opsRoomOpen ? <CaretRight size={10} weight="bold" style={{ display: 'inline', verticalAlign: 'middle' }} /> : <Diamond size={10} weight="regular" style={{ display: 'inline', verticalAlign: 'middle' }} />}
+      {chatUnread > 0 && !opsRoomOpen && (
+        <span style={{
+          position: 'absolute',
+          top: '-5px',
+          right: '-5px',
+          backgroundColor: '#b84040',
+          color: '#fff',
+          fontSize: '8px',
+          fontWeight: 700,
+          lineHeight: 1,
+          minWidth: '14px',
+          height: '14px',
+          borderRadius: '7px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 3px',
+        }}>
+          {chatUnread > 9 ? '9+' : chatUnread}
+        </span>
+      )}
+    </button>
+  );
+
+  // ── MOBILE HEADER ──
+  if (isMobile) {
+    return (
+      <header
+        className="shrink-0 border-b"
+        style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--bg-secondary)' }}
+      >
+        <div style={{ height: '2px', backgroundColor: 'var(--border-primary)' }} />
+
+        {/* Row 1: spacer for hamburger | title | OPS button */}
+        <div className="flex items-center justify-between px-3 py-2" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+          {/* Spacer for hamburger button */}
+          <div style={{ width: '44px' }} />
+          <div
+            style={{
+              fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '15px', fontWeight: 'normal',
+              letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Situation Room
+          </div>
+          <div>{opsButton}</div>
+        </div>
+
+        {/* Row 2: horizontally scrollable stat strip */}
+        <div
+          className="flex items-center gap-3 overflow-x-auto px-3 pb-2"
+          style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', scrollbarWidth: 'none' }}
+        >
+          <span style={{ color: 'var(--text-secondary)', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+            {utcTime}
+          </span>
+
+          {/* F&G */}
+          <span
+            className="inline-flex items-center gap-1.5 shrink-0"
+            style={{ padding: '1px 7px', border: '1px solid var(--border-subtle)', borderRadius: '3px' }}
+          >
+            <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>F&G</span>
+            <span style={{ fontWeight: 700, color: fg ? fgColor(fg.value) : 'var(--text-muted)' }}>{fg?.value ?? '--'}</span>
+          </span>
+
+          {/* Threat — compact */}
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span
+              className="relative"
+              style={{ width: '48px', height: '5px', border: '1px solid var(--border-primary)', background: 'var(--bg-card)' }}
+            >
+              <span
+                className="absolute inset-y-0 left-0"
+                style={{ width: `${threat.score}%`, backgroundColor: threatColor, transition: 'width 0.8s ease' }}
+              />
+            </span>
+            <span style={{ fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: threatColor, fontSize: '10px' }}>
+              {threat.level}
+            </span>
+          </span>
+
+          {/* Viewers */}
+          <span className="inline-flex items-center gap-1 shrink-0" style={{ padding: '1px 7px', border: '1px solid var(--border-subtle)', borderRadius: '3px' }}>
+            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#2a6e2a', animation: 'viewer-pulse 2s ease-in-out infinite' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>{viewers ?? '-'}</span>
+          </span>
+        </div>
+
+        <div style={{ height: '1px', backgroundColor: 'var(--border-primary)' }} />
+      </header>
+    );
+  }
+
+  // ── DESKTOP HEADER (unchanged) ──
   return (
     <header
       className="shrink-0 border-b"
@@ -308,45 +423,7 @@ export function DashboardHeader({ opsRoomOpen, onToggleOpsRoom, chatUnread = 0 }
           </Tooltip>
 
           {/* OPS ROOM toggle */}
-          {onToggleOpsRoom && (
-            <button
-              onClick={onToggleOpsRoom}
-              style={{
-                fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontSize: '10px',
-                backgroundColor: opsRoomOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
-                color: opsRoomOpen ? 'var(--bg-primary)' : 'var(--text-muted)',
-                border: '1px solid var(--border-primary)',
-                padding: '2px 10px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                animation: chatUnread > 0 && !opsRoomOpen ? 'ops-pulse 2s ease-in-out infinite' : 'none',
-              }}
-            >
-              OPS {opsRoomOpen ? <CaretRight size={10} weight="bold" style={{ display: 'inline', verticalAlign: 'middle' }} /> : <Diamond size={10} weight="regular" style={{ display: 'inline', verticalAlign: 'middle' }} />}
-              {chatUnread > 0 && !opsRoomOpen && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-5px',
-                  right: '-5px',
-                  backgroundColor: '#b84040',
-                  color: '#fff',
-                  fontSize: '8px',
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  minWidth: '14px',
-                  height: '14px',
-                  borderRadius: '7px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 3px',
-                }}>
-                  {chatUnread > 9 ? '9+' : chatUnread}
-                </span>
-              )}
-            </button>
-          )}
+          {opsButton}
 
           {/* Last refresh */}
           <span

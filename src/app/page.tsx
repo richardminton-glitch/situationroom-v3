@@ -6,6 +6,7 @@ import { useTheme } from '@/components/layout/ThemeProvider';
 import { useData } from '@/components/layout/DataProvider';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { DashboardGrid } from '@/components/layout/DashboardGrid';
+import { MobileDashboardGrid } from '@/components/layout/MobileDashboardGrid';
 import { PanelPicker } from '@/components/layout/PanelPicker';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
@@ -15,6 +16,7 @@ import { useTier } from '@/hooks/useTier';
 import { useSavedLayouts } from '@/hooks/useSavedLayouts';
 import { hasAccess, TIER_LABELS, TIER_BILLING } from '@/lib/auth/tier';
 import { usePricing, formatTierPrice } from '@/hooks/usePricing';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import Link from 'next/link';
 import { useUnreadChat } from '@/hooks/useUnreadChat';
 import type { Theme, Tier } from '@/types';
@@ -32,6 +34,7 @@ export default function DashboardPage() {
   const { userTier, canAccess } = useTier();
   const { error: dataError } = useData();
   const pricing = usePricing();
+  const isMobile = useIsMobile();
   // Always start on Full Overview; restore saved preset only for logged-in users
   const [activePreset, setActivePreset] = useState<string>('default');
   const [activeCustomId, setActiveCustomId] = useState<string | null>(null);
@@ -241,15 +244,15 @@ export default function DashboardPage() {
     <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Sidebar dashboardControls={dashboardControls} />
 
-      <div className="flex-1 flex flex-col min-w-0" style={{ marginRight: opsRoomOpen ? '320px' : '0', transition: 'margin-right 0.2s ease' }}>
+      <div className="flex-1 flex flex-col min-w-0" style={{ marginRight: !isMobile && opsRoomOpen ? '320px' : '0', transition: 'margin-right 0.2s ease' }}>
         <DashboardHeader
           opsRoomOpen={opsRoomOpen}
           onToggleOpsRoom={() => setOpsRoomOpen((o) => !o)}
           chatUnread={chatUnread}
         />
 
-        {/* Edit mode toolbar — only shows when editing a custom dashboard */}
-        {editMode && activeCustomId && (
+        {/* Edit mode toolbar — only shows when editing a custom dashboard (desktop only) */}
+        {!isMobile && editMode && activeCustomId && (
           <div
             className="flex items-center justify-end px-4 py-1.5 border-b shrink-0"
             style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-secondary)' }}
@@ -311,11 +314,15 @@ export default function DashboardPage() {
                   height: '100%',
                   transition: 'filter 0.3s ease',
                 }}>
-                  <DashboardGrid
-                    layout={layout}
-                    onLayoutChange={handleLayoutChange}
-                    editable={editMode && activeCustomId !== null}
-                  />
+                  {isMobile ? (
+                    <MobileDashboardGrid layout={layout} />
+                  ) : (
+                    <DashboardGrid
+                      layout={layout}
+                      onLayoutChange={handleLayoutChange}
+                      editable={editMode && activeCustomId !== null}
+                    />
+                  )}
                 </div>
                 {isLocked && (
                   <div style={{

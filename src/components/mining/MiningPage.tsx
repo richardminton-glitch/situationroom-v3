@@ -8,6 +8,7 @@
  */
 
 import { useTheme } from '@/components/layout/ThemeProvider';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import type { MiningIntelResponse } from '@/app/api/mining-intel/route';
 import { MinerProfitHero } from './MinerProfitHero';
 import { HashPriceChart } from './HashPriceChart';
@@ -28,6 +29,7 @@ interface Props {
 export function MiningPage({ data, loading, error }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
+  const isMobile = useIsMobile();
 
   /* ── Loading ──────────────────────────────────────────────── */
   if (loading) {
@@ -70,7 +72,7 @@ export function MiningPage({ data, loading, error }: Props) {
     }}>
       <div style={{
         maxWidth: 920, margin: '0 auto', width: '100%',
-        padding: '28px 36px 56px',
+        padding: isMobile ? '16px 12px 32px' : '28px 36px 56px',
         display: 'flex', flexDirection: 'column', gap: 0,
       }}>
 
@@ -101,8 +103,8 @@ export function MiningPage({ data, loading, error }: Props) {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 24,
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 16 : 24,
           }}>
             <HashPriceChart
               history={data.hashPrice.history}

@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { useTier }         from '@/hooks/useTier';
 import { useTheme }        from '@/components/layout/ThemeProvider';
+import { useIsMobile }     from '@/hooks/useIsMobile';
 import { UpgradePrompt }   from '@/components/auth/UpgradePrompt';
 import type { BtcSignalResponse }  from '@/app/api/btc-signal/route';
 import type { DistributionPoint }  from '@/lib/data/daily-snapshot';
@@ -117,6 +118,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const { canAccess, loading: tierLoading } = useTier();
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
+  const isMobile = useIsMobile();
 
   const isVip = canAccess('vip');
 
@@ -358,7 +360,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
         }}>
 
           {/* Calculator row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
             {/* Base sell input */}
             <div style={{ padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>

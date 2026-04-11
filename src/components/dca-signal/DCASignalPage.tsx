@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { BtcSignalResponse } from '@/app/api/btc-signal/route';
 import { useTheme }        from '@/components/layout/ThemeProvider';
+import { useIsMobile }     from '@/hooks/useIsMobile';
 import { PageHeader }      from './PageHeader';
 import { HeroSignal }      from './HeroSignal';
 import { SignalGrid }      from './SignalGrid';
@@ -26,6 +27,7 @@ interface Props {
 export function DCASignalPage({ data, loading, error }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
+  const isMobile = useIsMobile();
 
   // Single shared base amount — drives HeroSignal, ReturnsSummary, StackingChart, DCAOutSection
   const [baseAmount, setBaseAmount] = useState(100);
@@ -78,7 +80,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
       backgroundColor: 'var(--bg-primary)',
       fontFamily:      FONT,
       color:           'var(--text-primary)',
-      padding:         '24px 32px',
+      padding:         isMobile ? '16px 12px' : '24px 32px',
       display:         'flex',
       flexDirection:   'column',
       gap:             24,
@@ -96,7 +98,7 @@ export function DCASignalPage({ data, loading, error }: Props) {
       />
 
       {/* Signal grid + confluence bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
         <SignalGrid data={data} />
         <ConfluenceBar maMult={data.maMult} puellMult={data.puellMult} />
       </div>
