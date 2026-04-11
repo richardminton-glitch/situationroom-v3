@@ -49,8 +49,8 @@ const MAX_DAYS = 900; // x-axis ceiling
 
 function readCsv(): DayPrice[] {
   const candidates = [
-    path.join(process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
-    path.join(process.cwd(), 'data', 'btc-price-history.csv'),
+    path.join(/* turbopackIgnore: true */ process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
+    path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'btc-price-history.csv'),
   ];
 
   for (const p of candidates) {
