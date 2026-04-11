@@ -12,6 +12,7 @@ import type { MiningIntelResponse } from '@/app/api/mining-intel/route';
 import { MinerProfitHero } from './MinerProfitHero';
 import { HashPriceChart } from './HashPriceChart';
 import { HashRibbonChart } from './HashRibbonChart';
+import { EnergyGravityChart } from './EnergyGravityChart';
 import { MiningConfluence } from './MiningConfluence';
 import { HashrateDistribution } from './HashrateDistribution';
 import { SecurityOutlook } from './SecurityOutlook';
@@ -113,6 +114,16 @@ export function MiningPage({ data, loading, error }: Props) {
               data={data.hashRibbon.data}
               signal={data.hashRibbon.signal}
               currentHashrate={data.hashRibbon.currentHashrate}
+              theme={theme}
+            />
+          </div>
+
+          {/* Energy Gravity — full width below */}
+          <div style={{ marginTop: 20 }}>
+            <EnergyGravityChart
+              history={data.energyGravity.history}
+              current={data.energyGravity.current}
+              globalAvgKwh={data.energyPrices.globalWeightedAvg}
               theme={theme}
             />
           </div>

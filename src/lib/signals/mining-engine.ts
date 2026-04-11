@@ -45,6 +45,37 @@ export function computeHashPriceSeries(
   return result;
 }
 
+// ── Energy Gravity (Blockware) ───────────────────────────────────────────────
+
+export interface EnergyGravityPoint {
+  date: string;
+  gravity: number;    // $/kWh — max affordable electricity price
+  hashPrice: number;
+}
+
+/**
+ * Compute Energy Gravity series (Blockware model).
+ *
+ * Energy Gravity = the breakeven electricity rate for modern ASICs.
+ * Formula: gravity = hashPrice / ((efficiency / 1000) × 24)
+ *
+ * Where efficiency is J/TH. At 25 J/TH and $0.0345 hash price:
+ * gravity = 0.0345 / (0.025 × 24) = $0.0575/kWh
+ *
+ * When gravity > your electricity cost, mining is profitable.
+ */
+export function computeEnergyGravitySeries(
+  hashPriceHistory: HashPricePoint[],
+  efficiencyJPerTH: number = 25,
+): EnergyGravityPoint[] {
+  const divisor = (efficiencyJPerTH / 1000) * 24; // kWh per TH per day
+  return hashPriceHistory.map(hp => ({
+    date: hp.date,
+    gravity: divisor > 0 ? hp.hashPrice / divisor : 0,
+    hashPrice: hp.hashPrice,
+  }));
+}
+
 // ── Margin Signal ───────────────────────────────────────────────────────────
 
 export type MarginSignal = 'profitable' | 'marginal' | 'unprofitable';

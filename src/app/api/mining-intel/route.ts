@@ -22,8 +22,9 @@ import {
   computeBreakevenBtcPrice,
   computeEnergyValue,
   computeHashRibbon,
+  computeEnergyGravitySeries,
 } from '@/lib/signals/mining-engine';
-import type { HashPricePoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult, HashRibbonResult } from '@/lib/signals/mining-engine';
+import type { HashPricePoint, EnergyGravityPoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult, HashRibbonResult } from '@/lib/signals/mining-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,12 @@ export interface MiningIntelResponse {
     breakevenHashPrice: number;
     marginPct: number;
     breakevenBtcPrice: number;
+  };
+
+  // Energy Gravity (Blockware) — breakeven electricity rate
+  energyGravity: {
+    current: number;           // $/kWh — max affordable electricity
+    history: EnergyGravityPoint[];
   };
 
   // Section 3b: Energy prices
@@ -282,6 +289,12 @@ export async function GET() {
       hashrateEH, fleetEfficiency, circulatingSupply, btcPrice,
     );
 
+    // ── Compute energy gravity ──
+    const energyGravityHistory = computeEnergyGravitySeries(hashPriceHistory, efficiency);
+    const currentEnergyGravity = energyGravityHistory.length > 0
+      ? energyGravityHistory[energyGravityHistory.length - 1].gravity
+      : 0;
+
     // ── Compute hash ribbon ──
     const hashRibbonResult = computeHashRibbon(hashrates, dates);
 
@@ -330,6 +343,10 @@ export async function GET() {
       },
       securityBudget: budgetScenarios,
       editorial: editorialData ?? { title: '', body: '', updatedAt: '' },
+      energyGravity: {
+        current: currentEnergyGravity,
+        history: energyGravityHistory,
+      },
       hashRibbon: hashRibbonResult,
       energyValue: energyValueResult,
       btcPrice,
