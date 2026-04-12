@@ -197,8 +197,10 @@ export async function recordDailySnapshot() {
       const latest    = compositeRows[compositeRows.length - 1];
       const chartData = compositeRows.slice(-365);
 
-      // Also compute backtest periods (same logic as API route)
-      const backtestSummary = computeBacktestSummary(compositeRows, latest.price);
+      // Also compute backtest periods + stacking/distribution (same logic as API route)
+      const backtestSummary     = computeBacktestSummary(compositeRows, latest.price);
+      const stackingHistory     = computeStackingHistory(compositeRows);
+      const distributionHistory = computeDistributionHistory(compositeRows, stackingHistory);
 
       const signalResult = {
         composite:       latest.normalisedComposite,
@@ -211,6 +213,8 @@ export async function recordDailySnapshot() {
         timestamp:       new Date().toISOString(),
         chartData,
         backtestSummary,
+        stackingHistory,
+        distributionHistory,
       };
 
       const expires = new Date(Date.now() + 26 * 60 * 60 * 1000); // 26h — overlap with next cron
