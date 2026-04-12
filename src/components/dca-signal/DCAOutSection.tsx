@@ -784,7 +784,7 @@ const FAQ_ITEMS: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: 'How do I follow this week to week in practice?',
-    a: 'Check the signal once per week — Monday works well since signals compute from Sunday\'s close. If the composite is above 0.70×, make your DCA-in purchase at the recommended amount. If it is below 0.70×, make your DCA-out sale at the recommended amount (and consider skipping or reducing your buy that week). The VIP email signal delivers both numbers directly to your inbox so you never need to remember to check. Set a base amount, subscribe, and let the signal handle the scaling.',
+    a: 'Check the signal once per week — Monday works well since signals compute from Sunday\'s close. If the composite is above 0.70×, make your DCA-in purchase at the recommended amount. If it is below 0.70×, make your DCA-out sale at the recommended amount. The VIP email signal delivers both numbers directly to your inbox so you never need to remember to check. Set a base amount, subscribe, and let the signal handle the scaling.',
   },
   {
     q: 'Is this financial advice?',
