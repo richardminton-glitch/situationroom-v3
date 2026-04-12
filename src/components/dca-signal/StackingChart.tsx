@@ -16,18 +16,19 @@ import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
-type Period = '1Y' | '3Y' | '5Y' | 'ALL';
+type Period = '1Y' | '2Y' | '3Y' | '4Y' | '5Y';
 
 interface Props {
   stackingHistory: StackingPoint[];
   baseAmount:      number;   // user's weekly base — scales the BTC amounts
 }
 
-const PERIODS: { label: Period; years: number | null }[] = [
-  { label: '1Y',  years: 1 },
-  { label: '3Y',  years: 3 },
-  { label: '5Y',  years: 5 },
-  { label: 'ALL', years: null },
+const PERIODS: { label: Period; years: number }[] = [
+  { label: '1Y', years: 1 },
+  { label: '2Y', years: 2 },
+  { label: '3Y', years: 3 },
+  { label: '4Y', years: 4 },
+  { label: '5Y', years: 5 },
 ];
 
 function shiftYears(dateStr: string, years: number): string {
@@ -49,18 +50,16 @@ function formatPrice(v: number): string {
 }
 
 function getXTicks(data: StackingPoint[], period: Period): string[] {
-  // For ALL/5Y use yearly ticks; for 3Y use 6-monthly; for 1Y use monthly
+  // 1Y → monthly; 2Y/3Y → quarterly; 4Y/5Y → yearly
   const seen = new Set<string>();
   const ticks: string[] = [];
 
   if (period === '1Y') {
-    // Monthly
     for (const row of data) {
       const key = row.date.slice(0, 7);
       if (!seen.has(key)) { seen.add(key); ticks.push(row.date); }
     }
-  } else if (period === '3Y') {
-    // Quarterly
+  } else if (period === '2Y' || period === '3Y') {
     for (const row of data) {
       const [yyyy, mm] = row.date.split('-');
       const q = Math.floor((parseInt(mm) - 1) / 3);
@@ -68,7 +67,6 @@ function getXTicks(data: StackingPoint[], period: Period): string[] {
       if (!seen.has(key)) { seen.add(key); ticks.push(row.date); }
     }
   } else {
-    // Yearly
     for (const row of data) {
       const key = row.date.slice(0, 4);
       if (!seen.has(key)) { seen.add(key); ticks.push(row.date); }
@@ -82,7 +80,7 @@ function formatXTick(dateStr: string, period: Period): string {
   if (period === '1Y') {
     return d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
   }
-  if (period === '3Y') {
+  if (period === '2Y' || period === '3Y') {
     return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' });
   }
   return String(d.getUTCFullYear());
@@ -138,33 +136,20 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
   // Guard against empty history (e.g. stale cache with no computed data)
   if (!stackingHistory?.length) return null;
 
-  // Filter to selected period
-  const lastDate   = stackingHistory[stackingHistory.length - 1].date;
-  const cutoff     = period === 'ALL'
-    ? ''
-    : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
+  // Filter to selected period and zero-base
+  const lastDate = stackingHistory[stackingHistory.length - 1].date;
+  const cutoff   = shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years);
+  const raw      = stackingHistory.filter(r => r.date >= cutoff);
+  if (raw.length === 0) return null;
 
-  // For ALL — include everything; otherwise filter and offset to zero-base
-  let filtered: (StackingPoint & { btcSignalScaled: number; btcVanillaScaled: number })[];
-
-  if (period === 'ALL') {
-    filtered = stackingHistory.map(r => ({
-      ...r,
-      btcSignalScaled:  r.btcSignal  * scale,
-      btcVanillaScaled: r.btcVanilla * scale,
-    }));
-  } else {
-    const raw = stackingHistory.filter(r => r.date >= cutoff);
-    if (raw.length === 0) return null;
-    // Zero-base: subtract the starting cumulative so chart starts from 0
-    const baseSignal  = raw[0].btcSignal;
-    const baseVanilla = raw[0].btcVanilla;
-    filtered = raw.map(r => ({
+  const baseSignal  = raw[0].btcSignal;
+  const baseVanilla = raw[0].btcVanilla;
+  const filtered: (StackingPoint & { btcSignalScaled: number; btcVanillaScaled: number })[] =
+    raw.map(r => ({
       ...r,
       btcSignalScaled:  (r.btcSignal  - baseSignal)  * scale,
       btcVanillaScaled: (r.btcVanilla - baseVanilla) * scale,
     }));
-  }
 
   const xTicks = getXTicks(filtered, period);
 

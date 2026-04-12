@@ -24,10 +24,11 @@ import { VIPEmailSignup } from './VIPEmailSignup';
 const FONT      = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_PERIOD = 'sr-dca-out-period';
 
-type Period = '1Y' | '3Y' | '5Y' | 'ALL';
-const PERIODS: { label: Period; years: number | null }[] = [
-  { label: '1Y', years: 1 }, { label: '3Y', years: 3 },
-  { label: '5Y', years: 5 }, { label: 'ALL', years: null },
+type Period = '1Y' | '2Y' | '3Y' | '4Y' | '5Y';
+const PERIODS: { label: Period; years: number }[] = [
+  { label: '1Y', years: 1 }, { label: '2Y', years: 2 },
+  { label: '3Y', years: 3 }, { label: '4Y', years: 4 },
+  { label: '5Y', years: 5 },
 ];
 
 // ── Spectrum constants ────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ function getXTicks(data: { date: string }[], period: Period): string[] {
   for (const row of data) {
     let key: string;
     if      (period === '1Y') key = row.date.slice(0, 7);
-    else if (period === '3Y') { const [y, m] = row.date.split('-'); key = `${y}-Q${Math.floor((+m - 1) / 3)}`; }
+    else if (period === '2Y' || period === '3Y') { const [y, m] = row.date.split('-'); key = `${y}-Q${Math.floor((+m - 1) / 3)}`; }
     else                      key = row.date.slice(0, 4);
     if (!seen.has(key)) { seen.add(key); ticks.push(row.date); }
   }
@@ -109,7 +110,7 @@ function getXTicks(data: { date: string }[], period: Period): string[] {
 function formatXTick(dateStr: string, period: Period): string {
   const d = new Date(dateStr + 'T00:00:00Z');
   if (period === '1Y') return d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
-  if (period === '3Y') return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  if (period === '2Y' || period === '3Y') return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' });
   return String(d.getUTCFullYear());
 }
 
@@ -217,11 +218,11 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
   // ── Chart data ─────────────────────────────────────────────────────────────
   const lastDate = history.at(-1)?.date ?? '';
-  const cutoff   = period === 'ALL' || !lastDate ? '' : shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years!);
+  const cutoff   = lastDate ? shiftYears(lastDate, PERIODS.find(p => p.label === period)!.years) : '';
 
   type ChartRow = DistributionPoint & { weeklyUsd: number };
   const chartData: ChartRow[] = (() => {
-    const raw = period === 'ALL' ? history : history.filter(r => r.date >= cutoff);
+    const raw = history.filter(r => r.date >= cutoff);
     // For period slices, the first row has a large *cumulative* usdSignal going back to
     // history start. We need the row immediately before the cutoff as a baseline so
     // the first bar only shows that week's exit delta, not the running total.
@@ -240,7 +241,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const xTicks = getXTicks(chartData, period);
 
   // Period-filtered history
-  const periodHistory = period === 'ALL' || !cutoff ? history : history.filter(r => r.date >= cutoff);
+  const periodHistory = cutoff ? history.filter(r => r.date >= cutoff) : history;
   const periodStart   = cutoff ? history.filter(r => r.date < cutoff).at(-1) : null;
   const periodEnd     = periodHistory.at(-1);
 
@@ -265,9 +266,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   // teal line genuinely reflects what a fresh-start investor would see.
   const portData = (() => {
     if (!stackHistory.length || !history.length) return [];
-    const startIdx = period === 'ALL' || !cutoff
-      ? 0
-      : stackHistory.findIndex(s => s.date >= cutoff);
+    const startIdx = cutoff ? stackHistory.findIndex(s => s.date >= cutoff) : 0;
     if (startIdx < 0) return [];
 
     const prevStack = startIdx > 0 ? stackHistory[startIdx - 1] : null;
