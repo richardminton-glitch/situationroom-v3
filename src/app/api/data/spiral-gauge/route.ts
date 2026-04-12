@@ -8,11 +8,13 @@
  *   radius  = log10(price) mapped to $1–$1M range
  *   colour  = percentile rank of price/200-week MA
  *              (green = near/below MA, red = far above MA)
+ *
+ * Data source: fetchCoinGeckoHistory() — DB-backed, CSV-seeded (5700+ days),
+ * gap-filled to today via CoinGecko free tier.
  */
 
-import * as fs   from 'fs';
-import * as path from 'path';
 import { NextResponse } from 'next/server';
+import { fetchCoinGeckoHistory, type DayPrice } from '@/lib/data/coingecko-history';
 
 // ── SVG geometry ──────────────────────────────────────────────────────────────
 const SPIRAL_CX     = 170;
@@ -36,8 +38,6 @@ const HALVING_DATES  = ['2012-11-28', '2016-07-09', '2020-05-11', '2024-04-20'];
 const PRICE_TICKS    = [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface DayPrice { date: string; price: number; }
-
 export interface SpiralSegment {
   x1: number; y1: number;
   x2: number; y2: number;
@@ -59,33 +59,6 @@ export interface SpiralGaugeData {
   halvings:     HalvingMark[];
   rCenter:      number;
   rOuter:       number;
-}
-
-// ── CSV reader ────────────────────────────────────────────────────────────────
-function readCsv(): DayPrice[] {
-  const candidates = [
-    path.join(/* turbopackIgnore: true */ process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
-    path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'btc-price-history.csv'),
-  ];
-  for (const p of candidates) {
-    try {
-      let raw = fs.readFileSync(p, 'utf-8').replace(/^\uFEFF/, '');
-      const rows = raw.trim().split('\n').slice(1);
-      const result: DayPrice[] = [];
-      for (const row of rows) {
-        const [dateStr, priceStr] = row.trim().split(',');
-        if (!dateStr || !priceStr) continue;
-        const parts = dateStr.split('/');
-        if (parts.length !== 3) continue;
-        const [dd, mm, yyyy] = parts;
-        const date  = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-        const price = parseFloat(priceStr);
-        if (!isNaN(price) && price > 0) result.push({ date, price });
-      }
-      return result.sort((a, b) => a.date.localeCompare(b.date));
-    } catch { /* try next */ }
-  }
-  return [];
 }
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
@@ -132,8 +105,9 @@ let _cache: { data: SpiralGaugeData; ts: number } | null = null;
 const CACHE_TTL = 3_600_000;
 
 // ── Computation ───────────────────────────────────────────────────────────────
-function compute(): SpiralGaugeData {
-  const all = readCsv();
+async function compute(): Promise<SpiralGaugeData> {
+  // Full history from DB (CSV-seeded, gap-filled to today via CoinGecko)
+  const all = await fetchCoinGeckoHistory();
   if (!all.length) throw new Error('No price data');
 
   // Weekly sample
@@ -218,7 +192,7 @@ export async function GET() {
     return NextResponse.json(_cache.data, { headers: { 'Cache-Control': 'public, max-age=3600' } });
   }
   try {
-    const data = compute();
+    const data = await compute();
     _cache = { data, ts: Date.now() };
     return NextResponse.json(data, { headers: { 'Cache-Control': 'public, max-age=3600' } });
   } catch (e) {
