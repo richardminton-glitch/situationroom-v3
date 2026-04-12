@@ -51,7 +51,7 @@ export default function SupportPage() {
           { tier: 'General', price: pricing ? `${formatSats(pricing.tierPricesSats.general)} sats/mo` : '...', color: '#8b6914', subtitle: 'Price of a coffee', features: [
             'Everything in Free',
             'Full 5-agent briefings — Market, Network, Geopolitical, Macro, Outlook',
-            '30-day briefing archive with search',
+            '30-day briefing archive',
             'Macro Focus dashboard',
             'Conviction score breakdown — all 5 signals',
             'AI macro analysis (Grok-powered)',
@@ -74,6 +74,7 @@ export default function SupportPage() {
             'Everything in Members',
             'Custom dashboard layouts — save & switch',
             'On-demand Grok macro & on-chain deep analysis',
+            'AI briefing search — query the full archive',
             'Personalised VIP briefings by topic',
             'Threshold alerts via Nostr DM',
             'VIP newsletter topics',
