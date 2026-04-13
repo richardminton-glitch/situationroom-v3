@@ -264,10 +264,10 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   // re-simulate the period from scratch: track only the BTC bought/sold since
   // the period start and apply compositeToExcessRate() week-by-week so the
   // teal line genuinely reflects what a fresh-start investor would see.
-  const portData = (() => {
-    if (!stackHistory.length || !history.length) return [];
+  const { portData, totalUsdSigIn, totalUsdVanIn } = (() => {
+    if (!stackHistory.length || !history.length) return { portData: [], totalUsdSigIn: 0, totalUsdVanIn: 0 };
     const startIdx = cutoff ? stackHistory.findIndex(s => s.date >= cutoff) : 0;
-    if (startIdx < 0) return [];
+    if (startIdx < 0) return { portData: [], totalUsdSigIn: 0, totalUsdVanIn: 0 };
 
     const prevStack = startIdx > 0 ? stackHistory[startIdx - 1] : null;
     const sBuyBase  = prevStack?.btcSignal  ?? 0;
@@ -276,10 +276,17 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     // Re-simulate in-period exits fresh (independent of all-time distribution)
     let inPeriodSold = 0;
     let inPeriodUsd  = 0;
+    let totalUsdSigIn = 0;
+    let totalUsdVanIn = 0;
 
-    return stackHistory.slice(startIdx).map((s, i) => {
+    const data2 = stackHistory.slice(startIdx).map((s, i) => {
       const d = history[startIdx + i];
       if (!d) return null;
+
+      // Accumulate USD invested each week (at user's baseAmount scale)
+      const weeklyMult  = Math.max(0.1, Math.min(5.0, d.composite));
+      totalUsdVanIn    += 100 * buyScale;
+      totalUsdSigIn    += 100 * weeklyMult * buyScale;
 
       const inBought  = s.btcSignal  - sBuyBase;   // BTC bought by signal since period start
       const inVanilla = s.btcVanilla - sVanBase;    // BTC bought by vanilla since period start
@@ -300,6 +307,8 @@ export function DCAOutSection({ data, baseAmount }: Props) {
         usdSig:    inPeriodUsd * buyScale,
       };
     }).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    return { portData: data2, totalUsdSigIn, totalUsdVanIn };
   })();
 
   const portEnd      = portData.at(-1);
@@ -309,6 +318,10 @@ export function DCAOutSection({ data, baseAmount }: Props) {
   const portTotalSig = portBtcSig * data.btcPrice + portUsdSig;
   const portTotalVan = portBtcVan * data.btcPrice;
   const portXTicks   = getXTicks(portData, period);
+
+  // Average cost per BTC: for signal, net cost = total invested minus exits recouped
+  const sigAvgCost = portBtcSig > 0 ? (totalUsdSigIn - portUsdSig) / portBtcSig : 0;
+  const vanAvgCost = portBtcVan > 0 ? totalUsdVanIn / portBtcVan : 0;
 
   if (tierLoading) return null;
 
@@ -590,6 +603,15 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                         {formatUsd(portBtcSig * data.btcPrice, true)} BTC + {formatUsd(portUsdSig, true)} exits
                       </div>
                     </div>
+                    {sigAvgCost > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>AVG COST/BTC</div>
+                        <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>{formatUsd(sigAvgCost)}</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
+                          net of exits
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {/* Vanilla comparison card */}
@@ -611,6 +633,15 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                         {formatUsd(portTotalVan, true)} BTC only
                       </div>
                     </div>
+                    {vanAvgCost > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>AVG COST/BTC</div>
+                        <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatUsd(vanAvgCost)}</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
+                          no exits
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -33,8 +33,8 @@ export function compositeToExitTier(composite: number): string {
  */
 export function compositeToExcessRate(composite: number): number {
   if (composite >= DCA_CROSSOVER) return 0;     // accumulate zone — no exits
-  if (composite >= 0.55) return 0.04;            // light exits — 4%/week of excess
-  if (composite >= 0.40) return 0.07;            // building distribution — 7%/week
-  if (composite >= 0.25) return 0.11;            // increase exits — 11%/week
-  return 0.15;                                   // heavy distribution — 15%/week
+  if (composite >= 0.55) return 0.10;            // light exits — 10%/week of excess
+  if (composite >= 0.40) return 0.15;            // building distribution — 15%/week
+  if (composite >= 0.25) return 0.22;            // increase exits — 22%/week
+  return 0.30;                                   // heavy distribution — 30%/week
 }
