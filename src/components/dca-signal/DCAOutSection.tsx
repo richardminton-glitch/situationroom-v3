@@ -603,13 +603,20 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                         {formatUsd(portBtcSig * data.btcPrice, true)} BTC + {formatUsd(portUsdSig, true)} exits
                       </div>
                     </div>
-                    {sigAvgCost > 0 && (
+                    {portBtcSig > 0 && (
                       <div>
                         <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>AVG COST/BTC</div>
-                        <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>{formatUsd(sigAvgCost)}</div>
-                        <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>
-                          net of exits
-                        </div>
+                        {sigAvgCost > 0 ? (
+                          <>
+                            <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>{formatUsd(sigAvgCost)}</div>
+                            <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: 2 }}>net of exits</div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>FREE</div>
+                            <div style={{ fontSize: 9, color: tealColor, letterSpacing: '0.06em', marginTop: 2 }}>exits recouped all costs</div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
