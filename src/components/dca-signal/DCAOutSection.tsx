@@ -589,6 +589,10 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                   <div style={{ fontSize: 9, color: tealColor, letterSpacing: '0.12em', marginBottom: 8 }}>SIGNAL STRATEGY · {period}</div>
                   <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
                     <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>USD IN</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-primary)', fontWeight: 600 }}>{formatUsd(totalUsdSigIn)}</div>
+                    </div>
+                    <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>BTC REMAINING</div>
                       <div style={{ fontSize: 15, color: tealColor, fontWeight: 600 }}>{formatBtc(portBtcSig)}</div>
                     </div>
@@ -625,6 +629,10 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                 <div style={{ padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: 8 }}>VANILLA DCA · {period}</div>
                   <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>USD IN</div>
+                      <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatUsd(totalUsdVanIn)}</div>
+                    </div>
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>BTC ACCUMULATED</div>
                       <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{formatBtc(portBtcVan)}</div>
