@@ -49,7 +49,12 @@ export async function GET(request: NextRequest) {
   try {
     const port = process.env.PORT ?? '3001';
     const url = `http://localhost:${port}/api/briefing/generate`;
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      // Tell the HTTPS redirect middleware this is already "secure" so it
+      // doesn't 301 the loopback request. Without this, the middleware sees
+      // a plain-HTTP connection and redirects to https://localhost:3001.
+      'x-forwarded-proto': 'https',
+    };
     if (cronSecret) headers['Authorization'] = `Bearer ${cronSecret}`;
 
     const res = await httpPost(url, headers);
