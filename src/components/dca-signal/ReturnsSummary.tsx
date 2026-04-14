@@ -10,6 +10,8 @@ interface Props {
   backtestSummary: BacktestPeriod[];
   btcPrice:        number;
   baseAmount:      number;
+  frequency:       'weekly' | 'monthly';
+  weeklyEquiv:     number;   // baseAmount converted to weekly equivalent
 }
 
 function formatBtc(btc: number): string {
@@ -22,15 +24,16 @@ function formatUsd(v: number): string {
   return '$' + Math.round(v).toLocaleString('en-US');
 }
 
-export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props) {
+export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount, frequency, weeklyEquiv }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
   const isMobile = useIsMobile();
 
   if (!backtestSummary || backtestSummary.length === 0) return null;
 
-  // Scale portfolio values by baseAmount if different from $100 base
-  const scale = baseAmount / 100;
+  // Scale using weeklyEquiv: computeBacktestSummary uses $100/week as base
+  const scale = weeklyEquiv / 100;
+  const periodLabel = frequency === 'weekly' ? 'WEEK' : 'MONTH';
 
   return (
     <div style={{
@@ -45,7 +48,7 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
           SIGNAL DCA vs VANILLA DCA
         </span>
         <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-          BACKTESTED · ${baseAmount}/WEEK BASE
+          BACKTESTED · ${baseAmount.toLocaleString()}/{periodLabel} BASE
         </span>
       </div>
 
@@ -125,7 +128,7 @@ export function ReturnsSummary({ backtestSummary, btcPrice, baseAmount }: Props)
         color:         'var(--text-muted)',
         letterSpacing: '0.08em',
       }}>
-        BACKTESTED WEEKLY DCA · SIGNAL V3 (200W MA + PUELL) · NOT FINANCIAL ADVICE
+        BACKTESTED {periodLabel} DCA · SIGNAL V3 (200W MA + PUELL) · NOT FINANCIAL ADVICE
       </p>
 
     </div>

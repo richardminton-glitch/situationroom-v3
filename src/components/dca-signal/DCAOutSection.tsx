@@ -117,11 +117,13 @@ function formatXTick(dateStr: string, period: Period): string {
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
-  data:       BtcSignalResponse;
-  baseAmount: number;
+  data:        BtcSignalResponse;
+  baseAmount:  number;
+  frequency:   'weekly' | 'monthly';
+  weeklyEquiv: number;   // baseAmount converted to weekly equivalent for scaling
 }
 
-export function DCAOutSection({ data, baseAmount }: Props) {
+export function DCAOutSection({ data, baseAmount, frequency, weeklyEquiv }: Props) {
   const { canAccess, loading: tierLoading } = useTier();
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
@@ -153,7 +155,9 @@ export function DCAOutSection({ data, baseAmount }: Props) {
 
   const stackHistory = data.stackingHistory ?? [];
   const history      = data.distributionHistory ?? [];
-  const buyScale     = baseAmount / 100;
+  // computeStackingHistory uses $100/week as base — scale by weekly equivalent
+  const buyScale     = weeklyEquiv / 100;
+  const periodLabel  = frequency === 'weekly' ? 'week' : 'month';
 
   // Recommended sell: fraction of excess BTC currently held
   const latestStack = stackHistory.length > 0 ? stackHistory[stackHistory.length - 1] : null;
@@ -227,7 +231,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
     // history start. We need the row immediately before the cutoff as a baseline so
     // the first bar only shows that week's exit delta, not the running total.
     let baseline = 0;
-    if (period !== 'ALL' && raw.length > 0) {
+    if (raw.length > 0) {
       const prevRow = history.filter(r => r.date < raw[0].date).at(-1);
       if (prevRow) baseline = prevRow.usdSignal;
     }
@@ -456,7 +460,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
             background: inExitZone ? 'rgba(196,136,90,0.05)' : 'var(--bg-card)',
             border: inExitZone ? '1px solid rgba(196,136,90,0.2)' : '1px solid var(--border-subtle)',
           }}>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>THIS WEEK — SELL</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>THIS {periodLabel.toUpperCase()} — SELL</div>
             {inExitZone ? (
               <>
                 <div style={{ fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '0.02em', marginBottom: 4 }}>
@@ -579,7 +583,7 @@ export function DCAOutSection({ data, baseAmount }: Props) {
                   COMBINED PORTFOLIO · BUY + EXIT SIMULATION
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                  ${baseAmount.toLocaleString()}/week DCA in · exits auto-sized to excess BTC · at current BTC price
+                  ${baseAmount.toLocaleString()}/{periodLabel} DCA in · exits auto-sized to excess BTC · at current BTC price
                 </div>
               </div>
 

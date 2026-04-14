@@ -10,18 +10,22 @@ type Frequency = 'weekly' | 'monthly';
 type Status    = 'idle' | 'loading' | 'sent' | 'updated' | 'error';
 
 interface Props {
-  baseAmount: number;  // inherit from HeroSignal so the email uses the same base
+  baseAmount: number;
+  frequency:  'weekly' | 'monthly';
 }
 
-export function SignalEmailSignup({ baseAmount }: Props) {
+export function SignalEmailSignup({ baseAmount, frequency: initialFrequency }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
 
   const [email,     setEmail]     = useState('');
-  const [frequency, setFrequency] = useState<Frequency>('weekly');
+  const [frequency, setFrequency] = useState<Frequency>(initialFrequency);
   const [status,    setStatus]    = useState<Status>('idle');
   const [errorMsg,  setErrorMsg]  = useState('');
   const [confirmed, setConfirmed] = useState(false);
+
+  // Sync frequency if parent changes it
+  useEffect(() => { setFrequency(initialFrequency); }, [initialFrequency]);
 
   // Check URL param for confirmation success (client-only)
   useEffect(() => {

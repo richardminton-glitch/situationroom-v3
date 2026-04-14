@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/layout/ThemeProvider';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
-
-const LS_FREQ = 'sr-dca-frequency';
 
 type Frequency = 'weekly' | 'monthly';
 
 interface Props {
   composite:          number;
   tier:               string;
-  baseAmount:         number;                    // lifted to DCASignalPage
-  onBaseAmountChange: (n: number) => void;       // lifted to DCASignalPage
+  baseAmount:         number;
+  onBaseAmountChange: (n: number) => void;
+  frequency:          Frequency;
+  onFrequencyChange:  (f: Frequency) => void;
 }
 
 function compositeColour(composite: number, isDark: boolean): string {
@@ -22,30 +21,15 @@ function compositeColour(composite: number, isDark: boolean): string {
   return isDark ? '#d06050' : '#9b3232';
 }
 
-export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: Props) {
+export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange, frequency, onFrequencyChange }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
-
-  const [frequency, setFrequency] = useState<Frequency>('weekly');
-
-  // Hydrate frequency from localStorage only
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LS_FREQ) as Frequency | null;
-      if (stored === 'weekly' || stored === 'monthly') setFrequency(stored);
-    } catch { /* SSR guard */ }
-  }, []);
 
   function handleAmountChange(val: string) {
     const n = parseInt(val, 10);
     if (!isNaN(n) && n > 0 && n <= 9_999_999) {
       onBaseAmountChange(n);
     }
-  }
-
-  function handleFreqChange(freq: Frequency) {
-    setFrequency(freq);
-    try { localStorage.setItem(LS_FREQ, freq); } catch { /* noop */ }
   }
 
   const recommendedBuy = Math.round(baseAmount * composite);
@@ -110,7 +94,7 @@ export function HeroSignal({ composite, tier, baseAmount, onBaseAmountChange }: 
           {(['weekly', 'monthly'] as Frequency[]).map(f => (
             <button
               key={f}
-              onClick={() => handleFreqChange(f)}
+              onClick={() => onFrequencyChange(f)}
               style={{
                 padding:          '4px 10px',
                 fontSize: 11,

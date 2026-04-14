@@ -20,7 +20,9 @@ type Period = '1Y' | '2Y' | '3Y' | '4Y' | '5Y';
 
 interface Props {
   stackingHistory: StackingPoint[];
-  baseAmount:      number;   // user's weekly base — scales the BTC amounts
+  baseAmount:      number;
+  frequency:       'weekly' | 'monthly';
+  weeklyEquiv:     number;   // baseAmount converted to weekly equivalent for scaling
 }
 
 const PERIODS: { label: Period; years: number }[] = [
@@ -86,7 +88,7 @@ function formatXTick(dateStr: string, period: Period): string {
   return String(d.getUTCFullYear());
 }
 
-export function StackingChart({ stackingHistory, baseAmount }: Props) {
+export function StackingChart({ stackingHistory, baseAmount, frequency, weeklyEquiv }: Props) {
   const { theme } = useTheme();
   const isDark = theme !== 'parchment';
 
@@ -94,7 +96,9 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
 
   if (!stackingHistory || stackingHistory.length === 0) return null;
 
-  const scale = baseAmount / 100;
+  // computeStackingHistory uses $100/week as base — scale by weekly equivalent
+  const scale = weeklyEquiv / 100;
+  const periodLabel = frequency === 'weekly' ? 'week' : 'month';
 
   const signalColor  = isDark ? '#00d4c8' : '#4a7c59';
   const vanillaColor = isDark ? '#6b7a8d' : '#8a7e6c';
@@ -173,7 +177,7 @@ export function StackingChart({ stackingHistory, baseAmount }: Props) {
         fontFamily:     FONT,
       }}>
         <span style={{ fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-secondary)' }}>
-          BTC STACKING · SIGNAL vs VANILLA DCA
+          BTC STACKING · SIGNAL vs VANILLA DCA · ${baseAmount.toLocaleString()}/{periodLabel}
         </span>
 
         {/* Period toggles */}

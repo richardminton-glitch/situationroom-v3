@@ -17,6 +17,9 @@ import { SignalEmailSignup } from './SignalEmailSignup';
 
 const FONT    = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 const LS_BASE = 'sr-dca-base-amount';
+const LS_FREQ = 'sr-dca-frequency';
+
+type Frequency = 'weekly' | 'monthly';
 
 interface Props {
   data:    BtcSignalResponse | null;
@@ -29,8 +32,9 @@ export function DCASignalPage({ data, loading, error }: Props) {
   const isDark = theme !== 'parchment';
   const isMobile = useIsMobile();
 
-  // Single shared base amount — drives HeroSignal, ReturnsSummary, StackingChart, DCAOutSection
+  // Single shared base amount + frequency — drives all DCA components
   const [baseAmount, setBaseAmount] = useState(100);
+  const [frequency,  setFrequency]  = useState<Frequency>('weekly');
 
   useEffect(() => {
     try {
@@ -39,6 +43,8 @@ export function DCASignalPage({ data, loading, error }: Props) {
         const n = parseInt(stored, 10);
         if (!isNaN(n) && n > 0) setBaseAmount(n);
       }
+      const storedFreq = localStorage.getItem(LS_FREQ) as Frequency | null;
+      if (storedFreq === 'weekly' || storedFreq === 'monthly') setFrequency(storedFreq);
     } catch { /* SSR */ }
   }, []);
 
@@ -46,6 +52,16 @@ export function DCASignalPage({ data, loading, error }: Props) {
     setBaseAmount(n);
     try { localStorage.setItem(LS_BASE, String(n)); } catch { /* noop */ }
   }
+
+  function handleFrequencyChange(f: Frequency) {
+    setFrequency(f);
+    try { localStorage.setItem(LS_FREQ, f); } catch { /* noop */ }
+  }
+
+  // Convert user's base amount to a weekly equivalent for chart scaling.
+  // computeStackingHistory is always weekly at $100/wk; monthly users spread
+  // their monthly amount across ~4.333 weeks.
+  const weeklyEquiv = frequency === 'monthly' ? baseAmount * 12 / 52 : baseAmount;
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -95,6 +111,8 @@ export function DCASignalPage({ data, loading, error }: Props) {
         tier={data.tier}
         baseAmount={baseAmount}
         onBaseAmountChange={handleBaseAmountChange}
+        frequency={frequency}
+        onFrequencyChange={handleFrequencyChange}
       />
 
       {/* Signal grid + confluence bar */}
@@ -109,6 +127,8 @@ export function DCASignalPage({ data, loading, error }: Props) {
           backtestSummary={data.backtestSummary}
           btcPrice={data.btcPrice}
           baseAmount={baseAmount}
+          frequency={frequency}
+          weeklyEquiv={weeklyEquiv}
         />
       )}
 
@@ -117,17 +137,22 @@ export function DCASignalPage({ data, loading, error }: Props) {
 
       {/* BTC stacking chart — signal vs vanilla, scales with baseAmount */}
       {data.stackingHistory && data.stackingHistory.length > 0 && (
-        <StackingChart stackingHistory={data.stackingHistory} baseAmount={baseAmount} />
+        <StackingChart
+          stackingHistory={data.stackingHistory}
+          baseAmount={baseAmount}
+          frequency={frequency}
+          weeklyEquiv={weeklyEquiv}
+        />
       )}
 
       {/* Weekly signal history */}
       <SignalHistory data={data} />
 
       {/* Email signup — last general-tier item; everything below is VIP */}
-      <SignalEmailSignup baseAmount={baseAmount} />
+      <SignalEmailSignup baseAmount={baseAmount} frequency={frequency} />
 
       {/* DCA Exit Strategy — VIP gated, scales with baseAmount */}
-      <DCAOutSection data={data} baseAmount={baseAmount} />
+      <DCAOutSection data={data} baseAmount={baseAmount} frequency={frequency} weeklyEquiv={weeklyEquiv} />
 
       {/* Footer */}
       <div style={{
