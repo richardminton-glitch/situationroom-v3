@@ -1,9 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
+import http from 'node:http';
 import { handleNewBriefing } from '@/lib/chat/bot';
 import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
+
+/**
+ * Calls the briefing generate endpoint via Node's native http module.
+ * Next.js 16 patches global `fetch()` inside route handlers and can
+ * upgrade `http://` to `https://` based on the incoming request's
+ * protocol headers, causing ERR_SSL_WRONG_VERSION_NUMBER on the
+ * loopback. Using `http.request()` bypasses this entirely.
+ */
+function httpPost(url: string, headers: Record<string, string>): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const req = http.request(
+      { hostname: parsed.hostname, port: parsed.port, path: parsed.pathname, method: 'POST', headers },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode ?? 500, body: Buffer.concat(chunks).toString() }));
+      },
+    );
+    req.on('error', reject);
+    req.setTimeout(110_000, () => { req.destroy(new Error('timeout')); });
+    req.end();
+  });
+}
 
 /**
  * GET /api/cron/daily-briefing
@@ -22,21 +47,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Use HTTP localhost for the internal call to avoid SSL handshake issues
-    // when reaching the public HTTPS URL from the same node process. The
-    // request.nextUrl.origin can give a https:// URL behind a reverse proxy
-    // which causes ERR_SSL_WRONG_VERSION_NUMBER on internal loopback.
-    const baseUrl = process.env.INTERNAL_BASE_URL
-      ?? `http://localhost:${process.env.PORT ?? '3000'}`;
-    const res = await fetch(`${baseUrl}/api/briefing/generate`, {
-      method: 'POST',
-      headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {},
-    });
+    const port = process.env.PORT ?? '3001';
+    const url = `http://localhost:${port}/api/briefing/generate`;
+    const headers: Record<string, string> = {};
+    if (cronSecret) headers['Authorization'] = `Bearer ${cronSecret}`;
 
-    const data = await res.json();
+    const res = await httpPost(url, headers);
+    const data = JSON.parse(res.body);
 
     // Auto-post into chat on successful briefing generation
-    if (res.ok && data.success && data.headline && data.date) {
+    if (res.status === 200 && data.success && data.headline && data.date) {
       try {
         await handleNewBriefing(data.headline, data.date, normaliseThreatState(data.threatLevel));
       } catch (botErr) {
