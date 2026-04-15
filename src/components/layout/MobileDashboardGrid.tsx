@@ -8,14 +8,49 @@ interface MobileDashboardGridProps {
   layout: LayoutPanelItem[];
 }
 
+// Shared mobile ordering across all dashboard presets (default, full-data, custom).
+// Grouping: Bitcoin block first, then markets, intel, macro, tickers.
+// Panel IDs not listed fall to the end in their original layout order.
+const MOBILE_PANEL_ORDER = [
+  // Bitcoin block — prominent at top
+  'btc-hero',
+  'globe',
+  'btc-market',
+  'btc-network',
+  'btc-mining',
+  'fear-greed',
+  'lightning',
+  'onchain-sentiment',
+  'conviction',
+  'btc-charts',
+  // Markets
+  'market-indices',
+  'commodities',
+  // Intelligence
+  'intel-feed',
+  'ai-briefing',
+  // Macro
+  'fx-macro',
+  'central-bank',
+  // Tickers / bars — bottom
+  'economic-events',
+  'tikr',
+  'wire',
+] as const;
+
 /**
  * MobileDashboardGrid — replaces the react-rnd canvas on mobile.
  * Renders panels as a vertically stacked, scrollable list of cards
- * sorted in reading order (top-to-bottom, left-to-right from the desktop layout).
+ * in an explicit topic-grouped order (Bitcoin → markets → intel → macro → tickers).
+ * Panels not listed in MOBILE_PANEL_ORDER fall to the end.
  */
 export function MobileDashboardGrid({ layout }: MobileDashboardGridProps) {
-  // Sort panels by y then x for natural reading order
-  const sorted = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
+  const orderIndex = (panelId: string) => {
+    const base = panelId.replace(/-\d+$/, '');
+    const idx = MOBILE_PANEL_ORDER.indexOf(base as typeof MOBILE_PANEL_ORDER[number]);
+    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+  };
+  const sorted = [...layout].sort((a, b) => orderIndex(a.panelId) - orderIndex(b.panelId));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
