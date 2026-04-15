@@ -136,10 +136,12 @@ export async function GET() {
     const firstPaymentDate = allPayments.length > 0
       ? allPayments[0].createdAt
       : now;
-    // Months elapsed since first payment (clamped to ≥ 1 so a single-day
-    // project doesn't divide by zero or claim infinite runway).
-    const msElapsed = now.getTime() - firstPaymentDate.getTime();
-    const monthsElapsed = Math.max(1, msElapsed / (1000 * 60 * 60 * 24 * 30.44));
+    // Months elapsed since first payment. Do NOT floor this at 1: the runway
+    // end date calculation below relies on `now` cancelling out between
+    // `now + runwayMonths` and `-monthsElapsed`. A floor makes the end date
+    // drift forward by one day per day whenever elapsed < 1 month.
+    const msElapsed = Math.max(0, now.getTime() - firstPaymentDate.getTime());
+    const monthsElapsed = msElapsed / (1000 * 60 * 60 * 24 * 30.44);
     // Total costs incurred since first payment
     const costsIncurred = monthsElapsed * costs.total;
     // Remaining balance
