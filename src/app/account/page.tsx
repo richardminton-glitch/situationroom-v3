@@ -77,6 +77,12 @@ export default function AccountPage() {
   const [nostrError, setNostrError] = useState('');
   const [nostrLinked, setNostrLinked] = useState(false);
 
+  // Ops Chat username
+  const [chatName, setChatName] = useState('');
+  const [chatNameSaving, setChatNameSaving] = useState(false);
+  const [chatNameSaved, setChatNameSaved] = useState(false);
+  const [chatNameError, setChatNameError] = useState('');
+
   // Delete account
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteTyped, setDeleteTyped] = useState('');
@@ -124,6 +130,10 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user?.nostrNpub) setNostrLinked(true);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) setChatName(user.chatDisplayName ?? '');
   }, [user]);
 
   if (!user) {
@@ -327,6 +337,30 @@ export default function AccountPage() {
       setNostrError(err instanceof Error ? err.message : 'Failed to link Nostr identity');
     } finally {
       setNostrLinking(false);
+    }
+  }
+
+  async function saveChatName() {
+    const trimmed = chatName.trim();
+    setChatNameSaving(true);
+    setChatNameSaved(false);
+    setChatNameError('');
+    try {
+      const res = await fetch('/api/user/chat-display-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      setChatName(data.displayName ?? trimmed);
+      setChatNameSaved(true);
+      setTimeout(() => setChatNameSaved(false), 3000);
+      await refresh();
+    } catch (err) {
+      setChatNameError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setChatNameSaving(false);
     }
   }
 
@@ -793,6 +827,80 @@ export default function AccountPage() {
           </button>
         )}
       </div>
+
+      {/* ── Ops Chat Username ── */}
+      {(() => {
+        const canEdit = hasAccess(userTier, 'members');
+        const fallback = `anon-${user.id.slice(0, 4)}`;
+        const trimmed = chatName.trim();
+        const unchanged = trimmed === (user.chatDisplayName ?? '').trim();
+        return (
+          <div style={{
+            ...sectionStyle,
+            opacity: canEdit ? 1 : 0.45,
+            position: 'relative',
+          }}>
+            <span style={labelStyle}>Ops Chat Username</span>
+
+            {!canEdit && (
+              <div style={{
+                position: 'absolute', top: 20, right: 24,
+                padding: '3px 10px',
+                fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em',
+                color: '#4a6fa5', border: '1px solid #4a6fa5', backgroundColor: 'rgba(74, 111, 165, 0.08)',
+              }}>
+                MEMBERS ONLY
+              </div>
+            )}
+
+            <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '12px' }}>
+              How you appear in Ops Chat. 3–20 characters — letters, digits, <code>_</code> and <code>-</code> only.
+              Leave empty to fall back to <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{fallback}</span>.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={chatName}
+                onChange={(e) => { setChatName(e.target.value); setChatNameSaved(false); setChatNameError(''); }}
+                disabled={!canEdit || chatNameSaving}
+                placeholder={fallback}
+                maxLength={20}
+                style={{
+                  padding: '8px 12px', width: '220px',
+                  fontFamily: 'var(--font-mono)', fontSize: '12px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={saveChatName}
+                disabled={!canEdit || chatNameSaving || unchanged || trimmed.length === 0}
+                style={{
+                  ...btnStyle('primary'),
+                  opacity: !canEdit || chatNameSaving || unchanged || trimmed.length === 0 ? 0.5 : 1,
+                  cursor: !canEdit || chatNameSaving || unchanged || trimmed.length === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {chatNameSaving ? 'SAVING...' : 'SAVE'}
+              </button>
+            </div>
+
+            {chatNameSaved && (
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-success)', marginTop: '10px' }}>
+                ✓ Saved
+              </p>
+            )}
+            {chatNameError && (
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-danger)', marginTop: '10px' }}>
+                {chatNameError}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Nostr Identity ── */}
       <div style={{
