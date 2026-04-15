@@ -51,6 +51,9 @@ dev.log
 # claude session files
 .claude/
 
+# MCP server config (per-dev, not shared)
+.mcp.json
+
 # prisma generated client (rebuilt on deploy)
 /prisma/generated/
 
