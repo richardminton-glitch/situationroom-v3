@@ -132,6 +132,13 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
     setMounted(true);
     const stored = localStorage.getItem('sr-font-size');
     if (stored) setFontSize(parseInt(stored, 10));
+    // If a prior route set the force-expand flag (e.g. user clicked the
+    // Dashboard icon from /briefings while collapsed), open the sidebar on
+    // mount and clear the flag.
+    if (sessionStorage.getItem('sr-sidebar-force-expand') === '1') {
+      sessionStorage.removeItem('sr-sidebar-force-expand');
+      setCollapsed(false);
+    }
   }, []);
 
   // Auto-close mobile drawer on route change
@@ -272,10 +279,31 @@ export function Sidebar({ dashboardControls }: SidebarProps) {
                 );
               }
 
+              // Dashboard icon from any non-dashboard page: jump to Full
+              // Overview (default preset) AND expand the sidebar so the user
+              // can see the full preset list without a second click.
+              //
+              // The Sidebar is mounted per-route (AppShell, page.tsx, room/
+              // layout.tsx, bot-room/layout.tsx each render their own), so
+              // it remounts across navigation and setCollapsed(false) on the
+              // old instance is lost. We stash a sessionStorage flag that the
+              // next instance picks up in useEffect to force-expand on mount.
+              const isDashboardFromElsewhere = item.href === '/' && !active;
+              const handleNavClick = isDashboardFromElsewhere
+                ? () => {
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('sr-active-preset', 'default');
+                      localStorage.removeItem('sr-active-custom-id');
+                      sessionStorage.setItem('sr-sidebar-force-expand', '1');
+                    }
+                  }
+                : undefined;
+
               return (
                 <div key={item.href}>
                   <Link
                     href={item.href}
+                    onClick={handleNavClick}
                     className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors"
                     style={{
                       backgroundColor: active ? 'var(--bg-card)' : 'transparent',
