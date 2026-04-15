@@ -1,9 +1,11 @@
 import React from 'react';
 
 // ── Inline node types ─────────────────────────────────────────
+// Note: bold is NOT rendered in briefing body prose. Grok occasionally
+// wraps lead sentences in ** for visual emphasis, which doesn't belong
+// in a long-form prose briefing. All ** are stripped before parseInline.
 type InlineNode =
   | { type: 'text';     content: string }
-  | { type: 'bold';     content: string }
   | { type: 'citation'; n: string; url: string }
   | { type: 'link';     label: string; url: string };
 
@@ -23,14 +25,10 @@ function cleanModelArtifacts(text: string): string {
 }
 
 /**
- * If a paragraph has an odd number of `**` markers (unbalanced),
- * strip them all. Otherwise the lazy-pair regex in parseInline will
- * mis-match the orphan with an earlier opener and bold the wrong span,
- * or leave literal `**` in the rendered output.
+ * Briefings are prose-only — strip all `**` markers so Grok's decorative
+ * lead-sentence bolding doesn't render. Leaves citations and links intact.
  */
-function balanceBoldMarkers(text: string): string {
-  const count = (text.match(/\*\*/g) || []).length;
-  if (count % 2 === 0) return text;
+function stripBoldMarkers(text: string): string {
   return text.replace(/\*\*/g, '');
 }
 
@@ -52,25 +50,25 @@ export function stripBriefingMarkdown(text: string): string {
 
 /**
  * Parse inline markdown:
- *  - **bold**
  *  - [[n]](url) — numbered citation → superscript link
  *  - [label](url) — standard markdown link → inline link
+ *
+ * Bold (`**...**`) is intentionally NOT supported — callers strip all `**`
+ * before calling this (see stripBoldMarkers in the main component).
  */
 function parseInline(text: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   let remaining = text;
 
   while (remaining.length > 0) {
-    const boldMatch  = /\*\*([^*]+?)\*\*/.exec(remaining);
     const citeMatch  = /\[\[(\d+)\]\]\(([^)]+)\)/.exec(remaining);
     const linkMatch  = /\[([^\]]+?)\]\(([^)]+)\)/.exec(remaining);
 
     // Avoid double-matching: if linkMatch overlaps with citeMatch at same index, prefer citeMatch
-    const boldIdx = boldMatch ? boldMatch.index : Infinity;
     const citeIdx = citeMatch ? citeMatch.index : Infinity;
     const linkIdx = (linkMatch && (citeIdx === Infinity || linkMatch.index !== citeIdx)) ? linkMatch.index : Infinity;
 
-    const minIdx = Math.min(boldIdx, citeIdx, linkIdx);
+    const minIdx = Math.min(citeIdx, linkIdx);
 
     if (minIdx === Infinity) {
       nodes.push({ type: 'text', content: remaining });
@@ -81,10 +79,6 @@ function parseInline(text: string): InlineNode[] {
       if (citeIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, citeIdx) });
       nodes.push({ type: 'citation', n: citeMatch![1], url: citeMatch![2] });
       remaining = remaining.slice(citeIdx + citeMatch![0].length);
-    } else if (minIdx === boldIdx) {
-      if (boldIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, boldIdx) });
-      nodes.push({ type: 'bold', content: boldMatch![1] });
-      remaining = remaining.slice(boldIdx + boldMatch![0].length);
     } else {
       if (linkIdx > 0) nodes.push({ type: 'text', content: remaining.slice(0, linkIdx) });
       nodes.push({ type: 'link', label: linkMatch![1], url: linkMatch![2] });
@@ -99,7 +93,6 @@ function renderNodes(nodes: InlineNode[], baseKey: number): React.ReactNode[] {
   return nodes.map((node, i) => {
     const key = baseKey * 1000 + i;
     if (node.type === 'text')     return <React.Fragment key={key}>{node.content}</React.Fragment>;
-    if (node.type === 'bold')     return <strong key={key}>{node.content}</strong>;
     if (node.type === 'citation') {
       return (
         <sup key={key} style={{ marginLeft: '1px' }}>
@@ -142,7 +135,7 @@ export function BriefingMarkdown({ content, paragraphStyle }: Props) {
   const cleaned    = cleanModelArtifacts(content);
   const paragraphs = cleaned
     .split(/\n\n+/)
-    .map((p) => balanceBoldMarkers(p.trim()))
+    .map((p) => stripBoldMarkers(p.trim()))
     .filter(Boolean);
 
   const paraStyle: React.CSSProperties = paragraphStyle ?? {

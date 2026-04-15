@@ -38,6 +38,9 @@ function cleanModelArtifacts(text: string): string {
   cleaned = cleaned.replace(/\s*\(\d+\s+words?\)/gi, '');
   // Trailing "Sources: [...]" / "Sources integrated: [...]" block
   cleaned = cleaned.replace(/\s*Sources?\s*(?:integrated|cited|used)?:\s*\[.+$/is, '');
+  // Strip all ** — briefing prose should not render bold (Grok uses it
+  // decoratively for lead sentences, which looks wrong in a prose briefing).
+  cleaned = cleaned.replace(/\*\*/g, '');
   return cleaned.trim();
 }
 

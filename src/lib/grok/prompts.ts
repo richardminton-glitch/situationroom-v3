@@ -83,6 +83,7 @@ Example: [Reuters](https://reuters.com/article/...) or [Glassnode](https://glass
 
 Hard rules for all agents:
 - Prose only. No bullet points, no numbered lists, no headers within your section.
+- No markdown emphasis: do NOT wrap any text in **bold** or *italics*. Citations [Source](URL) are the only markdown permitted.
 - No sentence that restates data without interpreting it.
 - No phrase: "remains to be seen", "it is worth noting", "signals caution", "near-term", "focus remains on", "this could suggest", "it is important to".
 - Strong takes, clearly owned. If uncertain, say so directly and reason forward.

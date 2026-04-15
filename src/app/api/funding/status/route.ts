@@ -125,31 +125,23 @@ export async function GET() {
 
     const rolling30dGBP = fundedBalance;
     const coveragePct  = costs.total > 0 ? Math.min(999, Math.round((rolling30dGBP / costs.total) * 100)) : 0;
+    const allTimeRevenueGBP = allTimeSats / satsPerGbp;
 
     // ── Runway calculation ──────────────────────────────────────────────────
-    // Total revenue in GBP (all time)
-    const allTimeRevenueGBP = allTimeSats / satsPerGbp;
-    // First payment date — when the *earliest* payment row was inserted into
-    // our DB. We deliberately use createdAt (not activatedAt) so that legacy
-    // imports with backdated activation timestamps don't push the project
-    // start years into the past and permanently zero the balance.
-    const firstPaymentDate = allPayments.length > 0
-      ? allPayments[0].createdAt
-      : now;
-    // Months elapsed since first payment. Do NOT floor this at 1: the runway
-    // end date calculation below relies on `now` cancelling out between
-    // `now + runwayMonths` and `-monthsElapsed`. A floor makes the end date
-    // drift forward by one day per day whenever elapsed < 1 month.
-    const msElapsed = Math.max(0, now.getTime() - firstPaymentDate.getTime());
-    const monthsElapsed = msElapsed / (1000 * 60 * 60 * 24 * 30.44);
-    // Total costs incurred since first payment
-    const costsIncurred = monthsElapsed * costs.total;
-    // Remaining balance
-    const balanceGBP = allTimeRevenueGBP - costsIncurred;
-    // Runway: how many months from now the balance covers
-    const runwayMonths = costs.total > 0 ? Math.max(0, balanceGBP / costs.total) : 0;
-    // Runway end date — moves forward as revenue increases
-    const runwayEndDate = new Date(now.getTime() + runwayMonths * 30.44 * 24 * 60 * 60 * 1000);
+    // Use the same cumulative balance that powers coverage/rolling30d so the
+    // "FUNDED to X" date matches the £ remaining shown in the UI. The earlier
+    // `allTimeRevenueGBP - monthsElapsed * costs` formula ignored the floor-at-0
+    // clamp inside the cumulative loop and produced a larger balance (and a
+    // longer runway) whenever legacy-import payments had been backdated.
+    //
+    // Stability: rolling30dGBP decreases by exactly `dailyCostGBP` per day
+    // (the final subtraction in the cumulative loop). Using the SAME daily
+    // cost here makes the runway shrink by one day per day, which cancels
+    // `now` → end date stays fixed unless new revenue arrives.
+    const runwayDays  = dailyCostGBP > 0 ? Math.max(0, rolling30dGBP / dailyCostGBP) : 0;
+    const runwayEndDate = new Date(now.getTime() + runwayDays * 24 * 60 * 60 * 1000);
+    const runwayMonths = runwayDays / 30;  // display convention matches cumulative loop (30-day months)
+    const balanceGBP   = rolling30dGBP;    // response field kept for callers; now consistent with rolling30d
 
     // Active member counts
     const [generalCount, membersCount, vipCount] = await Promise.all([
