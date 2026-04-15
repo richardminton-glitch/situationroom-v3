@@ -23,6 +23,34 @@ function cleanModelArtifacts(text: string): string {
 }
 
 /**
+ * If a paragraph has an odd number of `**` markers (unbalanced),
+ * strip them all. Otherwise the lazy-pair regex in parseInline will
+ * mis-match the orphan with an earlier opener and bold the wrong span,
+ * or leave literal `**` in the rendered output.
+ */
+function balanceBoldMarkers(text: string): string {
+  const count = (text.match(/\*\*/g) || []).length;
+  if (count % 2 === 0) return text;
+  return text.replace(/\*\*/g, '');
+}
+
+/**
+ * Plain-text cleaner for contexts that don't render markdown
+ * (headlines, page metadata, signed-out headline preview).
+ * Removes bold markers, inline links → label, citations, and the
+ * word-count parenthetical.
+ */
+export function stripBriefingMarkdown(text: string): string {
+  return text
+    .replace(/\[\[(\d+)\]\]\([^)]*\)/g, '')   // [[n]](url) citation → drop
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // [label](url) → label
+    .replace(/\*\*/g, '')                       // all bold markers (matched or orphan)
+    .replace(/\s*\(\d+\s+words?\)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * Parse inline markdown:
  *  - **bold**
  *  - [[n]](url) — numbered citation → superscript link
@@ -112,7 +140,10 @@ interface Props {
 
 export function BriefingMarkdown({ content, paragraphStyle }: Props) {
   const cleaned    = cleanModelArtifacts(content);
-  const paragraphs = cleaned.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = cleaned
+    .split(/\n\n+/)
+    .map((p) => balanceBoldMarkers(p.trim()))
+    .filter(Boolean);
 
   const paraStyle: React.CSSProperties = paragraphStyle ?? {
     fontFamily: 'var(--font-body)',

@@ -34,6 +34,23 @@ export function stripBannedPhrases(text: string): string {
 }
 
 /**
+ * Strip all markdown artifacts from an extracted headline so we never
+ * persist literal `**`, citation links, or parenthetical word counts
+ * to the Briefing.headline column.
+ */
+function cleanHeadline(raw: string): string {
+  return raw
+    .replace(/\[\[(\d+)\]\]\([^)]*\)/g, '')   // [[n]](url) citation
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // [label](url) → label
+    .replace(/\*\*/g, '')                       // all ** (matched or orphan)
+    .replace(/^[#*_\s]+/, '')                   // leading markdown chars
+    .replace(/\s*\(\d+\s+words?\)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .substring(0, 280);
+}
+
+/**
  * Extract headline from Agent 5 output.
  * Looks for "HEADLINE: ..." prefix, falls back to last non-empty line.
  */
@@ -41,16 +58,14 @@ export function extractHeadline(outlookContent: string): { headline: string; cle
   const headlineMatch = outlookContent.match(/HEADLINE:\s*(.+)/i);
 
   if (headlineMatch) {
-    const headline = headlineMatch[1].trim().substring(0, 280);
+    const headline = cleanHeadline(headlineMatch[1]);
     const cleanContent = outlookContent.substring(0, headlineMatch.index).trim();
     return { headline, cleanContent };
   }
 
   // Fallback: use last non-empty line
   const lines = outlookContent.trim().split('\n').filter((l) => l.trim());
-  const headline = (lines[lines.length - 1] || 'Daily Briefing')
-    .replace(/^[#*_\s]+/, '')
-    .substring(0, 280);
+  const headline = cleanHeadline(lines[lines.length - 1] || 'Daily Briefing');
 
   return { headline, cleanContent: outlookContent.trim() };
 }

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { BriefingMarkdown } from '@/components/briefings/BriefingMarkdown';
+import { BriefingMarkdown, stripBriefingMarkdown } from '@/components/briefings/BriefingMarkdown';
 import { getCurrentUser } from '@/lib/auth';
 import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (!briefing) return { title: 'Briefing Not Found — Situation Room' };
   return {
-    title: `${briefing.headline} — Situation Room`,
+    title: `${stripBriefingMarkdown(briefing.headline)} — Situation Room`,
     description: `Daily Bitcoin & Macro Intelligence Briefing for ${date}. Threat: ${normaliseThreatState(briefing.threatLevel)}. Conviction: ${Math.round(briefing.convictionScore)}/100.`,
   };
 }
@@ -55,7 +55,7 @@ export default async function BriefingPage({ params }: Props) {
           SITUATION ROOM
         </p>
         <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '22px', fontWeight: 'normal', color: 'var(--text-primary)', marginBottom: '12px' }}>
-          {briefing.headline}
+          {stripBriefingMarkdown(briefing.headline)}
         </h1>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
           Sign in to read this briefing.
@@ -136,7 +136,7 @@ export default async function BriefingPage({ params }: Props) {
 
       {/* Headline — always visible */}
       <h1 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '26px', fontWeight: 'normal', lineHeight: 1.3, color: 'var(--text-primary)', marginBottom: '16px' }}>
-        {briefing.headline}
+        {stripBriefingMarkdown(briefing.headline)}
       </h1>
 
       {/* Badges — always visible */}

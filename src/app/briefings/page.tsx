@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import { hasAccess, TIER_PRICES_GBP } from '@/lib/auth/tier';
 import { BriefingSearch } from '@/components/briefings/BriefingSearch';
+import { stripBriefingMarkdown } from '@/components/briefings/BriefingMarkdown';
 import { getLiveSatsPerGbp, gbpToSats } from '@/lib/lnm/rates';
 import { normaliseThreatState } from '@/lib/room/threatEngine';
 import type { Tier } from '@/types';
@@ -128,7 +129,7 @@ export default async function BriefingsArchivePage() {
 
                     {/* Headline */}
                     <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.45, flex: 1 }}>
-                      {b.headline}
+                      {stripBriefingMarkdown(b.headline)}
                     </p>
 
                     {/* Arrow */}
