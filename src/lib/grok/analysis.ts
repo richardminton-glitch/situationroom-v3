@@ -80,7 +80,17 @@ export async function callGrokAnalysis(
 
       if (res.ok) {
         const data = await res.json();
-        return data?.choices?.[0]?.message?.content?.trim() ?? null;
+        const choice = data?.choices?.[0];
+        const content = choice?.message?.content?.trim() ?? null;
+
+        if (choice?.finish_reason === 'length') {
+          console.warn(
+            `[GrokAnalysis] Response truncated (finish_reason=length, max_tokens=${maxTokens}). ` +
+            `Content preview: ${content?.substring(0, 80) ?? '(empty)'}...`
+          );
+        }
+
+        return content;
       }
 
       const errBody = await res.text().catch(() => '');
