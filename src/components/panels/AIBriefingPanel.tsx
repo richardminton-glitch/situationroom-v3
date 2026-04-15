@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PanelLoading } from './shared';
 import { BlurGate } from '@/components/auth/BlurGate';
+import { BriefingMarkdown } from '@/components/briefings/BriefingMarkdown';
 
 interface BriefingData {
   date: string;
@@ -18,18 +19,14 @@ interface BriefingData {
   };
 }
 
-// Strip markdown noise: bold markers, citation links [[n]](url), bare URLs, word count suffixes
-function cleanText(text: string): string {
-  return text
-    .replace(/\[\[(\d+)\]\]\([^)]*\)/g, '')   // [[n]](url) citations
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // [text](url) → text
-    .replace(/https?:\/\/\S+/g, '')            // bare URLs
-    .replace(/\*\*([^*]+)\*\*/g, '$1')         // **bold** → plain
-    .replace(/\*([^*]+)\*/g, '$1')             // *italic* → plain
-    .replace(/\(\d+ words?\)/gi, '')           // (198 words) suffix
-    .replace(/\s{2,}/g, ' ')                   // collapse extra spaces
-    .trim();
-}
+// Compact paragraph style for the dashboard panel — smaller than the full
+// briefing detail page. Matches the prior `text-sm leading-relaxed` look.
+const PANEL_PARA_STYLE: React.CSSProperties = {
+  fontFamily: 'var(--font-body)',
+  fontSize:   '14px',
+  lineHeight: 1.625,
+  color:      'var(--text-primary)',
+};
 
 const SECTIONS: { key: keyof BriefingData['sections']; label: string }[] = [
   { key: 'outlook', label: 'Outlook' },
@@ -137,19 +134,19 @@ export function AIBriefingPanel() {
 
       {/* Active section content — Outlook is free; all other sections require General tier */}
       {activeSection === 'outlook' ? (
-        <div
-          className="flex-1 overflow-y-auto text-sm leading-relaxed"
-          style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)', minHeight: '80px' }}
-        >
-          {cleanText(briefing.sections.outlook || 'Section not available.')}
+        <div className="flex-1 overflow-y-auto" style={{ minHeight: '80px' }}>
+          <BriefingMarkdown
+            content={briefing.sections.outlook || 'Section not available.'}
+            paragraphStyle={PANEL_PARA_STYLE}
+          />
         </div>
       ) : (
         <BlurGate requiredTier="general" featureName="AI Intelligence">
-          <div
-            className="flex-1 overflow-y-auto text-sm leading-relaxed"
-            style={{ fontFamily: 'var(--font-body)', color: 'var(--text-primary)', minHeight: '80px' }}
-          >
-            {cleanText(briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.')}
+          <div className="flex-1 overflow-y-auto" style={{ minHeight: '80px' }}>
+            <BriefingMarkdown
+              content={briefing.sections[activeSection as keyof BriefingData['sections']] || 'Section not available.'}
+              paragraphStyle={PANEL_PARA_STYLE}
+            />
           </div>
         </BlurGate>
       )}

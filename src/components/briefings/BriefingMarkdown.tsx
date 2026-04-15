@@ -103,13 +103,18 @@ function renderNodes(nodes: InlineNode[], baseKey: number): React.ReactNode[] {
   });
 }
 
-interface Props { content: string }
+interface Props {
+  content: string;
+  /** Override the default paragraph style — useful when embedding inside
+   *  a panel with its own sizing (e.g. dashboard briefing panel). */
+  paragraphStyle?: React.CSSProperties;
+}
 
-export function BriefingMarkdown({ content }: Props) {
+export function BriefingMarkdown({ content, paragraphStyle }: Props) {
   const cleaned    = cleanModelArtifacts(content);
   const paragraphs = cleaned.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 
-  const paraStyle: React.CSSProperties = {
+  const paraStyle: React.CSSProperties = paragraphStyle ?? {
     fontFamily: 'var(--font-body)',
     fontSize:   '15px',
     lineHeight: 1.75,
