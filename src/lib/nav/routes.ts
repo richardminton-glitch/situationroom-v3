@@ -82,6 +82,13 @@ export const NAV_ROUTES: NavRoute[] = [
     keywords: ['map', 'globe', 'geography', 'situation', 'choropleth'],
     description: 'Global geopolitical intelligence map',
   },
+  {
+    href: '/tools/utxo-cosmography',
+    label: 'UTXO Cosmography',
+    section: 'Tools',
+    keywords: ['utxo', 'cosmography', 'atlas', 'cosmos', 'rings', 'art'],
+    description: 'Bitcoin UTXO atlas — protocol art',
+  },
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
   {

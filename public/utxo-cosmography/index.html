@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Drawing the Cosmos — UTXO Atlas</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f8f1e3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="UTXO Cosmos">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #f8f1e3;
+      color: #1a1a1a;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* Parchment grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- HEADER ---- */
+    #header {
+      position: relative;
+      z-index: 10;
+      background: #f8f1e3;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .header-rule-double {
+      border: none;
+      border-top: 3px double #2a2a2a;
+      margin: 0 0 6px 0;
+    }
+    .header-rule-single {
+      border: none;
+      border-top: 1px solid #2a2a2a;
+      margin: 6px 0 0 0;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .header-left {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      min-width: 160px;
+    }
+
+    .header-center { text-align: center; flex: 1; }
+
+    .header-title {
+      font-size: 26px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-weight: normal;
+      line-height: 1.1;
+    }
+
+    .header-subtitle {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #666;
+      margin-top: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+      min-width: 160px;
+    }
+
+    .header-badge { font-size: 10px; letter-spacing: 0.1em; color: #666; }
+
+    .nav-btn {
+      font-family: Georgia, serif;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid #2a2a2a;
+      background: #f8f1e3;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      line-height: 1.4;
+    }
+    .nav-btn:hover   { background: #ede6d4; }
+    .nav-btn:active  { background: #ddd6c4; }
+    .nav-btn:disabled { opacity: 0.30; cursor: default; background: #f8f1e3; }
+
+    .block-nav { display: flex; align-items: center; gap: 5px; }
+
+    #block-input {
+      font-family: Georgia, serif;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      width: 68px;
+      border: none;
+      border-bottom: 1px solid #2a2a2a;
+      background: transparent;
+      text-align: center;
+      color: #1a1a1a;
+      outline: none;
+      padding: 1px 2px;
+    }
+    #block-input::placeholder { color: #bbb; }
+
+    /* ---- MAIN ---- */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ---- CANVAS — parchment ---- */
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #f8f1e3;
+    }
+
+    #atlas-canvas {
+      display: block;
+      cursor: grab;
+      touch-action: none;   /* let JS handle all touch gestures */
+    }
+    #atlas-canvas:active { cursor: grabbing; }
+
+    /* ---- SIDEBAR ---- */
+    #sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      border-left: 1px solid #2a2a2a;
+      background: #f8f1e3;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 18px 16px;
+      gap: 18px;
+    }
+
+    .sidebar-section-title {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #444;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+
+    .marginalia {
+      font-style: italic;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: #2a2a2a;
+      border-left: 2px solid #2a2a2a;
+      padding-left: 10px;
+    }
+
+    .marginalia-credit {
+      font-size: 10px;
+      color: #777;
+      font-style: italic;
+      margin-top: 6px;
+      text-align: right;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 8px;
+      font-size: 11.5px;
+    }
+    .stats-grid .label { color: #666; }
+    .stats-grid .val   { font-weight: bold; text-align: right; }
+
+    .legend-group-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #777;
+      margin: 8px 0 5px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+
+    .legend-svg { flex-shrink: 0; }
+
+    .sidebar-note {
+      font-size: 10.5px;
+      color: #888;
+      line-height: 1.6;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+
+    /* ---- FOOTER ---- */
+    #footer {
+      position: relative;
+      z-index: 10;
+      border-top: 1px solid #2a2a2a;
+      background: #f8f1e3;
+      padding: 5px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      color: #777;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    /* ---- TOOLTIP — parchment theme ---- */
+    #tooltip {
+      position: fixed;
+      display: none;
+      background: #f8f1e3;
+      border: 1px solid #2a2a2a;
+      padding: 9px 13px;
+      font-family: Georgia, serif;
+      font-size: 11px;
+      max-width: 270px;
+      pointer-events: none;
+      z-index: 9999;
+      box-shadow: 2px 3px 10px rgba(0,0,0,0.15);
+      line-height: 1.65;
+      color: #1a1a1a;
+    }
+
+    .tt-title  { font-style: italic; font-size: 10px; color: #888; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 5px; }
+    .tt-value  { font-size: 13px; font-weight: bold; color: #111; }
+    .tt-btc    { font-size: 10px; color: #666; }
+    .tt-row    { font-size: 11px; margin-top: 2px; color: #333; }
+
+    /* ---- SIDEBAR TOGGLE BUTTON ---- */
+    #sidebar-toggle {
+      font-size: 14px;
+      padding: 3px 9px;
+      line-height: 1.5;
+    }
+
+    /* ---- SIDEBAR BACKDROP (mobile only) ---- */
+    #sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.38);
+      z-index: 190;
+      cursor: default;
+    }
+
+    /* ---- MOBILE RESPONSIVE ---- */
+    @media (max-width: 768px) {
+
+      /* Header: compact */
+      .header-title    { font-size: 18px; letter-spacing: 0.12em; }
+      .header-subtitle { display: none; }
+      .header-badge    { display: none; }
+      .header-left     { min-width: auto; }
+      .header-right    { min-width: auto; }
+      #block-input     { width: 56px; font-size: 11px; }
+
+      /* Sidebar: off-canvas drawer sliding in from the right */
+      #sidebar {
+        position: fixed;
+        top: 0;
+        right: -290px;
+        bottom: 0;
+        width: 270px;
+        z-index: 200;
+        border-left: 1px solid #2a2a2a;
+        box-shadow: -6px 0 28px rgba(0,0,0,0.22);
+        transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+        padding-top: 14px;
+        /* env() safe-area for notched phones */
+        padding-bottom: env(safe-area-inset-bottom, 0);
+      }
+
+      body.sidebar-open #sidebar          { right: 0; }
+      body.sidebar-open #sidebar-backdrop { display: block; }
+
+      /* Footer: show only the right-side branding */
+      #footer span:first-child { display: none; }
+      #footer { padding: 4px 16px; }
+
+      /* Safe area padding for notched phones (bottom home bar) */
+      #footer { padding-bottom: max(4px, env(safe-area-inset-bottom, 4px)); }
+    }
+
+    /* Very small phones */
+    @media (max-width: 400px) {
+      .header-title { font-size: 15px; }
+      .nav-btn { font-size: 9px; padding: 2px 6px; }
+      #block-input { width: 46px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOOLTIP -->
+  <div id="tooltip"></div>
+
+  <!-- HEADER -->
+  <header id="header">
+    <hr class="header-rule-double">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="block-nav">
+          <button class="nav-btn" id="prev-btn" onclick="goToPrevBlock()" title="Previous block" disabled>&#9664;</button>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <span style="font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:#999">Block</span>
+            <input id="block-input" type="text" placeholder="—"
+                   title="Enter block height or 64-char hash, then press Enter"
+                   onkeydown="if(event.key==='Enter')goToBlock(this.value)">
+          </div>
+          <button class="nav-btn" id="next-btn" onclick="goToNextBlock()" title="Next block" disabled>&#9654;</button>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="header-title">Drawing the Cosmos</div>
+        <div class="header-subtitle">Unspent Transaction Output Atlas</div>
+      </div>
+      <div class="header-right">
+        <span class="header-badge">UTXO Atlas &bull; mempool.space</span>
+        <button id="sidebar-toggle" class="nav-btn"
+                onclick="toggleSidebar()"
+                title="Block statistics"
+                aria-label="Toggle statistics panel">&#9776;</button>
+      </div>
+    </div>
+    <hr class="header-rule-single">
+  </header>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="canvas-wrap">
+      <canvas id="atlas-canvas"></canvas>
+      <div id="loading-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;background:rgba(248,241,227,0.92);font-family:Georgia,serif;pointer-events:none;">
+        <div style="font-size:13px;color:#333;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px">Consulting the Ledger</div>
+        <div id="loading-msg" style="font-size:11px;color:#666;font-style:italic;max-width:300px;text-align:center;line-height:1.7"></div>
+        <div id="loading-hash" style="margin-top:16px;font-size:9.5px;color:#aaa;letter-spacing:0.06em;font-family:monospace"></div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR BACKDROP (mobile) -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar()" aria-hidden="true"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+
+      <div>
+        <div class="sidebar-section-title">The Cartographer's Marginalia</div>
+        <p class="marginalia">
+          "The outer arm's 2011 red supergiants remain untouched — their ink as dark as the day
+          they were drawn. Meanwhile the core is birthing fresh open circles…
+          Bitcoin's patience, etched in permanence."
+        </p>
+        <p class="marginalia-credit">— Observation, Block <span id="mb-block">#883,247</span></p>
+      </div>
+
+      <div>
+        <div class="sidebar-section-title">Block Statistics</div>
+        <div class="stats-grid">
+          <span class="label">Inputs spent</span>     <span class="val" id="stat-total">—</span>
+          <span class="label">Total spent</span>      <span class="val" id="stat-supply">—</span>
+          <span class="label">Transactions</span>     <span class="val" id="stat-ancient">—</span>
+          <span class="label">Displayed</span>        <span class="val" id="stat-fresh">—</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-section-title">Legend</div>
+
+        <div class="legend-group-title">Size = Age (log scale)</div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="1.5" fill="#1a1a1a"/>
+          </svg>
+          <span>Fresh (&lt; 1 week) — speck</span>
+        </div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="4.5" fill="#1a1a1a"/>
+          </svg>
+          <span>Mid-age (1–5 years)</span>
+        </div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="8" fill="#1a1a1a"/>
+          </svg>
+          <span>Ancient (&gt; 10 years)</span>
+        </div>
+
+        <div class="legend-group-title">Ink density = Value</div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="5" fill="none" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>
+          </svg>
+          <span>Dust (&lt; 0.001 BTC) — outline</span>
+        </div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="5" fill="#5a5a5a"/>
+          </svg>
+          <span>Medium (0.001–0.1 BTC)</span>
+        </div>
+        <div class="legend-row">
+          <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
+            <circle cx="18" cy="11" r="5" fill="#0d0d0d"/>
+            <line x1="18" y1="3"  x2="18" y2="5"  stroke="#0d0d0d" stroke-width="1"/>
+            <line x1="18" y1="17" x2="18" y2="19" stroke="#0d0d0d" stroke-width="1"/>
+            <line x1="10" y1="11" x2="12" y2="11" stroke="#0d0d0d" stroke-width="1"/>
+            <line x1="24" y1="11" x2="26" y2="11" stroke="#0d0d0d" stroke-width="1"/>
+          </svg>
+          <span>Whale (&gt; 10 BTC) + rays</span>
+        </div>
+      </div>
+
+      <div class="sidebar-note" id="demo-note">
+        <strong style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Loading…</strong><br>
+        Fetching live block data from mempool.space.
+      </div>
+    </aside>
+  </div>
+
+  <!-- FOOTER -->
+  <footer id="footer">
+    <span>Each dot is one consumed input UTXO &mdash; size encodes age (log scale), ink density encodes value.</span>
+    <span>UTXO Cosmography</span>
+  </footer>
+
+  <script>
+  // ============================================================
+  // UTXO COSMOGRAPHY — GALAXY ENGINE
+  // Single-file vanilla JS + HTML5 Canvas
+  // ============================================================
+  //
+  // LIVE DATA SOURCE: mempool.space public API
+  // Block: 00000000000000000000c9b24bfd4a71eac7a955b4dab98f8656fadaa5201434
+  //
+  // TO POINT AT A DIFFERENT BLOCK: change BLOCK_HASH below.
+  // TO EXTEND TO FULL UTXO SET: use bitcoin-cli dumptxoutset and
+  //   replace fetchBlockUTXOs() with a fetch() to a local JSON file
+  //   keeping shape: { id, valueSats, ageYears, birthBlock, script }
+  // ============================================================
+
+  // ---- API CONFIG ----
+  const API_BASE  = 'https://mempool.space/api';
+  const MAX_UTXOS = 1500;  // cap for smooth rendering
+
+  // ---- NAVIGATION STATE ----
+  let currentBlockHash   = '';
+  let currentBlockHeight = 0;
+  let latestBlockHeight  = 0;
+  let _blockLoading      = false;   // guard against concurrent navigation
+  let _offlineMode       = false;
+
+  const FALLBACK_HEIGHT  = 908000;  // approx tip as of Mar 2026
+
+  // ---- LIVE DATA (populated by fetchBlockUTXOs) ----
+  let utxos = [];
+  let _lastRealStats = {};   // real block totals from API (totalInputs, totalSpent, txCount)
+  let _networkStats  = { fees: null, mempool: null, hashrate: null };
+
+  // ---- HISTORICAL LANDMARK BLOCKS (hardcoded) ----
+  // Arranged as a constellation arc around the central UTXO cloud (world coords).
+  // Visible when zoomed out (scale < ~0.65). Each entry has a distinct symbol.
+  // Blocks are ordered chronologically; the constellation chain connects them in this order.
+  // Positions form a clockwise arc at ~850–950 world units — visible when scale < ~0.65.
+  // Heights marked (approx) are estimated from date; confirmed heights are exact.
+  const HISTORICAL_BLOCKS = [
+    {
+      height: 0, name: 'Genesis Block', date: 'Jan 3, 2009',
+      tagline: '"Chancellor on brink of second bailout for banks"',
+      significance: 'The very first block, mined by Satoshi Nakamoto.',
+      detail: 'The 50 BTC reward is permanently unspendable — Bitcoin\'s founding artefact.',
+      wx: -750, wy: 610,  r: 35, symbol: 'genesis',
+    },
+    {
+      height: 170, name: 'First Transaction', date: 'Jan 12, 2009',
+      tagline: 'Satoshi → Hal Finney: 10 BTC',
+      significance: 'The first recorded person-to-person Bitcoin transaction.',
+      detail: 'Satoshi sent 10 BTC to early contributor Hal Finney to test the live network.',
+      wx: -870, wy: 280,  r: 20, symbol: 'transfer',
+    },
+    {
+      height: 32256, name: 'First Difficulty Adjustment', date: 'Dec 2009',
+      tagline: 'The network regulates itself',
+      significance: 'Proved the automated difficulty adjustment mechanism worked.',
+      detail: 'As miners joined, Bitcoin self-regulated — establishing decentralised security.',
+      wx: -930, wy: -50,  r: 18, symbol: 'cog',
+    },
+    {
+      height: 57043, name: 'Bitcoin Pizza Day', date: 'May 22, 2010',
+      tagline: '10,000 BTC for two Papa John\'s pizzas',
+      significance: 'The first real-world commercial transaction using Bitcoin.',
+      detail: 'Laszlo Hanyecz paid 10,000 BTC for two pizzas — establishing Bitcoin as a medium of exchange.',
+      wx: -720, wy: -475, r: 22, symbol: 'commerce',
+    },
+    {
+      height: 74638, name: 'Value-Overflow Incident', date: 'Aug 15, 2010',
+      tagline: '184 billion BTC briefly existed',
+      significance: 'The most severe protocol bug ever exploited on mainnet.',
+      detail: 'Satoshi deployed a soft fork within hours. Demonstrated the power of community consensus.',
+      wx: -360, wy: -780, r: 20, symbol: 'anomaly',
+    },
+    {
+      height: 130000, name: 'WikiLeaks Adopts Bitcoin', date: 'Jun 2011',  // approx block height
+      tagline: 'Censorship-resistant donations for WikiLeaks',
+      significance: 'First major civil liberties organisation to adopt Bitcoin after being cut off by Visa and Mastercard.',
+      detail: 'WikiLeaks turned to Bitcoin after traditional payment processors froze its accounts following the Cablegate release.',
+      wx: -65, wy: -880,  r: 18, symbol: 'transfer',
+    },
+    {
+      height: 210000, name: 'First Halving', date: 'Nov 28, 2012',
+      tagline: '50 BTC → 25 BTC',
+      significance: 'First implementation of Bitcoin\'s built-in supply constraint.',
+      detail: 'Block reward halved for the first time, initiating the four-year scarcity cycle.',
+      wx: 250, wy: -850,  r: 28, symbol: 'halving',
+    },
+    {
+      height: 263000, name: 'Silk Road Seized', date: 'Oct 2, 2013',  // approx block height
+      tagline: 'FBI seizes 144,000 BTC — first government confiscation',
+      significance: 'First time a government agency seized Bitcoin, proving it could be traced on the public ledger.',
+      detail: 'FBI shut down Silk Road and arrested founder Ross Ulbricht. Seized ~144,000 BTC worth $28.5 million at the time.',
+      wx: 550, wy: -710,  r: 18, symbol: 'anomaly',
+    },
+    {
+      height: 289000, name: 'Mt. Gox Collapse', date: 'Feb 2014',  // approx block height
+      tagline: '750,000 BTC lost — 70% of global exchange volume',
+      significance: 'The largest exchange hack in Bitcoin history. Wiped out the dominant exchange overnight.',
+      detail: 'Mt. Gox, handling ~70% of all Bitcoin trades, suspended withdrawals and filed for bankruptcy after losing 750,000 customer BTC.',
+      wx: 740, wy: -530,  r: 22, symbol: 'anomaly',
+    },
+    {
+      height: 420000, name: 'Second Halving', date: 'Jul 9, 2016',  // confirmed
+      tagline: '25 BTC → 12.5 BTC',
+      significance: 'Second halving confirmed Bitcoin\'s four-year supply schedule held.',
+      detail: 'Block reward halved from 25 to 12.5 BTC. Bitcoin price subsequently rose from ~$650 to ~$20,000 over 18 months.',
+      wx: 870, wy: -285,  r: 26, symbol: 'halving',
+    },
+    {
+      height: 478558, name: 'Bitcoin Cash Fork', date: 'Aug 1, 2017',  // confirmed
+      tagline: 'The great block-size schism',
+      significance: 'First hard fork to split Bitcoin into two competing chains.',
+      detail: 'At block 478,558 the Bitcoin Cash chain diverged, offering 8 MB blocks. Every BTC holder received 1 BCH. A community division that shaped Bitcoin politics for years.',
+      wx: 950, wy: -15,   r: 22, symbol: 'fork',
+    },
+    {
+      height: 481824, name: 'SegWit Activation', date: 'Aug 24, 2017',  // confirmed
+      tagline: 'Segregated Witness · Lightning Network enabled',
+      significance: 'Major upgrade separating signatures from transaction data.',
+      detail: 'Increased throughput and paved the way for the Lightning Network layer 2.',
+      wx: 930, wy: 175,   r: 25, symbol: 'upgrade',
+    },
+    {
+      height: 630000, name: 'Third Halving', date: 'May 11, 2020',  // confirmed
+      tagline: '12.5 BTC → 6.25 BTC',
+      significance: 'Third halving, mined during the global COVID-19 pandemic.',
+      detail: 'Block reward halved to 6.25 BTC. Preceded a bull run to $69,000 in late 2021.',
+      wx: 765, wy: 500,   r: 26, symbol: 'halving',
+    },
+    {
+      height: 700000, name: 'El Salvador Legal Tender', date: 'Sep 7, 2021',  // approx block height
+      tagline: 'First nation-state to adopt Bitcoin as legal currency',
+      significance: 'El Salvador became the first sovereign nation to grant Bitcoin legal tender status.',
+      detail: 'President Bukele signed the Bitcoin Law, requiring all businesses to accept BTC. Provided every citizen a $30 Chivo wallet stipend.',
+      wx: 550, wy: 720,   r: 20, symbol: 'sovereign',
+    },
+    {
+      height: 709632, name: 'Taproot Upgrade', date: 'Nov 14, 2021',  // confirmed
+      tagline: 'Schnorr Signatures · Enhanced privacy',
+      significance: 'First major protocol upgrade since SegWit.',
+      detail: 'Enabled more complex, efficient and private transactions via Schnorr Signatures.',
+      wx: 280, wy: 860,   r: 25, symbol: 'upgrade',
+    },
+    {
+      height: 840000, name: '2024 Halving', date: 'Apr 2024',  // confirmed
+      tagline: '6.25 BTC → 3.125 BTC · Runes protocol launch',
+      significance: 'Block reward reduced to 3.125 BTC.',
+      detail: 'Historic miner fees paid at launch of the Runes protocol — one of the most valuable blocks ever mined.',
+      wx: 25, wy: 890,    r: 28, symbol: 'halving',
+    },
+  ];
+
+  // ---- BLOCK NAVIGATION ----
+  async function loadLatestBlock() {
+    try {
+      setLoadingMsg('Finding latest block…');
+      const h = await fetch(`${API_BASE}/blocks/tip/height`).then(r => r.text()).then(Number);
+      latestBlockHeight = h;
+      const hash = await fetch(`${API_BASE}/block-height/${h}`).then(r => r.text());
+      await loadBlock(hash.trim(), h);
+    } catch (err) {
+      console.warn('mempool.space unreachable:', err.message);
+      loadFallbackBlock();
+    }
+  }
+
+  // ---- FALLBACK (offline / API unreachable) ----
+  function _seededRand(seed) {
+    // Returns a closure over a mutable LCG seed
+    let s = seed >>> 0;
+    return () => { s = ((Math.imul(s, 1664525) + 1013904223) >>> 0); return s / 0xFFFFFFFF; };
+  }
+
+  function generateFallbackUTXOs(blockHeight) {
+    const rand    = _seededRand(blockHeight * 2654435761);
+    const scripts = ['P2TR','P2WPKH','P2SH','P2PKH','P2WSH'];
+    const list    = [];
+    for (let i = 0; i < 280; i++) {
+      const r = rand();
+      let ageYears;
+      if      (r < 0.12) ageYears = 7  + rand() * 9;      // ancient  7–16 yr
+      else if (r < 0.35) ageYears = 2  + rand() * 5;      // mature   2–7 yr
+      else if (r < 0.68) ageYears = 0.5 + rand() * 1.5;   // seasoned 0.5–2 yr
+      else               ageYears = rand() * 0.5;          // fresh    0–0.5 yr
+
+      const v = rand();
+      let valueSats;
+      if      (v < 0.04) valueSats = Math.floor(1e9 + rand() * 9e9);   // whale ≥10 BTC
+      else if (v < 0.22) valueSats = Math.floor(1e7 + rand() * 9e7);   // large
+      else if (v < 0.65) valueSats = Math.floor(1e5 + rand() * 9e5);   // medium
+      else               valueSats = Math.floor(1000 + rand() * 90000); // dust
+
+      list.push({
+        id: i + 1,
+        valueSats,
+        ageYears,
+        birthBlock: Math.max(1, Math.floor(blockHeight - ageYears * 52560)),
+        script:     scripts[Math.floor(rand() * scripts.length)],
+      });
+    }
+    return list;
+  }
+
+  function loadFallbackBlock() {
+    _offlineMode       = true;
+    _blockLoading      = false;
+    currentBlockHeight = FALLBACK_HEIGHT;
+    currentBlockHash   = '';
+    latestBlockHeight  = FALLBACK_HEIGHT;
+
+    document.getElementById('block-input').value    = FALLBACK_HEIGHT;
+    document.getElementById('mb-block').textContent = '#' + FALLBACK_HEIGHT.toLocaleString();
+    document.getElementById('loading-hash').textContent = 'offline · demo data';
+    _setNavButtons(FALLBACK_HEIGHT);
+
+    utxos         = generateFallbackUTXOs(FALLBACK_HEIGHT);
+    utxoPositions = [];
+
+    _lastRealStats = {
+      totalInputs: utxos.length,
+      totalSpent:  utxos.reduce((s, u) => s + u.valueSats, 0),
+      txCount:     Math.floor(utxos.length / 2.4),
+    };
+
+    offsetX = canvas.width  / 2;
+    offsetY = canvas.height / 2;
+    scale   = 1;
+
+    layoutUTXOs();
+    updateStats(utxos.length);
+    setLoadingMsg('');
+
+    document.getElementById('demo-note').innerHTML =
+      `<strong style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#8b4010">
+        Offline — Demo Mode
+      </strong><br>
+      Showing block #${FALLBACK_HEIGHT.toLocaleString()} with synthetic data.
+      mempool.space could not be reached —
+      <a href="" onclick="location.reload();return false;"
+         style="color:inherit;text-decoration:underline">refresh to reconnect</a>.`;
+
+    document.querySelector('.marginalia').textContent =
+      `"Connection to the network lost. The data shown is a faithful reconstruction — ` +
+      `block #${FALLBACK_HEIGHT.toLocaleString()}, synthesised from the atlas ledger. ` +
+      `Refresh when the signal returns."`;
+  }
+
+  function _setNavButtons(height) {
+    document.getElementById('prev-btn').disabled = _blockLoading || _offlineMode || (height <= 0);
+    document.getElementById('next-btn').disabled = _blockLoading || _offlineMode || (height >= latestBlockHeight);
+  }
+
+  async function loadBlock(hash, height) {
+    if (_blockLoading) return;
+    _blockLoading = true;
+    _setNavButtons(height);
+
+    currentBlockHash   = hash;
+    currentBlockHeight = height;
+
+    document.getElementById('block-input').value = height;
+    document.getElementById('mb-block').textContent = '#' + height.toLocaleString();
+    document.getElementById('loading-hash').textContent =
+      hash.slice(0, 10) + '…' + hash.slice(-10);
+
+    // Reset view to centre for each new block
+    offsetX = canvas.width  / 2;
+    offsetY = canvas.height / 2;
+    scale   = 1;
+
+    utxos         = [];
+    utxoPositions = [];
+
+    try {
+      await fetchBlockUTXOs(hash);
+      _offlineMode = false;   // live data loaded successfully
+    } finally {
+      _blockLoading = false;
+      _setNavButtons(currentBlockHeight);
+    }
+  }
+
+  async function goToPrevBlock() {
+    if (_blockLoading || currentBlockHeight <= 0) return;
+    try {
+      const h    = currentBlockHeight - 1;
+      const hash = await fetch(`${API_BASE}/block-height/${h}`).then(r => r.text());
+      await loadBlock(hash.trim(), h);
+    } catch (err) { setLoadingMsg(`Error: ${err.message}`); }
+  }
+
+  async function goToNextBlock() {
+    if (_blockLoading) return;
+    // Refresh tip height in case a new block has been mined since page load
+    try {
+      const tip = await fetch(`${API_BASE}/blocks/tip/height`).then(r => r.text()).then(Number);
+      latestBlockHeight = tip;
+    } catch (_) {}
+    if (currentBlockHeight >= latestBlockHeight) return;
+    try {
+      const h    = currentBlockHeight + 1;
+      const hash = await fetch(`${API_BASE}/block-height/${h}`).then(r => r.text());
+      await loadBlock(hash.trim(), h);
+    } catch (err) { setLoadingMsg(`Error: ${err.message}`); }
+  }
+
+  async function goToBlock(val) {
+    val = String(val).trim();
+    if (!val) return;
+    try {
+      let hash, height;
+      if (/^[0-9a-f]{64}$/i.test(val)) {
+        // Full block hash
+        hash = val.toLowerCase();
+        const info = await fetch(`${API_BASE}/block/${hash}`).then(r => {
+          if (!r.ok) throw new Error('Block not found');
+          return r.json();
+        });
+        height = info.height;
+      } else if (/^\d+$/.test(val)) {
+        // Block height
+        height = parseInt(val, 10);
+        hash   = await fetch(`${API_BASE}/block-height/${height}`).then(r => {
+          if (!r.ok) throw new Error('Block not found');
+          return r.text();
+        });
+        hash = hash.trim();
+      } else {
+        throw new Error('Enter a block height (number) or 64-character hash');
+      }
+      // Update latest if we jumped past it
+      if (height > latestBlockHeight) latestBlockHeight = height;
+      await loadBlock(hash, height);
+    } catch (err) {
+      document.getElementById('block-input').value = currentBlockHeight || '';
+      setLoadingMsg(`Error: ${err.message}`);
+      setTimeout(() => setLoadingMsg(''), 3000);
+    }
+  }
+
+  // ---- SCRIPT TYPE MAPPING (mempool.space → display label) ----
+  function mapScriptType(type) {
+    const map = {
+      p2pkh:       'P2PKH',
+      p2sh:        'P2SH',
+      v0_p2wpkh:   'P2WPKH',
+      v0_p2wsh:    'P2WSH',
+      v1_taproot:  'P2TR',
+      p2pk:        'P2PKH',
+      p2ms:        'P2SH',
+    };
+    return map[type] || 'P2PKH';
+  }
+
+  // ---- LOADING OVERLAY ----
+  function setLoadingMsg(msg) {
+    const overlay = document.getElementById('loading-overlay');
+    const el      = document.getElementById('loading-msg');
+    if (msg) {
+      el.textContent       = msg;
+      overlay.style.display = 'flex';
+    } else {
+      overlay.style.display = 'none';
+    }
+  }
+
+  // ---- FETCH LIVE BLOCK DATA ----
+  // We visualise the INPUT UTXOs consumed in this block (vin entries).
+  // Outputs are all born in the same block → same age (boring).
+  // Inputs each reference a prior UTXO with its own creation time → rich age spread.
+  async function fetchBlockUTXOs(blockHash) {
+    try {
+      setLoadingMsg('Fetching block info…');
+
+      // 1. Block metadata
+      const res = await fetch(`${API_BASE}/block/${blockHash}`);
+      if (!res.ok) throw new Error(`Block fetch failed (HTTP ${res.status})`);
+      const info = await res.json();
+      const { height, timestamp, tx_count, extras } = info;
+      const blockDate = new Date(timestamp * 1000).toLocaleDateString('en-GB',
+        { year: 'numeric', month: 'short', day: 'numeric' });
+
+      // Real block totals — available in mempool.space's extras field.
+      // totalInputs excludes coinbase; totalInputAmt is in satoshis.
+      _lastRealStats = {
+        totalInputs: extras?.totalInputs   ?? null,
+        totalSpent:  extras?.totalInputAmt ?? null,
+        txCount:     tx_count,
+      };
+      updateStats(0);   // show real totals immediately, 0 displayed so far
+
+      // 2. Scan block transactions, collecting vin (input) entries.
+      //    vin.prevout = the UTXO being spent: value, script type.
+      //    vin.txid    = the parent transaction that created that UTXO.
+      const inputs = [];   // { valueSats, script, parentTxid }
+      const TARGET = 1200;
+      let startIndex = 0;
+
+      while (startIndex < tx_count && inputs.length < TARGET) {
+        setLoadingMsg(`Scanning block inputs… ${inputs.length} found (page ${startIndex / 25 + 1})`);
+        const txRes = await fetch(`${API_BASE}/block/${blockHash}/txs/${startIndex}`);
+        if (!txRes.ok) throw new Error(`Tx fetch failed (HTTP ${txRes.status})`);
+        const txs = await txRes.json();
+        if (!txs || txs.length === 0) break;
+
+        for (const tx of txs) {
+          for (const vin of (tx.vin || [])) {
+            // Skip coinbase (no real prevout)
+            if (vin.is_coinbase || !vin.txid || !vin.prevout || vin.prevout.value <= 0) continue;
+            inputs.push({
+              valueSats:  vin.prevout.value,
+              script:     mapScriptType(vin.prevout.scriptpubkey_type || ''),
+              parentTxid: vin.txid,
+            });
+            if (inputs.length >= TARGET) break;
+          }
+          if (inputs.length >= TARGET) break;
+        }
+
+        if (txs.length < 25) break;
+        startIndex += 25;
+      }
+
+      // 3. Batch-fetch parent transactions to resolve each coin's creation time.
+      //    Parent tx status.block_time → age of the input UTXO in years.
+      const uniqueTxids = [...new Set(inputs.map(i => i.parentTxid))];
+      const txInfo = new Map();   // txid → { blockTime, blockHeight }
+
+      const BATCH = 25;
+      for (let b = 0; b < uniqueTxids.length; b += BATCH) {
+        const slice = uniqueTxids.slice(b, b + BATCH);
+        setLoadingMsg(
+          `Resolving coin ages… (${Math.min(b + BATCH, uniqueTxids.length)} / ${uniqueTxids.length} parent txs)`
+        );
+        const results = await Promise.all(
+          slice.map(txid =>
+            fetch(`${API_BASE}/tx/${txid}`)
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null)
+          )
+        );
+        results.forEach((tx, idx) => {
+          if (tx?.status?.block_time) {
+            txInfo.set(slice[idx], {
+              blockTime:   tx.status.block_time,
+              blockHeight: tx.status.block_height || 0,
+            });
+          }
+        });
+      }
+
+      // 4. Build utxos with real ages from parent block timestamps.
+      const nowSec = Date.now() / 1000;
+      utxos = inputs
+        .filter(inp => txInfo.has(inp.parentTxid))
+        .map((inp, i) => {
+          const { blockTime, blockHeight: bh } = txInfo.get(inp.parentTxid);
+          return {
+            id:         i + 1,
+            valueSats:  inp.valueSats,
+            ageYears:   Math.max(0, (nowSec - blockTime) / (365.25 * 24 * 3600)),
+            birthBlock: bh,
+            script:     inp.script,
+          };
+        });
+
+      layoutUTXOs();
+      updateStats(utxos.length);
+      setLoadingMsg('');
+
+      const avgAge = utxos.length
+        ? (utxos.reduce((s, u) => s + u.ageYears, 0) / utxos.length).toFixed(1)
+        : '—';
+
+      document.getElementById('demo-note').innerHTML =
+        `<strong style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Live Block Data</strong><br>
+         ${utxos.length.toLocaleString()} input UTXOs consumed in block #${height.toLocaleString()}
+         (${blockDate}). Avg coin age: ${avgAge} yrs — via mempool.space.`;
+
+      document.querySelector('.marginalia').textContent =
+        `"In block #${height.toLocaleString()}, ${utxos.length.toLocaleString()} coins broke their silence — ` +
+        `some held for years, others barely hours. Average age: ${avgAge} years. ` +
+        `Each circle marks a coin's final orbit before being spent."`;
+
+    } catch (err) {
+      console.error('fetchBlockUTXOs error:', err);
+      setLoadingMsg(`Error: ${err.message}. Check console.`);
+      document.getElementById('demo-note').innerHTML =
+        `<strong style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#a33">Fetch Error</strong><br>
+         ${err.message}`;
+    }
+  }
+
+  // ---- NETWORK STATS (fees, mempool, hashrate) ----
+  async function fetchNetworkStats() {
+    try {
+      const [fees, mempool, hashRes] = await Promise.all([
+        fetch(`${API_BASE}/v1/fees/recommended`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${API_BASE}/mempool`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${API_BASE}/v1/mining/hashrate/3d`).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      _networkStats = {
+        fees,
+        mempool,
+        hashrate: hashRes?.currentHashrate ?? null,
+      };
+    } catch (_) {}
+  }
+
+  // ---- CANVAS & STATE ----
+  const canvas  = document.getElementById('atlas-canvas');
+  const ctx     = canvas.getContext('2d');
+  const tooltip = document.getElementById('tooltip');
+
+  let offsetX = 0, offsetY = 0, scale = 1;
+  let isDragging = false, dragSX = 0, dragSY = 0, dragOX = 0, dragOY = 0;
+  let utxoPositions = []; // { ...utxo, x, y, coreR, baseR, baseAngle, omega }
+
+  // Touch state
+  let _pinchDist0 = 0, _pinchScale0 = 1;
+  let _tapStartPos = null;
+
+  // ---- ANIMATION STATE ----
+  let _animTotalElapsed = 0; // seconds, never resets
+  let _animLastTs       = null;
+
+  // ---- AGE → STAR CORE RADIUS (log scale, 1.2–10px) ----
+  // Older UTXOs cast a larger mark on the atlas.
+  function ageToStarRadius(ageYears) {
+    const minR = 1.2, maxR = 10;
+    const logMin = Math.log10(0.005);  // ~2 days
+    const logMax = Math.log10(16);     // 16 years
+    const t = Math.max(0, Math.min(1,
+      (Math.log10(Math.max(0.005, ageYears)) - logMin) / (logMax - logMin)));
+    return minR + t * (maxR - minR);
+  }
+
+  // ---- VALUE → INK STYLE ----
+  // Wealthier outputs drink deeper into the parchment.
+  function valueToInkStyle(valueSats) {
+    if (valueSats >= 1_000_000_000) return {
+      // Whale (≥ 10 BTC): dense black, ink-bleed, radiating rays
+      fill:    '#0d0d0d',
+      alpha:    0.94,
+      bleed:    0.55,
+      outline:  false,
+      rays:     true,
+    };
+    if (valueSats >= 10_000_000) return {
+      // Large (≥ 0.1 BTC): dark grey, moderate bleed
+      fill:    '#2e2e2e',
+      alpha:    0.80,
+      bleed:    0.35,
+      outline:  false,
+      rays:     false,
+    };
+    if (valueSats >= 100_000) return {
+      // Medium (≥ 0.001 BTC): mid grey, light bleed
+      fill:    '#5a5a5a',
+      alpha:    0.65,
+      bleed:    0.15,
+      outline:  false,
+      rays:     false,
+    };
+    return {
+      // Dust (< 0.001 BTC): open dashed circle, barely inked
+      fill:    'none',
+      stroke:  '#4a4a4a',
+      alpha:    0.50,
+      bleed:    0,
+      outline:  true,
+      rays:     false,
+    };
+  }
+
+  // ---- LAYOUT (golden-angle spiral, ancient = core, fresh = outer) ----
+  function layoutUTXOs() {
+    const PHI    = Math.PI * (3 - Math.sqrt(5)); // golden angle ~137.5°
+    const sorted = [...utxos].sort((a, b) => b.ageYears - a.ageYears);
+
+    utxoPositions = sorted.map((u, i) => {
+      const coreR = ageToStarRadius(u.ageYears);
+
+      // Deterministic jitter keyed on UTXO id — stable across re-layouts
+      const h1     = ((u.id * 1664525 + 1013904223) >>> 0) & 0xFFFF;
+      const h2     = ((u.id * 22695477 + 1)          >>> 0) & 0xFFFF;
+      const jitterR = (h1 / 0xFFFF - 0.5) * 12;
+      const jitterA = (h2 / 0xFFFF - 0.5) * 0.28;
+
+      const baseR     = Math.max(8, 16 + Math.sqrt(i) * 20 + jitterR);
+      // Stable initial angle: golden ratio * id so UTXOs spread evenly
+      const baseAngle = (u.id * 2.39996) % (Math.PI * 2) + jitterA;
+
+      // Angular velocity: inner = slower, outer = slightly faster (rad/s)
+      // Range: ~0.007 (centre) → ~0.020 (edge at r≈350)
+      const omega = 0.007 + baseR * 0.000038;
+
+      return {
+        ...u,
+        coreR, baseR, baseAngle, omega,
+        x: baseR * Math.cos(baseAngle),
+        y: baseR * Math.sin(baseAngle),
+      };
+    });
+  }
+
+  // ---- DRAW INK DOT (star on parchment) ----
+  function drawStar(u) {
+    const { x, y, coreR } = u;
+    const style = valueToInkStyle(u.valueSats);
+
+    ctx.save();
+    ctx.globalAlpha = style.alpha;
+
+    if (style.outline) {
+      // Fresh: dashed open circle — ink not yet dry
+      ctx.beginPath();
+      ctx.arc(x, y, coreR, 0, Math.PI * 2);
+      ctx.strokeStyle = style.stroke;
+      ctx.lineWidth   = Math.max(0.6, coreR * 0.18) / scale;
+      ctx.setLineDash([3 / scale, 2.5 / scale]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      // Ink bleed: subtle radial softening at the edge
+      if (style.bleed > 0) {
+        const bleedR = coreR * (1 + style.bleed);
+        const grd = ctx.createRadialGradient(x, y, coreR * 0.6, x, y, bleedR);
+        grd.addColorStop(0,   style.fill);
+        grd.addColorStop(0.5, style.fill);
+        grd.addColorStop(1,   'rgba(26,26,26,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(x, y, bleedR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Solid ink core
+      ctx.fillStyle = style.fill;
+      ctx.beginPath();
+      ctx.arc(x, y, coreR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Short radiating rays for large ancient stars (like old atlas symbols)
+      if (style.rays && coreR > 4) {
+        const rayLen  = coreR * 1.6;
+        const rayW    = Math.max(0.5, coreR * 0.10) / scale;
+        ctx.strokeStyle = style.fill;
+        ctx.lineWidth   = rayW;
+        ctx.setLineDash([]);
+        [0, Math.PI / 2, Math.PI, Math.PI * 1.5].forEach(angle => {
+          const startD = coreR * 1.05;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(angle) * startD, y + Math.sin(angle) * startD);
+          ctx.lineTo(x + Math.cos(angle) * rayLen,  y + Math.sin(angle) * rayLen);
+          ctx.stroke();
+        });
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ---- PARCHMENT DENSITY SHADOW at core (where ancients cluster) ----
+  function drawCoreShadow() {
+    // Subtle ink-stain / paper aging at the dense centre
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 160);
+    g.addColorStop(0,   'rgba(80, 60, 20, 0.06)');
+    g.addColorStop(0.5, 'rgba(60, 40, 10, 0.02)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-500, -500, 1000, 1000);
+  }
+
+  // ---- ATLAS STRUCTURE: partial arcs, radial arms, spiral sweeps ----
+  // Drawn in world space (pans/zooms with data). All strokes are faint
+  // so the ink dots remain the primary visual element.
+  function drawAtlasStructure() {
+    ctx.save();
+    ctx.setLineDash([]);
+
+    const ink = a => `rgba(18,12,4,${a})`;
+
+    // --- 1. Partial concentric guide rings — inner = thicker/darker ---
+    const rings = [
+      { r: 100, lw: 2.2,  alpha: 0.22, tickAlpha: 0.28, tickLen: 8,  arcs: [[0.20, 1.90], [2.80, 4.55], [5.05, 6.10]], tickStep: 0.38 },
+      { r: 210, lw: 1.5,  alpha: 0.16, tickAlpha: 0.20, tickLen: 7,  arcs: [[0.45, 2.30], [3.30, 5.35]],               tickStep: 0.30 },
+      { r: 345, lw: 0.9,  alpha: 0.10, tickAlpha: 0.13, tickLen: 5,  arcs: [[0.10, 1.65], [2.25, 3.85], [4.90, 6.10]], tickStep: 0.24 },
+    ];
+
+    rings.forEach(({ r, lw, alpha, tickAlpha, tickLen, arcs, tickStep }) => {
+      arcs.forEach(([a0, a1]) => {
+        ctx.strokeStyle = ink(alpha);
+        ctx.lineWidth   = lw / scale;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, a0, a1);
+        ctx.stroke();
+
+        // Tick marks
+        ctx.strokeStyle = ink(tickAlpha);
+        ctx.lineWidth   = (lw * 0.65) / scale;
+        const outerR = r + tickLen / scale;
+        for (let a = a0; a <= a1 + 0.001; a += tickStep) {
+          const ca = Math.min(a, a1);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(ca) * r,      Math.sin(ca) * r);
+          ctx.lineTo(Math.cos(ca) * outerR,  Math.sin(ca) * outerR);
+          ctx.stroke();
+        }
+      });
+    });
+
+    // --- 2. Radial guide arms — taper from thick at centre outward ---
+    const radials = [0.55, 2.00, 3.50, 5.10];
+    radials.forEach(angle => {
+      const ca = Math.cos(angle), sa = Math.sin(angle);
+
+      // Draw arm as segments so we can taper lineWidth
+      const segCount = 20;
+      const startR = 28, endR = 360;
+      for (let i = 0; i < segCount; i++) {
+        const t   = i / segCount;         // 0 = near centre, 1 = outer
+        const r0  = startR + t * (endR - startR);
+        const r1  = startR + (i + 1) / segCount * (endR - startR);
+        const lw  = (1.6 - t * 1.1) / scale;  // 1.6 → 0.5
+        const alp = 0.18 - t * 0.10;           // 0.18 → 0.08
+        ctx.strokeStyle = ink(alp);
+        ctx.lineWidth   = lw;
+        ctx.beginPath();
+        ctx.moveTo(ca * r0, sa * r0);
+        ctx.lineTo(ca * r1, sa * r1);
+        ctx.stroke();
+      }
+
+      // Perpendicular crosshatch ticks
+      const pa = angle + Math.PI / 2;
+      const pc = Math.cos(pa), ps = Math.sin(pa);
+      [75, 140, 210, 280, 345].forEach(dist => {
+        const t    = (dist - 28) / (360 - 28);
+        const half = (6 - t * 2) / scale;   // larger ticks near centre
+        const bx   = ca * dist, by = sa * dist;
+        ctx.strokeStyle = ink(0.20 - t * 0.08);
+        ctx.lineWidth   = (1.0 - t * 0.4) / scale;
+        ctx.beginPath();
+        ctx.moveTo(bx + pc * half, by + ps * half);
+        ctx.lineTo(bx - pc * half, by - ps * half);
+        ctx.stroke();
+      });
+    });
+
+    // --- 3. Logarithmic spiral arms — tapered: thick at centre, thin at outer ---
+    // r = 32 + 46θ, drawn segment-by-segment to vary lineWidth
+    [0, Math.PI].forEach(phase => {
+      const thetaMin = 0.3, thetaMax = Math.PI * 2.9;
+      const step = 0.05;
+      for (let theta = thetaMin; theta < thetaMax; theta += step) {
+        const t   = (theta - thetaMin) / (thetaMax - thetaMin); // 0→1
+        const lw  = (2.4 - t * 1.8) / scale;   // 2.4 → 0.6
+        const alp = 0.18 - t * 0.10;            // 0.18 → 0.08
+        const r0  = 32 + 46 * theta;
+        const r1  = 32 + 46 * (theta + step);
+        ctx.strokeStyle = ink(alp);
+        ctx.lineWidth   = lw;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(theta        + phase) * r0,
+                   Math.sin(theta        + phase) * r0);
+        ctx.lineTo(Math.cos(theta + step + phase) * r1,
+                   Math.sin(theta + step + phase) * r1);
+        ctx.stroke();
+      }
+    });
+
+    // --- 4. Orbital arcs around high-value UTXOs ---
+    utxoPositions
+      .filter(u => u.valueSats >= 1_000_000_000)
+      .forEach(u => {
+        const orbitR = u.coreR * 2.4;
+        const startA = (u.id * 1.7) % (Math.PI * 2);
+        const spanA  = Math.PI * (0.6 + (u.id % 7) / 7 * 0.9);
+
+        ctx.strokeStyle = ink(0.22);
+        ctx.lineWidth   = 1.4 / scale;
+        ctx.setLineDash([5 / scale, 3.5 / scale]);
+        ctx.beginPath();
+        ctx.arc(u.x, u.y, orbitR, startA, startA + spanA);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Motion tick at leading end
+        const endA = startA + spanA;
+        ctx.strokeStyle = ink(0.28);
+        ctx.lineWidth   = 1.2 / scale;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(endA - 0.20) * orbitR + u.x,
+                   Math.sin(endA - 0.20) * orbitR + u.y);
+        ctx.lineTo(Math.cos(endA)         * orbitR + u.x,
+                   Math.sin(endA)         * orbitR + u.y);
+        ctx.stroke();
+      });
+
+    ctx.restore();
+  }
+
+  // ---- GRID (parchment — faint dark lines) ----
+  function drawGrid() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.strokeStyle = 'rgba(0,0,0,0.032)';
+    ctx.lineWidth   = 1;
+    const sz = 44;
+    const ox = ((offsetX % sz) + sz) % sz;
+    const oy = ((offsetY % sz) + sz) % sz;
+    for (let x = ox; x < canvas.width;  x += sz) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = oy; y < canvas.height; y += sz) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---- CROSSHAIR ----
+  function drawCrosshair() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+    ctx.lineWidth   = 0.75;
+    ctx.setLineDash([4, 7]);
+    ctx.beginPath(); ctx.moveTo(offsetX, 0); ctx.lineTo(offsetX, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, offsetY); ctx.lineTo(canvas.width, offsetY);  ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- HISTORICAL BLOCK CONSTELLATION (world space) ----
+  function drawHistoricalBlocks() {
+    const fade = Math.max(0, Math.min(1, (0.65 - scale) / 0.25));
+    if (fade < 0.01) return;
+
+    const ink  = a => `rgba(18,12,4,${(a * fade).toFixed(3)})`;
+    const fS   = s => Math.max(6, Math.round(s / scale));  // screen-stable font size in world px
+
+    // — Faint radial spokes from the atlas centre to each landmark —
+    ctx.setLineDash([10 / scale, 7 / scale]);
+    HISTORICAL_BLOCKS.forEach(hb => {
+      ctx.strokeStyle = ink(0.07);
+      ctx.lineWidth   = 0.6 / scale;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(hb.wx, hb.wy); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // — Chronological constellation chain —
+    ctx.strokeStyle = ink(0.28);
+    ctx.lineWidth   = 0.9 / scale;
+    ctx.setLineDash([8 / scale, 5 / scale]);
+    for (let i = 0; i < HISTORICAL_BLOCKS.length - 1; i++) {
+      const a = HISTORICAL_BLOCKS[i], b = HISTORICAL_BLOCKS[i + 1];
+      ctx.beginPath(); ctx.moveTo(a.wx, a.wy); ctx.lineTo(b.wx, b.wy); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // — Thematic connections (halvings ↔; SegWit ↔ Taproot) —
+    const byH  = h => HISTORICAL_BLOCKS.find(b => b.height === h);
+    const pairs = [[210000, 420000], [420000, 630000], [630000, 840000], [481824, 709632]];
+    ctx.lineWidth = 0.55 / scale;
+    ctx.setLineDash([3 / scale, 6 / scale]);
+    pairs.forEach(([h1, h2]) => {
+      const a = byH(h1), b = byH(h2);
+      if (!a || !b) return;
+      ctx.strokeStyle = ink(0.13);
+      ctx.beginPath(); ctx.moveTo(a.wx, a.wy); ctx.lineTo(b.wx, b.wy); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // — Block symbols, nebulae, labels —
+    HISTORICAL_BLOCKS.forEach(hb => {
+      const { wx, wy, r, symbol } = hb;
+
+      // Nebula haze
+      const ng = ctx.createRadialGradient(wx, wy, r * 0.2, wx, wy, r * 5.5);
+      ng.addColorStop(0,   `rgba(18,12,4,${(0.11 * fade).toFixed(3)})`);
+      ng.addColorStop(0.5, `rgba(18,12,4,${(0.04 * fade).toFixed(3)})`);
+      ng.addColorStop(1,   'rgba(18,12,4,0)');
+      ctx.fillStyle = ng;
+      ctx.beginPath(); ctx.arc(wx, wy, r * 5.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = ink(0.62);
+      ctx.fillStyle   = ink(0.10);
+      ctx.lineWidth   = 1.1 / scale;
+
+      if (symbol === 'genesis') {
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 1.3 / scale; ctx.strokeStyle = ink(0.55);
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(wx + Math.cos(a) * r * 1.15, wy + Math.sin(a) * r * 1.15);
+          ctx.lineTo(wx + Math.cos(a) * r * 2.4,  wy + Math.sin(a) * r * 2.4);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = ink(0.28); ctx.lineWidth = 0.6 / scale;
+        ctx.beginPath(); ctx.arc(wx, wy, r * 3.1, 0, Math.PI * 2); ctx.stroke();
+
+      } else if (symbol === 'halving') {
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = ink(0.40); ctx.lineWidth = 0.65 / scale;
+        ctx.beginPath(); ctx.arc(wx, wy, r * 2.1, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = ink(0.52); ctx.lineWidth = 0.9 / scale;
+        ctx.beginPath(); ctx.moveTo(wx - r, wy); ctx.lineTo(wx + r, wy); ctx.stroke();
+
+      } else if (symbol === 'transfer') {
+        const off = r * 0.85;
+        ctx.beginPath(); ctx.arc(wx - off, wy, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(wx + off, wy, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 0.8 / scale; ctx.strokeStyle = ink(0.48);
+        ctx.beginPath();
+        ctx.moveTo(wx - off + r * 0.6, wy); ctx.lineTo(wx + off - r * 0.6, wy); ctx.stroke();
+
+      } else if (symbol === 'upgrade') {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+          i === 0 ? ctx.moveTo(wx + Math.cos(a) * r, wy + Math.sin(a) * r)
+                  : ctx.lineTo(wx + Math.cos(a) * r, wy + Math.sin(a) * r);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // Inner hexagon
+        ctx.strokeStyle = ink(0.35); ctx.lineWidth = 0.5 / scale;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+          i === 0 ? ctx.moveTo(wx + Math.cos(a) * r * 0.55, wy + Math.sin(a) * r * 0.55)
+                  : ctx.lineTo(wx + Math.cos(a) * r * 0.55, wy + Math.sin(a) * r * 0.55);
+        }
+        ctx.closePath(); ctx.stroke();
+
+      } else if (symbol === 'anomaly') {
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 0.8 / scale; ctx.strokeStyle = ink(0.52);
+        ctx.beginPath();
+        ctx.moveTo(wx - r * 0.65, wy - r * 0.65); ctx.lineTo(wx + r * 0.65, wy + r * 0.65); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(wx + r * 0.65, wy - r * 0.65); ctx.lineTo(wx - r * 0.65, wy + r * 0.65); ctx.stroke();
+
+      } else if (symbol === 'inscription') {
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 0.7 / scale; ctx.strokeStyle = ink(0.46);
+        [-r * 0.36, 0, r * 0.36].forEach(dy => {
+          ctx.beginPath(); ctx.moveTo(wx - r * 0.62, wy + dy); ctx.lineTo(wx + r * 0.62, wy + dy); ctx.stroke();
+        });
+
+      } else if (symbol === 'cog') {
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.lineWidth = 0.8 / scale; ctx.strokeStyle = ink(0.46);
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(wx + Math.cos(a) * r, wy + Math.sin(a) * r);
+          ctx.lineTo(wx + Math.cos(a) * r * 1.55, wy + Math.sin(a) * r * 1.55);
+          ctx.stroke();
+        }
+
+      } else if (symbol === 'fork') {
+        // Y-shape: stem + two diverging branches representing chain split
+        const stemL = r * 1.3, branchL = r * 1.1, branchA = Math.PI / 4.5;
+        ctx.lineWidth = 1.2 / scale; ctx.strokeStyle = ink(0.62);
+        // stem (pointing down)
+        ctx.beginPath(); ctx.moveTo(wx, wy + stemL); ctx.lineTo(wx, wy); ctx.stroke();
+        // left branch
+        ctx.beginPath(); ctx.moveTo(wx, wy);
+        ctx.lineTo(wx - Math.sin(branchA) * branchL, wy - Math.cos(branchA) * branchL); ctx.stroke();
+        // right branch
+        ctx.beginPath(); ctx.moveTo(wx, wy);
+        ctx.lineTo(wx + Math.sin(branchA) * branchL, wy - Math.cos(branchA) * branchL); ctx.stroke();
+        // dots at each tip
+        ctx.fillStyle = ink(0.62);
+        [[wx, wy + stemL],
+         [wx - Math.sin(branchA) * branchL, wy - Math.cos(branchA) * branchL],
+         [wx + Math.sin(branchA) * branchL, wy - Math.cos(branchA) * branchL]
+        ].forEach(([tx, ty]) => {
+          ctx.beginPath(); ctx.arc(tx, ty, 2.2 / scale, 0, Math.PI * 2); ctx.fill();
+        });
+
+      } else if (symbol === 'sovereign') {
+        // Filled circle + outer ring + 6 radiating inner lines (sun / legal symbol)
+        ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = ink(0.38); ctx.lineWidth = 0.6 / scale;
+        ctx.beginPath(); ctx.arc(wx, wy, r * 2.1, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 0.8 / scale; ctx.strokeStyle = ink(0.52);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(wx + Math.cos(a) * r * 1.1, wy + Math.sin(a) * r * 1.1);
+          ctx.lineTo(wx + Math.cos(a) * r * 1.85, wy + Math.sin(a) * r * 1.85);
+          ctx.stroke();
+        }
+
+      } else {  // commerce / diamond
+        ctx.beginPath();
+        ctx.moveTo(wx,        wy - r);
+        ctx.lineTo(wx + r * 0.8, wy);
+        ctx.lineTo(wx,        wy + r);
+        ctx.lineTo(wx - r * 0.8, wy);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+
+      // Scale-stable labels
+      const fTitle = fS(10), fSub = fS(9);
+      const extraPad = symbol === 'genesis' ? r * 3.8 : r * 2.6;
+      const ly = wy + extraPad + fTitle;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = ink(0.65);
+      ctx.font = `bold ${fTitle}px Georgia, serif`;
+      ctx.fillText('#' + hb.height.toLocaleString(), wx, ly);
+      ctx.fillStyle = ink(0.46);
+      ctx.font = `${fSub}px Georgia, serif`;
+      ctx.fillText(hb.name, wx, ly + fTitle * 1.2);
+    });
+  }
+
+  // ---- ATLAS INSTRUMENT PANELS (screen space) ----
+  const _iInk = a => `rgba(18,12,4,${a})`;
+
+  function drawAtlasInset(x, y, w, h, label) {
+    ctx.fillStyle = 'rgba(248,241,227,0.94)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = _iInk(0.40); ctx.lineWidth = 0.9;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.strokeStyle = _iInk(0.17); ctx.lineWidth = 0.4;
+    ctx.strokeRect(x + 3.5, y + 3.5, w - 7, h - 7);
+    ctx.fillStyle = _iInk(0.62);
+    ctx.font = '700 7px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x + w / 2, y + 13);
+    ctx.strokeStyle = _iInk(0.20); ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x + 7, y + 16.5); ctx.lineTo(x + w - 7, y + 16.5); ctx.stroke();
+  }
+
+  function drawFeeOracle() {
+    if (!_networkStats.fees) return;
+    const { fastestFee, halfHourFee, hourFee, economyFee } = _networkStats.fees;
+    const W = 145, H = 115, px = 14, py = canvas.height - H - 14;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawAtlasInset(px, py, W, H, 'FEE  ORACLE');
+    const tiers = [
+      { label: 'FASTEST', val: fastestFee,  shade: 0.75 },
+      { label: '½ HOUR',  val: halfHourFee, shade: 0.54 },
+      { label: '1 HOUR',  val: hourFee,     shade: 0.37 },
+      { label: 'ECONOMY', val: economyFee,  shade: 0.21 },
+    ];
+    const maxVal = Math.max(...tiers.map(t => t.val), 1);
+    const barW = W - 66;
+    tiers.forEach(({ label, val, shade }, i) => {
+      const ry = py + 23 + i * 19;
+      ctx.fillStyle = _iInk(0.48); ctx.font = '6px Georgia, serif'; ctx.textAlign = 'left';
+      ctx.fillText(label, px + 7, ry + 8);
+      ctx.fillStyle = _iInk(0.06); ctx.fillRect(px + 50, ry + 2, barW, 9);
+      ctx.strokeStyle = _iInk(0.16); ctx.lineWidth = 0.4;
+      ctx.strokeRect(px + 50, ry + 2, barW, 9);
+      ctx.fillStyle = _iInk(shade);
+      ctx.fillRect(px + 50, ry + 2, Math.max(1, (val / maxVal) * barW), 9);
+      ctx.fillStyle = _iInk(0.58); ctx.font = '700 6.5px Georgia, serif'; ctx.textAlign = 'right';
+      ctx.fillText(val, px + W - 7, ry + 8);
+    });
+    ctx.fillStyle = _iInk(0.26); ctx.font = '5.5px Georgia, serif'; ctx.textAlign = 'center';
+    ctx.fillText('SAT / VBYTE', px + W / 2, py + H - 7);
+    ctx.restore();
+  }
+
+  function drawMempoolGauge() {
+    if (!_networkStats.mempool) return;
+    const mem = _networkStats.mempool;
+    const W = 98, H = 115, px = canvas.width - W - 14, py = canvas.height - H - 14;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawAtlasInset(px, py, W, H, 'MEMPOOL');
+    const gx = px + W / 2 - 11, gy = py + 21, gw = 22, gh = H - 46;
+    const REF = 250000;
+    const fillH = gh * Math.min(1, mem.count / REF);
+    ctx.fillStyle = _iInk(0.05); ctx.fillRect(gx, gy, gw, gh);
+    ctx.strokeStyle = _iInk(0.28); ctx.lineWidth = 0.6; ctx.strokeRect(gx, gy, gw, gh);
+    ctx.fillStyle = _iInk(0.52); ctx.fillRect(gx, gy + gh - fillH, gw, fillH);
+    [0.25, 0.5, 0.75].forEach(f => {
+      const ty = gy + gh - gh * f;
+      ctx.strokeStyle = _iInk(0.20); ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(gx + gw, ty); ctx.lineTo(gx + gw + 4, ty); ctx.stroke();
+      ctx.fillStyle = _iInk(0.30); ctx.font = '5px Georgia, serif'; ctx.textAlign = 'left';
+      ctx.fillText(Math.round(REF * f / 1000) + 'k', gx + gw + 6, ty + 2);
+    });
+    const countStr = mem.count >= 1000 ? Math.round(mem.count / 1000) + 'k' : mem.count;
+    ctx.fillStyle = _iInk(0.65); ctx.font = '700 8px Georgia, serif'; ctx.textAlign = 'center';
+    ctx.fillText(countStr, px + W / 2, py + H - 15);
+    ctx.fillStyle = _iInk(0.28); ctx.font = '5.5px Georgia, serif';
+    ctx.fillText('UNCONF. TXS', px + W / 2, py + H - 7);
+    ctx.restore();
+  }
+
+  function drawHashRate() {
+    if (_networkStats.hashrate == null) return;
+    const W = 145, H = 50, px = canvas.width - W - 14, py = 14;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawAtlasInset(px, py, W, H, 'HASH  RATE');
+    const eh = (_networkStats.hashrate / 1e18).toFixed(1);
+    ctx.fillStyle = _iInk(0.70); ctx.font = '700 17px Georgia, serif'; ctx.textAlign = 'right';
+    ctx.fillText(eh, px + W / 2 + 8, py + 39);
+    ctx.fillStyle = _iInk(0.38); ctx.font = '700 8.5px Georgia, serif'; ctx.textAlign = 'left';
+    ctx.fillText('EH/s', px + W / 2 + 13, py + 39);
+    ctx.restore();
+  }
+
+  function drawOfflineBanner() {
+    if (!_offlineMode) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // Sepia tint bar
+    ctx.fillStyle = 'rgba(139,69,19,0.07)';
+    ctx.fillRect(0, 0, canvas.width, 26);
+    ctx.strokeStyle = 'rgba(139,69,19,0.22)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, 26); ctx.lineTo(canvas.width, 26); ctx.stroke();
+    // Text
+    ctx.fillStyle = 'rgba(110,48,8,0.72)';
+    ctx.font = '700 7.5px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      '\u26A0  OFFLINE \u2014 DEMO DATA \u2014 Block #' + FALLBACK_HEIGHT.toLocaleString() +
+      '  \u00B7  Synthetic UTXOs  \u00B7  Refresh to reconnect',
+      canvas.width / 2, 16
+    );
+    ctx.restore();
+  }
+
+  // ---- MAIN DRAW ----
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Parchment background
+    ctx.fillStyle = '#f8f1e3';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawGrid();
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+
+    drawCoreShadow();
+    drawAtlasStructure();
+    drawHistoricalBlocks();
+
+    utxoPositions.forEach(u => {
+      // Screen-space cull
+      const sx = u.x * scale + offsetX;
+      const sy = u.y * scale + offsetY;
+      const sr = (u.coreR * 2.5) * scale; // use bleed-adjusted radius for culling
+      if (sx + sr < -10 || sx - sr > canvas.width  + 10) return;
+      if (sy + sr < -10 || sy - sr > canvas.height + 10) return;
+
+      ctx.save();
+      drawStar(u);
+      ctx.restore();
+    });
+
+    ctx.restore();
+    drawCrosshair();
+    drawFeeOracle();
+    drawMempoolGauge();
+    drawHashRate();
+    drawOfflineBanner();
+  }
+
+  // ---- ANIMATION LOOP ----
+  function animateTick(ts) {
+    if (_animLastTs !== null) {
+      _animTotalElapsed += (ts - _animLastTs) / 1000;
+    }
+    _animLastTs = ts;
+
+    // Advance each UTXO's angle by omega * elapsed
+    utxoPositions.forEach(u => {
+      const a = u.baseAngle + u.omega * _animTotalElapsed;
+      u.x = u.baseR * Math.cos(a);
+      u.y = u.baseR * Math.sin(a);
+    });
+
+    draw();
+    requestAnimationFrame(animateTick);
+  }
+
+  // ---- RESIZE ----
+  function resize() {
+    const wrap   = document.getElementById('canvas-wrap');
+    canvas.width  = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+    if (offsetX === 0 && offsetY === 0) {
+      offsetX = canvas.width  / 2;
+      offsetY = canvas.height / 2;
+    }
+    // No draw() needed — animateTick handles all redraws
+  }
+
+  // ---- PAN ----
+  canvas.addEventListener('mousedown', e => {
+    isDragging = true;
+    dragSX = e.clientX; dragSY = e.clientY;
+    dragOX = offsetX;   dragOY = offsetY;
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (isDragging) {
+      offsetX = dragOX + (e.clientX - dragSX);
+      offsetY = dragOY + (e.clientY - dragSY);
+      // No draw() — animateTick redraws every frame
+      return;
+    }
+    updateTooltip(e);
+  });
+
+  window.addEventListener('mouseup', () => { isDragging = false; });
+
+  canvas.addEventListener('mouseleave', () => {
+    if (!isDragging) tooltip.style.display = 'none';
+  });
+
+  // ---- SIDEBAR TOGGLE ----
+  function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+  }
+
+  // ---- TOUCH: PAN + PINCH-TO-ZOOM + TAP TOOLTIP ----
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    tooltip.style.display = 'none';
+
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      isDragging   = true;
+      dragSX = t.clientX; dragSY = t.clientY;
+      dragOX = offsetX;   dragOY = offsetY;
+      _tapStartPos = { x: t.clientX, y: t.clientY, t: Date.now() };
+    } else if (e.touches.length >= 2) {
+      isDragging   = false;
+      _tapStartPos = null;
+      const t1 = e.touches[0], t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+      _pinchDist0  = Math.sqrt(dx * dx + dy * dy);
+      _pinchScale0 = scale;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+
+    if (e.touches.length === 1 && isDragging) {
+      const t = e.touches[0];
+      offsetX = dragOX + (t.clientX - dragSX);
+      offsetY = dragOY + (t.clientY - dragSY);
+
+    } else if (e.touches.length >= 2) {
+      isDragging = false;
+      const t1 = e.touches[0], t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const newScale = Math.max(0.12, Math.min(12, _pinchScale0 * dist / _pinchDist0));
+      const rect = canvas.getBoundingClientRect();
+      // Zoom towards the midpoint between the two fingers
+      const mx = (t1.clientX + t2.clientX) / 2 - rect.left;
+      const my = (t1.clientY + t2.clientY) / 2 - rect.top;
+      offsetX = mx - (mx - offsetX) * (newScale / scale);
+      offsetY = my - (my - offsetY) * (newScale / scale);
+      scale   = newScale;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    // Tap detection: ≤12 px movement, ≤300 ms → show tooltip
+    if (_tapStartPos && e.changedTouches.length === 1 && e.touches.length === 0) {
+      const t  = e.changedTouches[0];
+      const dx = t.clientX - _tapStartPos.x, dy = t.clientY - _tapStartPos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 12 && Date.now() - _tapStartPos.t < 300) {
+        updateTooltip({ clientX: t.clientX, clientY: t.clientY });
+        if (tooltip.style.display === 'block') {
+          setTimeout(() => { tooltip.style.display = 'none'; }, 3500);
+        }
+      }
+    }
+    if (e.touches.length === 0) { isDragging = false; }
+    _tapStartPos = null;
+  }, { passive: false });
+
+  // ---- ZOOM ----
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor   = e.deltaY > 0 ? 0.88 : 1.14;
+    const newScale = Math.max(0.12, Math.min(12, scale * factor));
+    offsetX = mx - (mx - offsetX) * (newScale / scale);
+    offsetY = my - (my - offsetY) * (newScale / scale);
+    scale   = newScale;
+    // No draw() — animateTick redraws every frame
+  }, { passive: false });
+
+  // ---- TOOLTIP (hit detection: UTXOs + historical landmark blocks) ----
+  function updateTooltip(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx   = e.clientX - rect.left;
+    const sy   = e.clientY - rect.top;
+    const wx   = (sx - offsetX) / scale;
+    const wy   = (sy - offsetY) / scale;
+
+    // 1. UTXO hit-test (world space)
+    let hit = null, bestDist = Infinity;
+    for (const u of utxoPositions) {
+      const dx = wx - u.x, dy = wy - u.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const threshold = u.coreR * 1.8 + 5 / scale;
+      if (dist < threshold && dist < bestDist) { bestDist = dist; hit = u; }
+    }
+
+    if (hit) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 16) + 'px';
+      tooltip.style.top  = (e.clientY - 12) + 'px';
+      tooltip.innerHTML =
+        `<div class="tt-title">UTXO #${hit.id}</div>` +
+        `<div class="tt-value">${formatSats(hit.valueSats)}</div>` +
+        `<div class="tt-btc">${(hit.valueSats / 1e8).toFixed(8)} BTC</div>` +
+        `<div class="tt-row">Age: ${hit.ageYears.toFixed(2)} years</div>` +
+        `<div class="tt-row">Created in block: #${hit.birthBlock.toLocaleString()}</div>` +
+        `<div class="tt-row">Script: ${hit.script}</div>`;
+      return;
+    }
+
+    // 2. Historical landmark hit-test (screen space, only when visible)
+    const fade = Math.max(0, Math.min(1, (0.65 - scale) / 0.25));
+    if (fade > 0.05) {
+      for (const hb of HISTORICAL_BLOCKS) {
+        const bsx = hb.wx * scale + offsetX;
+        const bsy = hb.wy * scale + offsetY;
+        const dx  = sx - bsx, dy = sy - bsy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const hitR = Math.max(18, hb.r * scale * 3.5);
+        if (dist < hitR) {
+          tooltip.style.display = 'block';
+          tooltip.style.left = (e.clientX + 16) + 'px';
+          tooltip.style.top  = (e.clientY - 12) + 'px';
+          tooltip.innerHTML =
+            `<div class="tt-title">Block #${hb.height.toLocaleString()} &middot; ${hb.date}</div>` +
+            `<div class="tt-value">${hb.name}</div>` +
+            `<div class="tt-btc" style="font-style:italic;margin-top:3px">${hb.tagline}</div>` +
+            `<div class="tt-row" style="margin-top:6px;border-top:1px solid #ddd;padding-top:5px">${hb.significance}</div>` +
+            `<div class="tt-row" style="margin-top:3px;color:#666">${hb.detail}</div>`;
+          return;
+        }
+      }
+    }
+
+    tooltip.style.display = 'none';
+  }
+
+  // ---- STATS ----
+  // displayedCount = how many dots we've sampled and rendered.
+  // Real totals come from _lastRealStats (populated from the block API).
+  function updateStats(displayedCount) {
+    const { totalInputs, totalSpent, txCount } = _lastRealStats;
+
+    // Fallback to sample-derived values when API extras are unavailable
+    const sampleSpent = utxos.reduce((s, u) => s + u.valueSats, 0);
+
+    const inputsVal = totalInputs != null ? totalInputs : null;
+    const spentVal  = totalSpent  != null ? totalSpent  : (utxos.length > 0 ? sampleSpent : null);
+    const spentIsEstimate = totalSpent == null && utxos.length > 0;
+
+    document.getElementById('stat-total').textContent =
+      inputsVal != null ? inputsVal.toLocaleString() : (displayedCount > 0 ? '~' + displayedCount.toLocaleString() : '—');
+
+    document.getElementById('stat-supply').textContent =
+      spentVal != null ? (spentIsEstimate ? '~' : '') + (spentVal / 1e8).toFixed(4) + ' BTC' : '—';
+
+    document.getElementById('stat-ancient').textContent =
+      txCount != null ? txCount.toLocaleString() : '—';
+
+    document.getElementById('stat-fresh').textContent =
+      inputsVal != null
+        ? `${displayedCount.toLocaleString()} of ${inputsVal.toLocaleString()}`
+        : displayedCount.toLocaleString();
+  }
+
+
+  // ---- HELPERS ----
+  function formatSats(sats) {
+    if (sats >= 1e8)  return (sats / 1e8).toFixed(4) + ' BTC';
+    if (sats >= 1000) return Math.round(sats / 1000)  + 'k sats';
+    return sats + ' sats';
+  }
+
+  // ---- INIT ----
+  // Start RAF immediately so the atlas structure animates while data loads.
+  // fetchBlockUTXOs() populates utxos[] and calls layoutUTXOs()/updateStats() when done.
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(animateTick);
+  loadLatestBlock();
+  fetchNetworkStats();
+  setInterval(fetchNetworkStats, 60_000);
+
+  // ---- PWA SERVICE WORKER ----
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
+  </script>
+</body>
+</html>

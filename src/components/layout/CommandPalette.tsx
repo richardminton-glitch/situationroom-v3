@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
+  Atom,
   ChartLine,
   ChartLineUp,
   Crosshair,
@@ -57,7 +58,8 @@ const ROUTE_ICONS: Record<string, React.ReactNode> = {
   '/tools/dca-signal':  <ChartLine   size={14} />,
   '/tools/cycle-gauge': <Gauge       size={14} />,
   '/tools/mining':      <HardHat     size={14} />,
-  '/tools/map':         <MapTrifold  size={14} />,
+  '/tools/map':              <MapTrifold size={14} />,
+  '/tools/utxo-cosmography': <Atom       size={14} />,
   '/rooms/members':     <Crosshair   size={14} />,
   '/rooms/trading-desk': <ChartLineUp size={14} />,
   '/support':           <Heart       size={14} />,

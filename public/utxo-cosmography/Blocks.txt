@@ -1,0 +1,48 @@
+1. The Genesis Block (Block 0) — January 3, 2009 
+Significance: The very first block, mined by Satoshi Nakamoto.
+Key Detail: Contains the embedded text headline: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks," acting as a timestamp and a critique of the traditional banking system.
+Unique Attribute: The 50 BTC mining reward is embedded in the code and is permanently unspendable. 
+en.bitcoin.it
+en.bitcoin.it
+ +4
+2. The First Transaction (Block 170) — January 12, 2009 
+Significance: The first recorded Bitcoin transaction.
+Key Detail: Satoshi Nakamoto sent 10 BTC to early contributor Hal Finney to test the network's functionality. 
+3. The First Bitcoin Pizza Day (Block 57,043) — May 22, 2010 
+Significance: The first real-world, commercial transaction using Bitcoin.
+Key Detail: Laszlo Hanyecz famously paid 10,000 BTC for two Papa John’s pizzas, setting a precedent for Bitcoin's utility as a medium of exchange. 
+4. The First Mining Difficulty Adjustment (Block 32,256) — December 2009
+Significance: Proved the network's automated difficulty adjustment worked.
+Key Detail: As more miners joined, the network became harder to mine, establishing the decentralized, self-regulating security mechanism of Bitcoin. 
+Wikipedia
+Wikipedia
+ +4
+5. The First Halving (Block 210,000) — November 28, 2012 
+Significance: The first implementation of Bitcoin's built-in supply constraint.
+Key Detail: The block reward was reduced from 50 BTC to 25 BTC, initiating a pattern of scarcity-driven price appreciation. 
+Bitpanda
+Bitpanda
+6. The "Value-Overflow" Incident (Block 74,638) — August 15, 2010 
+Significance: The most severe bug in Bitcoin history.
+Key Detail: A hacker exploited a bug to create 184 billion Bitcoin. Satoshi intervened, and a soft fork was implemented to fix the bug, demonstrating the robustness of community consensus. 
+Bitpanda
+Bitpanda
+ +2
+7. SegWit Activation (Block 481,824) — August 24, 2017 
+Significance: A major technical upgrade that increased capacity and enabled Layer 2 solutions.
+Key Detail: Segregated Witness (SegWit) separated transaction signatures from transaction data, reducing transaction size and paving the way for the Lightning Network. 
+YouTube
+YouTube
+ +4
+8. Taproot Upgrade (Block 709,632) — November 14, 2021 
+Significance: The first major upgrade since SegWit, enhancing privacy and smart contract functionality.
+Key Detail: Allowed for more complex, efficient, and private transactions (Schnorr Signatures). 
+9. The First "Ordinals" Block (Block 767,430) — December 2022 
+Significance: Introduced "non-fungible" assets to Bitcoin.
+Key Detail: This block allowed for the inscription of data (images, text) directly onto satoshis (the smallest unit of Bitcoin), enabling NFTs on the base layer. 
+The Block
+The Block
+ +4
+10. The 2024 Halving Block (Block 840,000) — April 2024 
+Significance: Reduced the block reward to 3.125 BTC.
+Key Detail: Mined directly after the 2024 halving, this block saw historic transaction fees paid due to the launch of the "Runes" protocol, making it one of the most valuable blocks in history for miners. 

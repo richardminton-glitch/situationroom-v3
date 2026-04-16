@@ -1,0 +1,20 @@
+{
+  "name": "UTXO Cosmography",
+  "short_name": "UTXO Cosmos",
+  "description": "Bitcoin UTXO Atlas — stellar cartography of the blockchain",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f1e3",
+  "theme_color": "#f8f1e3",
+  "orientation": "any",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -12,10 +12,11 @@ import { ToolsRail } from '@/components/layout/ToolsRail';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 const TOOL_LABELS: Record<string, string> = {
-  '/tools/dca-signal':  'DCA Signal',
-  '/tools/cycle-gauge': 'Cycle Gauge',
-  '/tools/mining':      'Mining Intel',
-  '/tools/map':         'Situation Map',
+  '/tools/dca-signal':       'DCA Signal',
+  '/tools/cycle-gauge':      'Cycle Gauge',
+  '/tools/mining':           'Mining Intel',
+  '/tools/map':              'Situation Map',
+  '/tools/utxo-cosmography': 'UTXO Cosmography',
 };
 
 export default function ToolsLayout({ children }: { children: React.ReactNode }) {
