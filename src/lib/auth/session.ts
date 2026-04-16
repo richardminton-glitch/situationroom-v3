@@ -1,9 +1,20 @@
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
+import {
+  DEV_MASTER_COOKIE,
+  isDevMasterEnabled,
+  parseDevMasterCookie,
+  synthesizeDevMasterUser,
+  warnIfDevMasterEnabled,
+} from './dev-master';
 
 const SESSION_COOKIE = 'sr_session';
 const SESSION_EXPIRY_DAYS = 30;
+
+// Loud warning the first time anything in this module is touched if the
+// dev-master flag is on. Inert in production builds where the flag is unset.
+warnIfDevMasterEnabled();
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -65,6 +76,15 @@ export async function destroySession() {
 }
 
 export async function getCurrentUser() {
+  // Dev-master bypass: only active when both NODE_ENV !== 'production'
+  // AND LOCAL_DEV_AUTH_ENABLED=1. Lets local testing skip the email/PIN flow
+  // and impersonate any tier (admin / vip / members / general / free).
+  if (isDevMasterEnabled()) {
+    const cookieStore = await cookies();
+    const role = parseDevMasterCookie(cookieStore.get(DEV_MASTER_COOKIE)?.value);
+    if (role) return synthesizeDevMasterUser(role);
+  }
+
   const session = await getSession();
   return session?.user ?? null;
 }

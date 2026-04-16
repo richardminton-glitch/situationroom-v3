@@ -85,13 +85,22 @@ export function normaliseThreatState(raw: string | null | undefined): ThreatStat
   return LEGACY_STATE_MAP[upper] ?? 'QUIET';
 }
 
-/** State-to-colour mapping */
+/**
+ * State-to-colour mapping — CSS variables resolved against the active theme.
+ * In dark these are teal/amber/red; in parchment they're gold/burnt/blood-red.
+ * Both palettes communicate the same semantics: cool = quiet, warm = elevated,
+ * red = alert/critical.
+ *
+ * For canvas drawing where computed RGB strings are required, use
+ *   `getComputedStyle(document.documentElement).getPropertyValue('--room-…').trim()`
+ * at draw time instead of consuming this map directly.
+ */
 export const STATE_COLORS: Record<ThreatState, string> = {
-  QUIET: '#00e5c8',
-  MONITORING: '#00e5c8',
-  ELEVATED: '#f0a500',
-  ALERT: '#f07000',
-  CRITICAL: '#e03030',
+  QUIET:      'var(--room-positive)',
+  MONITORING: 'var(--room-positive)',
+  ELEVATED:   'var(--room-warning)',
+  ALERT:      'var(--room-alert)',
+  CRITICAL:   'var(--room-critical)',
 };
 
 /**

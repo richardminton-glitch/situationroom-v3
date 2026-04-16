@@ -69,7 +69,7 @@ export default function NostrChatSlot({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(9, 13, 18, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-secondary) 75%, transparent)',
         backdropFilter: 'blur(6px)',
         overflow: 'hidden',
         position: 'relative',
@@ -82,8 +82,8 @@ export default function NostrChatSlot({
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#8494a7',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          color: 'var(--text-secondary)',
+          borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
           display: 'flex',
           justifyContent: 'space-between',
@@ -114,17 +114,17 @@ export default function NostrChatSlot({
             <div key={msg.id} style={{ lineHeight: '16px' }}>
               <span
                 style={{
-                  color: msg.isAdmin ? '#e03030' : msg.isBot ? '#5b9bd5' : '#00e5c8',
+                  color: msg.isAdmin ? 'var(--room-negative)' : msg.isBot ? 'var(--room-bot)' : 'var(--room-accent)',
                   fontWeight: 600,
                   fontSize: 10,
                 }}
               >
                 {icon} {msg.authorDisplay}
               </span>
-              <span style={{ color: '#4d6070', fontSize: 9, marginLeft: 6 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 9, marginLeft: 6 }}>
                 {new Date(msg.createdAt).toISOString().slice(11, 16)}
               </span>
-              <div style={{ color: '#a0b0c0', marginTop: 1 }}>
+              <div style={{ color: 'var(--text-primary)', marginTop: 1 }}>
                 {msg.content}
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function NostrChatSlot({
       {/* Input area */}
       <div
         style={{
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--border-subtle)',
           padding: '6px 10px',
           flexShrink: 0,
         }}
@@ -152,10 +152,10 @@ export default function NostrChatSlot({
                 flex: 1,
                 minWidth: 0,
                 resize: 'none',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: 0,
-                color: '#e8edf2',
+                color: 'var(--text-primary)',
                 fontSize: 11,
                 fontFamily: FONT,
                 padding: '6px 8px',
@@ -167,9 +167,9 @@ export default function NostrChatSlot({
               disabled={sending || !draft.trim()}
               style={{
                 background: sending || !draft.trim()
-                  ? 'rgba(255,255,255,0.04)'
-                  : '#00e5c8',
-                color: sending || !draft.trim() ? '#5e7080' : '#090d12',
+                  ? 'var(--bg-card)'
+                  : 'var(--room-accent)',
+                color: sending || !draft.trim() ? 'var(--text-muted)' : 'var(--bg-primary)',
                 border: 'none',
                 borderRadius: 0,
                 fontSize: 9,
@@ -184,16 +184,16 @@ export default function NostrChatSlot({
             </button>
           </div>
         ) : (
-          <div style={{ fontSize: 10, color: '#5e7080', fontFamily: FONT }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: FONT }}>
             Members upgrade required{' '}
             <Link
               href="/support"
               style={{
-                color: '#00e5c8',
+                color: 'var(--room-accent)',
                 fontSize: 10,
                 fontFamily: FONT,
                 textDecoration: 'none',
-                border: '1px solid rgba(0,229,200,0.2)',
+                border: '1px solid color-mix(in srgb, var(--room-accent) 25%, transparent)',
                 padding: '2px 8px',
                 letterSpacing: '0.08em',
               }}

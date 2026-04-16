@@ -21,8 +21,6 @@ import type { ThreatState } from '@/lib/room/threatEngine';
 // 5 threat-domain agents feeding the Threat Assessment Module
 const AGENT_KEYS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
 const LABS = ['GEOPOLITICAL', 'ECONOMIC', 'BITCOIN', 'DISASTER', 'POLITICAL'];
-// Default dim colour when domain has no threat contribution
-const DEFAULT_AGENT_COL = '#3d9090';
 const APOS = [
   { fx: 0.18, fy: 0.68 }, // GEOPOLITICAL — lower-left
   { fx: 0.78, fy: 0.28 }, // ECONOMIC     — upper-right
@@ -34,7 +32,6 @@ const APOS = [
 const DOMAIN_IDX: Record<string, number> = {
   GEOPOLITICAL: 0, ECONOMIC: 1, BITCOIN: 2, DISASTER: 3, POLITICAL: 4,
 };
-const COORD_COLOR = '#f0a500'; // orange Threat Assessment Module
 
 // Threat-driven parameters computed each frame
 const THREAT_SCORE_MAP = {
@@ -46,29 +43,133 @@ const THREAT_SCORE_MAP = {
 
 const FLOW_LABELS = ['INTEL', 'MACRO', 'CHAIN', 'HAZARD', 'LEGAL'];
 
+// ── Theme-aware palette (read from CSS vars at draw time) ──────────────────
+//
+// Canvas drawing requires concrete colour strings, not CSS var references.
+// We snapshot the relevant tokens once per frame in renderFrame so the same
+// component renders correctly in parchment (warm tones) and dark (teal/coral
+// ops-room aesthetic) without re-architecting the draw code.
+
+interface RoomPalette {
+  bg:           string;
+  textPrimary:  string;
+  textMuted:    string;
+  accent:       string;  // primary highlight (teal in dark, gold in parchment)
+  accentDim:    string;  // dim variant for inactive agents
+  positive:     string;
+  negative:     string;
+  warning:      string;
+  alert:        string;
+  critical:     string;
+  coordinator:  string;  // Threat Assessment Module — uses warning hue
+  geopolitical: string;
+  economic:     string;
+  bitcoin:      string;
+  disaster:     string;
+  political:    string;
+}
+
+// Module-level palette ref. Set at the top of each renderFrame so any draw
+// helper called downstream can read the current theme's colours without a
+// signature change. Initialised lazily.
+let _palette: RoomPalette | null = null;
+
+function P(): RoomPalette {
+  if (!_palette) _palette = getRoomPalette();
+  return _palette;
+}
+
+// Small RGB cache used by threatToColor — avoids parsing every call.
+let _paletteRgbCache: { key: string; teal: [number, number, number]; amber: [number, number, number]; red: [number, number, number] } | null = null;
+
+function hexToRgb(hex: string): [number, number, number] {
+  // Accept #RGB / #RRGGBB / 'rgb(r,g,b)' — anything else falls back to mid-grey
+  const trimmed = hex.trim();
+  if (trimmed.startsWith('#')) {
+    const h = trimmed.slice(1);
+    if (h.length === 3) {
+      return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)];
+    }
+    if (h.length === 6) {
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+  }
+  const m = trimmed.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) return [+m[1], +m[2], +m[3]];
+  return [128, 128, 128];
+}
+
+function getRoomPalette(): RoomPalette {
+  if (typeof window === 'undefined') {
+    // SSR fallback — dark defaults
+    return {
+      bg: '#07090e', textPrimary: '#e8edf2', textMuted: '#5e7080',
+      accent: '#00e5c8', accentDim: '#3d9090',
+      positive: '#00e5c8', negative: '#e03030', warning: '#f0a500',
+      alert: '#f07000', critical: '#e03030', coordinator: '#f0a500',
+      geopolitical: '#e03030', economic: '#f0a500', bitcoin: '#00e5c8',
+      disaster: '#9b7fdd', political: '#4a9eff',
+    };
+  }
+  const cs = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+  return {
+    bg:          get('--bg-primary',              '#07090e'),
+    textPrimary: get('--text-primary',            '#e8edf2'),
+    textMuted:   get('--text-muted',              '#5e7080'),
+    accent:      get('--room-accent',             '#00e5c8'),
+    accentDim:   get('--room-accent-soft',        '#3d9090'),
+    positive:    get('--room-positive',           '#00e5c8'),
+    negative:    get('--room-negative',           '#e03030'),
+    warning:     get('--room-warning',            '#f0a500'),
+    alert:       get('--room-alert',              '#f07000'),
+    critical:    get('--room-critical',           '#e03030'),
+    coordinator: get('--room-warning',            '#f0a500'),
+    geopolitical:get('--room-domain-geopolitical','#e03030'),
+    economic:    get('--room-domain-economic',    '#f0a500'),
+    bitcoin:     get('--room-domain-bitcoin',     '#00e5c8'),
+    disaster:    get('--room-domain-disaster',    '#9b7fdd'),
+    political:   get('--room-domain-political',   '#4a9eff'),
+  };
+}
+
 // ── Hex-alpha helper ─────────────────────────────────────────────────────────
 
 function ha(n: number): string {
   return Math.floor(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
 }
 
-/** Threat-to-colour (hex): 0→teal, ~20→amber, 40+→red */
-function threatToColor(impact: number): string {
-  // Normalise to 0–1 range (40 = max single-domain contribution for full red)
+/**
+ * Threat-to-colour gradient: 0 → "positive" (teal/gold), 0.5 → "warning"
+ * (amber/dark-gold), 1 → "critical" (red). Endpoints are read from the
+ * active room palette so the gradient flows through theme-appropriate hues
+ * in both parchment and dark.
+ */
+function threatToColor(impact: number, palette: RoomPalette = P()): string {
+  // Cache the parsed RGB tuples so we don't re-parse every frame.
+  const key = palette.positive + '|' + palette.warning + '|' + palette.critical;
+  if (!_paletteRgbCache || _paletteRgbCache.key !== key) {
+    _paletteRgbCache = {
+      key,
+      teal:  hexToRgb(palette.positive),
+      amber: hexToRgb(palette.warning),
+      red:   hexToRgb(palette.critical),
+    };
+  }
+  const { teal, amber, red } = _paletteRgbCache;
+
   const s = Math.max(0, Math.min(1, impact / 40));
   let r: number, g: number, b: number;
   if (s <= 0.5) {
-    // Teal (#00e5c8) → amber (#f0a500)
     const t = s / 0.5;
-    r = Math.round(0 + (240 - 0) * t);
-    g = Math.round(229 + (165 - 229) * t);
-    b = Math.round(200 + (0 - 200) * t);
+    r = Math.round(teal[0]  + (amber[0] - teal[0])  * t);
+    g = Math.round(teal[1]  + (amber[1] - teal[1])  * t);
+    b = Math.round(teal[2]  + (amber[2] - teal[2])  * t);
   } else {
-    // Amber (#f0a500) → red (#e03030)
     const t = (s - 0.5) / 0.5;
-    r = Math.round(240 + (224 - 240) * t);
-    g = Math.round(165 + (48 - 165) * t);
-    b = Math.round(0 + (48 - 0) * t);
+    r = Math.round(amber[0] + (red[0]   - amber[0]) * t);
+    g = Math.round(amber[1] + (red[1]   - amber[1]) * t);
+    b = Math.round(amber[2] + (red[2]   - amber[2]) * t);
   }
   return '#' + ha(r) + ha(g) + ha(b);
 }
@@ -162,7 +263,7 @@ class CNode {
 
     // Rings
     if (type === 'coord') {
-      const ringCol = COORD_COLOR;
+      const ringCol = P().coordinator;
       [5.5, 3.6, 2.2].forEach((m, i) => {
         ctx.beginPath(); ctx.arc(x, y, dr * m + act * 10 * (2 - i), 0, Math.PI * 2);
         ctx.strokeStyle = ringCol + ha((0.03 + act * 0.1 - i * 0.005) * 255);
@@ -336,13 +437,13 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const coord = new CNode({
-    bx: W * 0.5, by: H * 0.44, r: 20, col: COORD_COLOR,
+    bx: W * 0.5, by: H * 0.44, r: 20, col: P().coordinator,
     type: 'coord', label: 'THREAT ASSESSOR', dR: 9, dSpd: 0.00016,
   });
 
   // Agents start dim — colour updated each frame from domain contribution
   const agents = APOS.map((p, i) => new CNode({
-    bx: p.fx * W, by: p.fy * H, r: 12, col: DEFAULT_AGENT_COL,
+    bx: p.fx * W, by: p.fy * H, r: 12, col: P().accentDim,
     type: 'agent', label: LABS[i], dR: 22,
     dSpd: 0.00022 + i * 0.00003, phase: i * 1.26,
   }));
@@ -352,7 +453,7 @@ function buildScene(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): S
     for (let j = 0; j < 3; j++) {
       const sr = 50 + j * 18 + Math.random() * 22;
       const s = new CNode({
-        r: 5.5 + Math.random() * 2.5, col: DEFAULT_AGENT_COL, type: 'sub', parent: ag,
+        r: 5.5 + Math.random() * 2.5, col: P().accentDim, type: 'sub', parent: ag,
         oR: sr, oRY: sr * 0.58,
         oSpd: (0.009 + Math.random() * 0.009) * (j % 2 ? 1 : -1),
         oA: (j / 3) * Math.PI * 2 + ai * 0.63,
@@ -433,7 +534,7 @@ function drawDataOverlays(
     const domainKey = AGENT_KEYS[ai];
     const contrib = data.domainContributions.find(d => d.domain === domainKey);
     const domainScore = contrib ? contrib.score : 0;
-    const newCol = domainScore > 0.1 ? threatToColor(domainScore) : DEFAULT_AGENT_COL;
+    const newCol = domainScore > 0.1 ? threatToColor(domainScore) : P().accentDim;
     ag.col = newCol;
     // Only update subs that are not on a recon probe (those keep target colour)
     ag._subs.forEach(sub => {
@@ -478,7 +579,7 @@ function drawDataOverlays(
       if (i < filled) {
         ctx.strokeStyle = ag.col + ha((0.55 + ag.act * 0.25) * 255);
       } else {
-        ctx.strokeStyle = '#ffffff' + ha(0.10 * 255);
+        ctx.strokeStyle = P().textPrimary + ha(0.10 * 255);
       }
       ctx.lineWidth = 2; ctx.stroke();
     }
@@ -496,16 +597,16 @@ function drawDataOverlays(
       ctx.beginPath();
       ctx.arc(coord.x, coord.y, arcR, startA, endA);
       if (i < filled) {
-        ctx.strokeStyle = COORD_COLOR + ha(0.7 * 255);
+        ctx.strokeStyle = P().coordinator + ha(0.7 * 255);
       } else {
-        ctx.strokeStyle = '#ffffff' + ha(0.08 * 255);
+        ctx.strokeStyle = P().textPrimary + ha(0.08 * 255);
       }
       ctx.lineWidth = 2.5; ctx.stroke();
     }
 
     ctx.font = '700 7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillStyle = COORD_COLOR + 'cc';
+    ctx.fillStyle = P().coordinator + 'cc';
     ctx.fillText('THREAT ' + threatScore, coord.x, coord.y - arcR - 6);
   }
 
@@ -567,8 +668,14 @@ function renderFrame(
   pool: CPart[],
   frameCount: number,
 ) {
+  // Refresh palette at the top of every frame so theme changes are picked
+  // up live. Cheap: getComputedStyle is fast, and the RGB cache prevents
+  // re-parsing inside threatToColor unless the palette actually changed.
+  _palette = getRoomPalette();
+  const palette = _palette;
+
   const { W, H } = s;
-  ctx.fillStyle = '#07090e'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = palette.bg; ctx.fillRect(0, 0, W, H);
 
   // Count active particles
   let activeCount = 0;
@@ -576,7 +683,7 @@ function renderFrame(
 
   // Dot grid — skip when many particles active
   if (activeCount <= 40) {
-    ctx.fillStyle = 'rgba(0,229,200,0.02)';
+    ctx.fillStyle = palette.accent + '08'; // ~3% alpha
     for (let gx = 44; gx < W; gx += 44) {
       for (let gy = 44; gy < H; gy += 44) {
         ctx.beginPath(); ctx.arc(gx, gy, 0.5, 0, Math.PI * 2); ctx.fill();
@@ -610,7 +717,7 @@ function renderFrame(
   // Edges: agent <-> agent (dashed)
   for (let i = 0; i < s.agents.length; i++) {
     for (let j = i + 1; j < s.agents.length; j++) {
-      edge(ctx, s.agents[i], s.agents[j], 0.04, 0.28, '#aaa', true);
+      edge(ctx, s.agents[i], s.agents[j], 0.04, 0.28, palette.textMuted, true);
     }
   }
 
@@ -637,7 +744,7 @@ function renderFrame(
     if (p.fy < 0) p.fy = 1; if (p.fy > 1) p.fy = 0;
     const a = (Math.sin(t * 0.0009 + p.ph) * 0.5 + 0.5) * 0.11;
     ctx.beginPath(); ctx.arc(p.fx * W, p.fy * H, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = p.tc ? `rgba(240,165,0,${a})` : `rgba(0,229,200,${a})`;
+    ctx.fillStyle = (p.tc ? palette.warning : palette.accent) + ha(a * 255);
     ctx.fill();
   });
 
@@ -711,7 +818,7 @@ function renderFrame(
 
     // Connection line (thin, dashed)
     ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
-    ctx.strokeStyle = '#ffffff' + ha(alpha * 255);
+    ctx.strokeStyle = P().textPrimary + ha(alpha * 255);
     ctx.lineWidth = 0.4; ctx.setLineDash([1, 6]); ctx.stroke(); ctx.setLineDash([]);
 
     // Travelling data dots
@@ -746,10 +853,10 @@ function renderFrame(
   // Data overlays
   drawDataOverlays(ctx, s, t, threatScore, threatState, liveData);
 
-  // Vignette
+  // Vignette — fade to the theme background at the edges
   const vg = ctx.createRadialGradient(W * 0.5, H * 0.5, H * 0.2, W * 0.5, H * 0.5, H * 0.92);
-  vg.addColorStop(0, 'rgba(7,9,14,0)');
-  vg.addColorStop(1, 'rgba(7,9,14,0.72)');
+  vg.addColorStop(0, palette.bg + '00'); // fully transparent
+  vg.addColorStop(1, palette.bg + 'b8'); // ~72% alpha
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
@@ -814,7 +921,7 @@ export default function NetworkCanvas2D({
       const btcAgent = scene.agents[2]; // BITCOIN agent
       if (!btcAgent) return;
       const coord = scene.coord;
-      const headCol = btcPrice > prev ? '#00e5c8' : '#e03030';
+      const headCol = btcPrice > prev ? P().positive : P().negative;
 
       // Fire particles from subs inward to BITCOIN agent
       btcAgent._subs.forEach((sub, i) => {
@@ -1080,13 +1187,21 @@ export default function NetworkCanvas2D({
 
   // Build hover overlay data
   const hoverData = dataRef.current;
-  const stateColor = ({ QUIET: '#00e5c8', MONITORING: '#00e5c8', ELEVATED: '#f0a500', ALERT: '#f07000', CRITICAL: '#e03030' } as Record<string, string>)[threatState] || '#00e5c8';
+  // State → CSS var. Resolved by the browser at render time so theme changes
+  // flow through without a re-mount.
+  const stateColor = ({
+    QUIET:      'var(--room-positive)',
+    MONITORING: 'var(--room-positive)',
+    ELEVATED:   'var(--room-warning)',
+    ALERT:      'var(--room-alert)',
+    CRITICAL:   'var(--room-critical)',
+  } as Record<string, string>)[threatState] || 'var(--room-positive)';
   const DOMAIN_LABELS: Record<string, { label: string; color: string }> = {
-    GEOPOLITICAL: { label: 'GEOPOLITICAL', color: '#e03030' },
-    ECONOMIC: { label: 'ECONOMIC', color: '#f0a500' },
-    BITCOIN: { label: 'BITCOIN', color: '#00e5c8' },
-    DISASTER: { label: 'DISASTER', color: '#9b7fdd' },
-    POLITICAL: { label: 'POLITICAL', color: '#4a9eff' },
+    GEOPOLITICAL: { label: 'GEOPOLITICAL', color: 'var(--room-domain-geopolitical)' },
+    ECONOMIC:     { label: 'ECONOMIC',     color: 'var(--room-domain-economic)' },
+    BITCOIN:      { label: 'BITCOIN',      color: 'var(--room-domain-bitcoin)' },
+    DISASTER:     { label: 'DISASTER',     color: 'var(--room-domain-disaster)' },
+    POLITICAL:    { label: 'POLITICAL',    color: 'var(--room-domain-political)' },
   };
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
@@ -1109,8 +1224,8 @@ export default function NetworkCanvas2D({
             position: 'absolute',
             left: hoverPos.x + 30,
             top: hoverPos.y - 80,
-            background: 'rgba(9, 13, 18, 0.92)',
-            border: '1px solid rgba(240, 165, 0, 0.3)',
+            background: 'color-mix(in srgb, var(--bg-card) 92%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-warning) 35%, transparent)',
             padding: '10px 14px',
             fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
             pointerEvents: 'none',
@@ -1119,7 +1234,7 @@ export default function NetworkCanvas2D({
           }}
         >
           {/* Title */}
-          <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#8494a7', marginBottom: 6 }}>
+          <div style={{ fontSize: 9, letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 6 }}>
             THREAT ASSESSMENT MODULE
           </div>
 
@@ -1131,7 +1246,7 @@ export default function NetworkCanvas2D({
             }}>
               {threatScore}
             </span>
-            <span style={{ fontSize: 9, color: '#8494a7' }}>/100</span>
+            <span style={{ fontSize: 9, color: 'var(--text-secondary)' }}>/100</span>
             <span style={{
               fontSize: 8, letterSpacing: '0.08em',
               color: stateColor,
@@ -1143,7 +1258,7 @@ export default function NetworkCanvas2D({
           </div>
 
           {/* Domain contribution bars */}
-          <div style={{ fontSize: 8, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
+          <div style={{ fontSize: 8, letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 4 }}>
             DOMAIN CONTRIBUTIONS
           </div>
           {hoverData.domainContributions.length > 0 ? (
@@ -1154,7 +1269,7 @@ export default function NetworkCanvas2D({
                 const pct = threatScore > 0 ? (score / threatScore) * 100 : 0;
                 const barW = 120;
                 const filledW = Math.min(barW, (score / 40) * barW); // 40 = max tier impact
-                const info = DOMAIN_LABELS[key] || { label: key, color: '#8494a7' };
+                const info = DOMAIN_LABELS[key] || { label: key, color: 'var(--text-secondary)' as string };
                 return (
                   <div key={key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
@@ -1163,10 +1278,10 @@ export default function NetworkCanvas2D({
                       </span>
                       <span style={{ fontSize: 9, color: score > 0 ? info.color : '#5e7080', fontWeight: 600 }}>
                         {score > 0 ? '+' + score.toFixed(1) : '0'}
-                        {pct > 0 && <span style={{ color: '#5e7080', marginLeft: 4, fontWeight: 400 }}>{pct.toFixed(0)}%</span>}
+                        {pct > 0 && <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontWeight: 400 }}>{pct.toFixed(0)}%</span>}
                       </span>
                     </div>
-                    <div style={{ width: barW, height: 3, background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
+                    <div style={{ width: barW, height: 3, background: 'var(--border-subtle)', position: 'relative' }}>
                       <div style={{
                         width: filledW, height: '100%',
                         background: info.color,
@@ -1178,11 +1293,11 @@ export default function NetworkCanvas2D({
               })}
             </div>
           ) : (
-            <div style={{ fontSize: 9, color: '#5e7080' }}>NO ACTIVE THREATS</div>
+            <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>NO ACTIVE THREATS</div>
           )}
 
           {/* Methodology note */}
-          <div style={{ fontSize: 7, color: '#4d6070', marginTop: 6, lineHeight: '10px' }}>
+          <div style={{ fontSize: 7, color: 'var(--text-muted)', marginTop: 6, lineHeight: '10px' }}>
             Exponential decay · 3h half-life · Recalculated every second
           </div>
         </div>

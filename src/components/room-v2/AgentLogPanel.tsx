@@ -12,15 +12,16 @@ import type { LogEntry } from '@/lib/room/logTemplates';
 
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
-// Domain colours matching agent definitions
+// Domain colours pulled from the room CSS palette so each agent renders
+// the right hue for the active theme (warm/parchment vs cool/dark).
 const DOMAIN_COLORS: Record<string, string> = {
-  GEOPOLITICAL: '#e03030',
-  ECONOMIC: '#f0a500',
-  BITCOIN: '#00e5c8',
-  DISASTER: '#9b7fdd',
-  POLITICAL: '#4a9eff',
-  COORDINATOR: '#f0a500',
-  SYSTEM: '#ffffff',
+  GEOPOLITICAL: 'var(--room-domain-geopolitical)',
+  ECONOMIC:     'var(--room-domain-economic)',
+  BITCOIN:      'var(--room-domain-bitcoin)',
+  DISASTER:     'var(--room-domain-disaster)',
+  POLITICAL:    'var(--room-domain-political)',
+  COORDINATOR:  'var(--room-warning)',
+  SYSTEM:       'var(--text-primary)',
 };
 
 interface AgentLogPanelProps {
@@ -49,9 +50,9 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(9, 13, 18, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-secondary) 75%, transparent)',
         backdropFilter: 'blur(6px)',
-        borderTop: '1px solid rgba(0, 229, 200, 0.12)',
+        borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
         overflow: 'hidden',
         position: 'relative',
       }}
@@ -65,8 +66,8 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#8494a7',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          color: 'var(--text-secondary)',
+          borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -75,7 +76,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
       >
         <span>AGENT TELEMETRY</span>
         {hovered && (
-          <span style={{ color: '#5e7080', fontSize: 8 }}>PAUSED</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 8 }}>PAUSED</span>
         )}
       </div>
 
@@ -92,7 +93,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
         }}
       >
         {entries.map((entry) => {
-          const color = DOMAIN_COLORS[entry.domain] || '#8494a7';
+          const color = DOMAIN_COLORS[entry.domain] || 'var(--text-secondary)';
           const agent = AGENTS[entry.domain as keyof typeof AGENTS];
           const label = agent?.shortLabel || entry.domain;
           const isTiered = entry.tier && entry.tier >= 3;
@@ -106,14 +107,14 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
                 lineHeight: '16px',
                 gap: 6,
                 borderLeft: isTiered ? `2px solid ${color}` : '2px solid transparent',
-                background: isTiered ? 'rgba(255,255,255,0.02)' : 'transparent',
+                background: isTiered ? 'color-mix(in srgb, var(--text-primary) 4%, transparent)' : 'transparent',
                 animation: 'logFadeIn 0.3s ease-out',
               }}
             >
               {/* Timestamp */}
               <span
                 style={{
-                  color: '#4d6070',
+                  color: 'var(--text-muted)',
                   flexShrink: 0,
                   fontVariantNumeric: 'tabular-nums',
                   width: 56,
@@ -136,7 +137,7 @@ export default function AgentLogPanel({ entries }: AgentLogPanelProps) {
               </span>
 
               {/* Message */}
-              <span style={{ color: '#a0b0c0' }}>
+              <span style={{ color: 'var(--text-primary)' }}>
                 {entry.message}
               </span>
             </div>

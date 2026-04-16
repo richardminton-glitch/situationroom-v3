@@ -269,7 +269,7 @@ export function DcaVipEmail({
           {/* CTA */}
           <Section style={{ textAlign: 'center' as const, marginBottom: '24px' }}>
             <Link
-              href={`${siteUrl}/room/dca-signal`}
+              href={`${siteUrl}/tools/dca-signal`}
               style={{
                 display:         'inline-block',
                 backgroundColor: C.vip,

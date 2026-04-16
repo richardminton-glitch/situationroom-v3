@@ -147,7 +147,7 @@ export function OpsChat() {
             <div style={{
               fontSize: '11px', lineHeight: 1.5, padding: '5px 7px',
               background: C.bgElevated, border: `1px solid ${C.border}`,
-              borderLeft: '2px solid rgba(0,212,170,0.1)',
+              borderLeft: '2px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
             }}>
               {colorise(msg.content)}
             </div>

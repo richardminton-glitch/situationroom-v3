@@ -7,9 +7,61 @@ const CANDLE_LIMIT = 96;
 const CANDLE_POLL_MS = 30_000;
 const POOL_POLL_MS = 60_000;
 
-const TP_COLOUR = '#00ff41';
-const SL_COLOUR = '#ff3333';
-const ENTRY_COLOUR = 'rgba(255,255,255,0.7)';
+// Take-profit / stop-loss are bright signal colours that read well on both
+// themes — kept hard-coded.
+const TP_COLOUR = '#00c853';
+const SL_COLOUR = '#d32f2f';
+
+// ── Theme reader ───────────────────────────────────────────────────────────
+//
+// lightweight-charts paints into a canvas and so needs concrete colour
+// strings, not CSS var references. Snapshot the active theme at init and
+// re-apply whenever data-theme on <html> changes.
+
+interface ChartTheme {
+  bg:        string;
+  text:      string;
+  grid:      string;
+  border:    string;
+  crosshair: string;
+  upCol:     string;
+  downCol:   string;
+  entry:     string;
+}
+
+function readChartTheme(): ChartTheme {
+  if (typeof window === 'undefined') {
+    return {
+      bg: '#060a0d', text: 'rgba(232,237,242,0.55)', grid: 'rgba(255,255,255,0.04)',
+      border: 'rgba(255,255,255,0.06)', crosshair: 'rgba(0,212,170,0.3)',
+      upCol: '#00d4aa', downCol: '#ff6b4a', entry: 'rgba(255,255,255,0.7)',
+    };
+  }
+  const cs = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string) =>
+    cs.getPropertyValue(name).trim() || fallback;
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  // Subtle grid + axis lines: tinted versions of text on the active theme
+  const tintHex   = isDark ? 'ffffff' : '000000';
+  const grid      = `#${tintHex}0d`; // ~5% alpha on top of bg
+  const border    = `#${tintHex}14`; // ~8% alpha
+  // Crosshair: tinted accent, semi-transparent
+  const accentHex = get('--room-accent', isDark ? '#00d4aa' : '#8b6914');
+  // Entry-line: subdued text colour at ~70% alpha, theme-aware
+  const entry     = isDark ? 'rgba(232,237,242,0.7)' : 'rgba(45,40,30,0.7)';
+
+  return {
+    bg:        get('--bg-primary',   '#060a0d'),
+    text:      isDark ? 'rgba(232,237,242,0.55)' : 'rgba(45,40,30,0.65)',
+    grid,
+    border,
+    crosshair: accentHex + '4d', // ~30% alpha
+    upCol:     get('--room-positive', '#00d4aa'),
+    downCol:   get('--room-negative', '#ff6b4a'),
+    entry,
+  };
+}
 
 interface PoolData {
   position: 'LONG' | 'SHORT' | 'FLAT';
@@ -53,6 +105,7 @@ export function ChartPanel() {
 
     const pool = poolRef.current;
     if (pool.position === 'FLAT') return;
+    const t = readChartTheme();
 
     if (pool.takeProfit) {
       priceLinesRef.current.push(series.createPriceLine({
@@ -68,7 +121,7 @@ export function ChartPanel() {
     if (pool.entryPrice) {
       priceLinesRef.current.push(series.createPriceLine({
         price: pool.entryPrice,
-        color: ENTRY_COLOUR,
+        color: t.entry,
         lineWidth: 1,
         lineStyle: lc.LineStyle.Dashed,
         axisLabelVisible: true,
@@ -149,43 +202,44 @@ export function ChartPanel() {
     import('lightweight-charts').then((lc) => {
       if (cancelled) return;
       lcRef.current = lc;
+      const t = readChartTheme();
 
       const chart = lc.createChart(container, {
         layout: {
-          background: { type: lc.ColorType.Solid, color: C.bgPrimary },
-          textColor: 'rgba(255,255,255,0.35)',
+          background: { type: lc.ColorType.Solid, color: t.bg },
+          textColor:  t.text,
           fontFamily: FONT,
-          fontSize: 10,
+          fontSize:   10,
         },
         grid: {
-          vertLines: { color: 'rgba(255,255,255,0.04)' },
-          horzLines: { color: 'rgba(255,255,255,0.04)' },
+          vertLines: { color: t.grid },
+          horzLines: { color: t.grid },
         },
         crosshair: {
-          mode: lc.CrosshairMode.Normal,
-          vertLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: lc.LineStyle.Dotted },
-          horzLine: { color: 'rgba(0,212,170,0.3)', width: 1, style: lc.LineStyle.Dotted },
+          mode:     lc.CrosshairMode.Normal,
+          vertLine: { color: t.crosshair, width: 1, style: lc.LineStyle.Dotted },
+          horzLine: { color: t.crosshair, width: 1, style: lc.LineStyle.Dotted },
         },
         rightPriceScale: {
-          borderColor: 'rgba(255,255,255,0.06)',
+          borderColor:  t.border,
           scaleMargins: { top: 0.08, bottom: 0.08 },
         },
         timeScale: {
-          borderColor: 'rgba(255,255,255,0.06)',
-          timeVisible: true,
+          borderColor:    t.border,
+          timeVisible:    true,
           secondsVisible: false,
         },
         handleScroll: { mouseWheel: true, pressedMouseMove: true },
-        handleScale: { mouseWheel: true, pinch: true },
+        handleScale:  { mouseWheel: true, pinch: true },
       });
 
       const series = chart.addSeries(lc.CandlestickSeries, {
-        upColor: C.teal,
-        downColor: C.coral,
-        borderUpColor: C.teal,
-        borderDownColor: C.coral,
-        wickUpColor: C.teal,
-        wickDownColor: C.coral,
+        upColor:         t.upCol,
+        downColor:       t.downCol,
+        borderUpColor:   t.upCol,
+        borderDownColor: t.downCol,
+        wickUpColor:     t.upCol,
+        wickDownColor:   t.downCol,
       });
 
       chartRef.current = chart;
@@ -208,12 +262,49 @@ export function ChartPanel() {
         });
       }
 
+      // Re-apply theme whenever data-theme on <html> changes. Lightweight-
+      // charts paints into a canvas so it can't pick up CSS-var changes on
+      // its own — we have to hand it concrete colours each time.
+      const applyTheme = () => {
+        const next = readChartTheme();
+        chart.applyOptions({
+          layout:          { background: { type: lc.ColorType.Solid, color: next.bg }, textColor: next.text },
+          grid:            { vertLines: { color: next.grid }, horzLines: { color: next.grid } },
+          crosshair: {
+            vertLine: { color: next.crosshair, width: 1, style: lc.LineStyle.Dotted },
+            horzLine: { color: next.crosshair, width: 1, style: lc.LineStyle.Dotted },
+          },
+          rightPriceScale: { borderColor: next.border },
+          timeScale:       { borderColor: next.border },
+        });
+        series.applyOptions({
+          upColor:         next.upCol,
+          downColor:       next.downCol,
+          borderUpColor:   next.upCol,
+          borderDownColor: next.downCol,
+          wickUpColor:     next.upCol,
+          wickDownColor:   next.downCol,
+        });
+        // Refresh entry-line colour on theme change
+        updatePriceLines();
+      };
+      const themeObserver = new MutationObserver((records) => {
+        for (const r of records) {
+          if (r.type === 'attributes' && r.attributeName === 'data-theme') {
+            applyTheme();
+            return;
+          }
+        }
+      });
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
       // Initial data fetch
       fetchCandles().then(fetchPool);
 
       // Store cleanup refs
       (container as any).__cleanup = () => {
         ro.disconnect();
+        themeObserver.disconnect();
         chart.remove();
         chartRef.current = null;
         seriesRef.current = null;

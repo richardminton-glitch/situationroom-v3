@@ -31,6 +31,38 @@
   --font-body: 'IM Fell English', 'Georgia', 'Times New Roman', serif;
   --font-data: 'Source Serif 4', 'Georgia', serif;
   --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+
+  /* ── Room-specific palette (Members Room + Bot Room) ──
+     Same conceptual roles in both themes — "positive" reads as positive,
+     "danger" as danger — but the actual hue swaps from teal/coral (dark
+     ops-room aesthetic) to gold/red (parchment editorial aesthetic) so
+     the rooms feel consistent with the rest of the parchment site. */
+  --room-positive:        #4a7c59;  /* warm green — healthy/connected */
+  --room-positive-soft:   #7ba887;
+  --room-negative:        #9b3232;  /* deep red — danger/disconnected */
+  --room-warning:         #b8860b;  /* dark gold — elevated state */
+  --room-alert:           #c25a14;  /* burnt orange — alert state */
+  --room-critical:        #7a1a1a;  /* blood red — critical state */
+  --room-accent:          #8b6914;  /* parchment gold — primary highlight */
+  --room-accent-soft:     #b89456;
+  --room-bot:             #2c5e9c;  /* deep blue — bot/system messages */
+
+  /* Threat domain hues — distinct enough to read on parchment, muted enough
+     not to clash with the warm palette. */
+  --room-domain-geopolitical: #9b3232;
+  --room-domain-economic:     #b8860b;
+  --room-domain-bitcoin:      #8b6914;
+  --room-domain-disaster:     #5b4a8a;
+  --room-domain-political:    #2c5e9c;
+
+  /* Trading Desk asset-class zone colours — muted parchment hues that read
+     against the warm background while keeping each class visually distinct.
+     BTC stays orange (universal brand). */
+  --zone-global:      #2c5e9c;  /* deep blue */
+  --zone-us:          #4a7c59;  /* warm green */
+  --zone-btc:         #c47615;  /* darker BTC orange — readable on parchment */
+  --zone-fx:          #9b3232;  /* deep red */
+  --zone-commodities: #b8860b;  /* dark gold */
 }
 
 /* ============================================
@@ -64,6 +96,30 @@
   --font-body: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
   --font-data: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
   --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+
+  /* ── Room-specific palette (dark variant — original ops-room aesthetic) ── */
+  --room-positive:        #00e5c8;
+  --room-positive-soft:   #2dd4bf;
+  --room-negative:        #e03030;
+  --room-warning:         #f0a500;
+  --room-alert:           #f07000;
+  --room-critical:        #e03030;
+  --room-accent:          #00e5c8;
+  --room-accent-soft:     #6fe5d4;
+  --room-bot:             #5b9bd5;
+
+  --room-domain-geopolitical: #e03030;
+  --room-domain-economic:     #f0a500;
+  --room-domain-bitcoin:      #00e5c8;
+  --room-domain-disaster:     #9b7fdd;
+  --room-domain-political:    #4a9eff;
+
+  /* Trading Desk asset-class zone colours — original ops-room palette */
+  --zone-global:      #4a9eff;  /* electric blue */
+  --zone-us:          #00d4aa;  /* teal */
+  --zone-btc:         #f7931a;  /* BTC orange */
+  --zone-fx:          #ff6b4a;  /* coral */
+  --zone-commodities: #ffd700;  /* bright gold */
 }
 
 @theme inline {

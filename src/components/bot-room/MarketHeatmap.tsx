@@ -82,7 +82,7 @@ function Cell({ label, type, change }: { label: string; type: string; change: nu
       style={{
         flex: 1, minWidth: 0, padding: '4px 2px', textAlign: 'center',
         background: change != null ? bg : HM.flat,
-        border: hover ? '1px solid rgba(0,212,170,0.2)' : '1px solid transparent',
+        border: hover ? '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)' : '1px solid transparent',
         transition: 'border-color 0.15s',
       }}
     >

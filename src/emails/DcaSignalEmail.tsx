@@ -217,7 +217,7 @@ export function DcaSignalEmail({
           {/* CTA */}
           <Section style={{ textAlign: 'center' as const, marginBottom: '20px' }}>
             <Link
-              href={`${siteUrl}/room/dca-signal`}
+              href={`${siteUrl}/tools/dca-signal`}
               style={{
                 display: 'inline-block',
                 backgroundColor: C.accent,

@@ -2,7 +2,7 @@
  * GET /api/dca-signal-confirm?token=xxx
  *
  * Confirms a DCA signal email subscription via double opt-in link.
- * Redirects to /room/dca-signal with:
+ * Redirects to /tools/dca-signal with:
  *   - ?subscribed=1     for dca_in subscriptions
  *   - ?vip_subscribed=1 for dca_in_out (VIP) subscriptions
  */
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
   if (!token) {
-    return NextResponse.redirect(`${SITE_URL}/room/dca-signal?error=invalid_token`);
+    return NextResponse.redirect(`${SITE_URL}/tools/dca-signal?error=invalid_token`);
   }
 
   try {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!subscriber) {
-      return NextResponse.redirect(`${SITE_URL}/room/dca-signal?error=invalid_token`);
+      return NextResponse.redirect(`${SITE_URL}/tools/dca-signal?error=invalid_token`);
     }
 
     await prisma.dcaSignalSubscriber.update({
@@ -38,10 +38,10 @@ export async function GET(request: NextRequest) {
     });
 
     const param = subscriber.signalType === 'dca_in_out' ? 'vip_subscribed=1' : 'subscribed=1';
-    return NextResponse.redirect(`${SITE_URL}/room/dca-signal?${param}`);
+    return NextResponse.redirect(`${SITE_URL}/tools/dca-signal?${param}`);
 
   } catch (err) {
     console.error('[dca-signal-confirm] Error:', err);
-    return NextResponse.redirect(`${SITE_URL}/room/dca-signal?error=server_error`);
+    return NextResponse.redirect(`${SITE_URL}/tools/dca-signal?error=server_error`);
   }
 }

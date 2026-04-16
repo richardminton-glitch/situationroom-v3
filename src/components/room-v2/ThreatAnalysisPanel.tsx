@@ -78,10 +78,10 @@ export default function ThreatAnalysisPanel({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(9, 13, 18, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-secondary) 75%, transparent)',
         backdropFilter: 'blur(6px)',
-        borderTop: '1px solid rgba(0, 229, 200, 0.12)',
-        borderRight: '1px solid rgba(0, 229, 200, 0.12)',
+        borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
+        borderRight: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
         overflow: 'hidden',
         position: 'relative',
       }}
@@ -95,8 +95,8 @@ export default function ThreatAnalysisPanel({
           fontSize: 9,
           fontFamily: FONT,
           letterSpacing: '0.14em',
-          color: '#8494a7',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          color: 'var(--text-secondary)',
+          borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -106,9 +106,9 @@ export default function ThreatAnalysisPanel({
         <span>THREAT ANALYSIS</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {hovered && (
-            <span style={{ color: '#5e7080', fontSize: 8 }}>PAUSED</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 8 }}>PAUSED</span>
           )}
-          <span style={{ color: STATE_COLORS[displayState] || '#8494a7', fontSize: 8, fontWeight: 600 }}>
+          <span style={{ color: STATE_COLORS[displayState] || 'var(--text-secondary)', fontSize: 8, fontWeight: 600 }}>
             {displayState} ({displayScore})
           </span>
         </div>
@@ -127,10 +127,10 @@ export default function ThreatAnalysisPanel({
         }}
       >
         {entries.length === 0 && (
-          <div style={{ padding: '8px 10px', color: '#5e7080', lineHeight: '16px' }}>
-            <span style={{ color: '#4d6070' }}>{formatTime(Date.now())}</span>
-            <span style={{ color: '#8494a7', fontWeight: 600, fontSize: 9, marginLeft: 6 }}>INIT</span>
-            <div style={{ color: '#a0b0c0', marginTop: 2, paddingLeft: 62, lineHeight: '14px' }}>
+          <div style={{ padding: '8px 10px', color: 'var(--text-muted)', lineHeight: '16px' }}>
+            <span style={{ color: 'var(--text-muted)' }}>{formatTime(Date.now())}</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: 9, marginLeft: 6 }}>INIT</span>
+            <div style={{ color: 'var(--text-primary)', marginTop: 2, paddingLeft: 62, lineHeight: '14px' }}>
               SYSTEM ONLINE — Threat analysis engine initialised. Current posture: {displayState} ({displayScore}/100). Awaiting first state transition for AI analysis.
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function ThreatAnalysisPanel({
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span
                   style={{
-                    color: '#4d6070',
+                    color: 'var(--text-muted)',
                     flexShrink: 0,
                     fontVariantNumeric: 'tabular-nums',
                     width: 56,
@@ -164,16 +164,16 @@ export default function ThreatAnalysisPanel({
                 </span>
 
                 <span style={{ fontSize: 9, fontWeight: 600 }}>
-                  <span style={{ color: STATE_COLORS[fromState] || '#8494a7' }}>
+                  <span style={{ color: STATE_COLORS[fromState] || 'var(--text-secondary)' }}>
                     {entry.fromState}
                   </span>
-                  <span style={{ color: '#5e7080', margin: '0 3px' }}>{'->'}</span>
-                  <span style={{ color: STATE_COLORS[toState] || '#8494a7' }}>
+                  <span style={{ color: 'var(--text-muted)', margin: '0 3px' }}>{'->'}</span>
+                  <span style={{ color: STATE_COLORS[toState] || 'var(--text-secondary)' }}>
                     {entry.toState}
                   </span>
                 </span>
 
-                <span style={{ color: '#5e7080', fontSize: 9 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
                   ({entry.score}/100)
                 </span>
               </div>
@@ -181,7 +181,7 @@ export default function ThreatAnalysisPanel({
               {/* Analysis text */}
               <div
                 style={{
-                  color: '#a0b0c0',
+                  color: 'var(--text-primary)',
                   marginTop: 2,
                   paddingLeft: 62,
                   lineHeight: '14px',

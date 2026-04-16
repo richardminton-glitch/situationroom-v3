@@ -9,12 +9,12 @@
 const FONT = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
 const COLORS = {
-  label: '#8494a7',
-  primary: '#e8edf2',
-  positive: '#00e5c8',
-  negative: '#e03030',
-  amber: '#f0a500',
-  dimBorder: 'rgba(255,255,255,0.06)',
+  label:     'var(--text-secondary)',
+  primary:   'var(--text-primary)',
+  positive:  'var(--room-positive)',
+  negative:  'var(--room-negative)',
+  amber:     'var(--room-warning)',
+  dimBorder: 'var(--border-subtle)',
 };
 
 /* ------------------------------------------------------------------ */
@@ -107,6 +107,11 @@ function StatusBadge({
   label: string;
   color: string;
 }) {
+  // Build a 15%-alpha background tint of `color`. Works for hex (#RRGGBB),
+  // rgb()/rgba(), and CSS var() references via color-mix.
+  const bg = color.startsWith('#')
+    ? `${color}26`
+    : `color-mix(in srgb, ${color} 15%, transparent)`;
   return (
     <span
       style={{
@@ -114,9 +119,7 @@ function StatusBadge({
         fontFamily: FONT,
         letterSpacing: '0.08em',
         color,
-        background: color.startsWith('#')
-          ? `${color}26`
-          : color.replace(')', ', 0.15)').replace('rgb(', 'rgba('),
+        background: bg,
         padding: '1px 5px',
         borderRadius: 2,
         fontWeight: 600,
@@ -275,9 +278,9 @@ export default function BtcInfoPanel({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(9, 13, 18, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-secondary) 75%, transparent)',
         backdropFilter: 'blur(6px)',
-        borderRight: '1px solid rgba(0, 229, 200, 0.12)',
+        borderRight: '1px solid color-mix(in srgb, var(--room-accent) 18%, transparent)',
         overflow: 'hidden',
         position: 'relative',
         fontFamily: FONT,
@@ -446,7 +449,7 @@ export default function BtcInfoPanel({
                 </div>
                 <div style={{
                   height: 3, borderRadius: 1.5,
-                  background: 'rgba(255,255,255,0.08)',
+                  background: 'var(--border-subtle)',
                   overflow: 'hidden',
                 }}>
                   <div style={{
@@ -488,7 +491,7 @@ export default function BtcInfoPanel({
           inset: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px)',
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, color-mix(in srgb, var(--text-primary) 2%, transparent) 2px, color-mix(in srgb, var(--text-primary) 2%, transparent) 4px)',
           zIndex: 1,
         }}
       />
@@ -496,7 +499,7 @@ export default function BtcInfoPanel({
       <style>{`
         .btc-info-scroll::-webkit-scrollbar { width: 3px; }
         .btc-info-scroll::-webkit-scrollbar-track { background: transparent; }
-        .btc-info-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        .btc-info-scroll::-webkit-scrollbar-thumb { background: var(--text-muted); }
       `}</style>
     </div>
   );

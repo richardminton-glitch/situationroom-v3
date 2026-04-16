@@ -79,10 +79,10 @@ export default function MembersRoom() {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: '#090d12',
+          background: 'var(--bg-primary)',
           fontFamily: FONT,
           overflow: 'hidden',
-          color: '#e8edf2',
+          color: 'var(--text-primary)',
         }}
       >
         {/* ── Top bar ── */}
@@ -103,7 +103,7 @@ export default function MembersRoom() {
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
-              borderRight: '1px solid rgba(255,255,255,0.08)',
+              borderRight: '1px solid var(--border-subtle)',
               minHeight: 0,
             }}
           >
@@ -169,13 +169,13 @@ export default function MembersRoom() {
                   left: '50%',
                   transform: 'translateX(-50%)',
                   zIndex: 15,
-                  background: 'rgba(9, 13, 18, 0.9)',
-                  border: '1px solid rgba(0, 229, 200, 0.3)',
+                  background: 'color-mix(in srgb, var(--bg-primary) 90%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--room-accent) 35%, transparent)',
                   padding: '8px 20px',
                   fontSize: 11,
                   fontFamily: FONT,
                   letterSpacing: '0.1em',
-                  color: '#00e5c8',
+                  color: 'var(--room-accent)',
                   animation: 'stateTransitionFade 3s ease-out forwards',
                 }}
               >
@@ -191,7 +191,7 @@ export default function MembersRoom() {
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
-              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              borderLeft: '1px solid var(--border-subtle)',
               minHeight: 0,
             }}
           >

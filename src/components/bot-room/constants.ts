@@ -1,32 +1,60 @@
 /**
  * Bot Room — shared constants, design tokens, topology data, and mock state.
- * All colours/tokens mirror the BOT-ROOM-SPEC design system.
+ *
+ * Theme handling: tokens that map to global theme (background, text, border,
+ * accent) are CSS variable references so the same component renders correctly
+ * in parchment and dark. BTC orange / gold stay hard-coded since they're
+ * brand colours, not theme colours.
+ *
+ * Inline styles in React components consume these as
+ *   `<div style={{ backgroundColor: C.bgPrimary }}>`
+ * and the browser resolves the var against whatever data-theme is active.
+ *
+ * For canvas / SVG drawing where computed RGB strings are required, use
+ *   `getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim()`
+ * at draw time (see NetworkCanvas2D for an example).
  */
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 export const C = {
-  bgPrimary:   '#060a0d',
-  bgElevated:  '#080e14',
-  bgOverlay:   '#0d1e28',
-  teal:        '#00d4aa',
-  coral:       '#ff6b4a',
+  // Surfaces
+  bgPrimary:   'var(--bg-primary)',
+  bgElevated:  'var(--bg-card)',
+  bgOverlay:   'var(--bg-secondary)',
+
+  // Accents — teal/coral in dark, gold/red in parchment. Maps to the room
+  // palette (defined in globals.css under `--room-positive` / `--room-negative`)
+  // so positive/negative semantics stay consistent across themes.
+  teal:        'var(--room-positive)',
+  coral:       'var(--room-negative)',
+
+  // Brand colours — kept hard-coded since BTC orange and gold are universal
   btcOrange:   '#f7931a',
   gold:        '#ffd700',
-  textPrimary: '#e8edf2',
-  textMuted:   '#8494a7',
-  textDim:     '#5e7080',
-  border:      '#0d1e28',
-  borderSoft:  '#1a2e3a',
+
+  // Text
+  textPrimary: 'var(--text-primary)',
+  textMuted:   'var(--text-secondary)',
+  textDim:     'var(--text-muted)',
+
+  // Borders
+  border:      'var(--border-primary)',
+  borderSoft:  'var(--border-subtle)',
 };
 
+// ── Heatmap tints ─────────────────────────────────────────────────────────────
+// Subtle background washes for the market heatmap. Use semi-transparent
+// rgba over the current theme background. Browsers resolve `var()` inside
+// `rgb()` / `rgba()` only with the new color-mix() syntax, so we use
+// `color-mix(in srgb, ..., transparent)` for theme-awareness.
 export const HM = {
-  posStrong: '#00d4aa14',
-  pos:       '#00d4aa07',
-  flat:      '#090f14',
-  neg:       '#ff6b4a07',
-  negStrong: '#ff6b4a14',
-  btc:       '#f7931a0a',
-  gold:      '#ffd7000a',
+  posStrong: 'color-mix(in srgb, var(--room-positive) 12%, transparent)',
+  pos:       'color-mix(in srgb, var(--room-positive) 6%, transparent)',
+  flat:      'color-mix(in srgb, var(--bg-secondary) 50%, transparent)',
+  neg:       'color-mix(in srgb, var(--room-negative) 6%, transparent)',
+  negStrong: 'color-mix(in srgb, var(--room-negative) 12%, transparent)',
+  btc:       'color-mix(in srgb, #f7931a 6%, transparent)',
+  gold:      'color-mix(in srgb, #ffd700 6%, transparent)',
 };
 
 export const FONT = "'Courier New', Courier, monospace";

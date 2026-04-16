@@ -68,12 +68,12 @@ export default function TopBar({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 16px',
-        background: 'rgba(9, 13, 18, 0.85)',
+        background: 'color-mix(in srgb, var(--bg-secondary) 85%, transparent)',
         backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        borderBottom: '1px solid var(--border-subtle)',
         fontFamily: FONT,
         fontSize: 12,
-        color: '#e8edf2',
+        color: 'var(--text-primary)',
         zIndex: 10,
         position: 'relative',
         flexShrink: 0,
@@ -81,7 +81,7 @@ export default function TopBar({
     >
       {/* Left: UTC clock */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span style={{ color: '#5e7080', fontSize: 9, letterSpacing: '0.05em' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: '0.05em' }}>
           {utc}
         </span>
       </div>
@@ -135,7 +135,7 @@ export default function TopBar({
           <span
             style={{
               fontSize: 9,
-              color: '#8494a7',
+              color: 'var(--text-secondary)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
@@ -153,8 +153,8 @@ export default function TopBar({
               transform: 'translateX(-50%)',
               marginTop: 8,
               width: 320,
-              background: 'rgba(9, 13, 18, 0.96)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'color-mix(in srgb, var(--bg-card) 96%, transparent)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 4,
               padding: '12px 14px',
               fontFamily: FONT,
@@ -172,27 +172,27 @@ export default function TopBar({
                 transform: 'translateX(-50%) rotate(45deg)',
                 width: 8,
                 height: 8,
-                background: 'rgba(9, 13, 18, 0.96)',
-                borderTop: '1px solid rgba(255,255,255,0.12)',
-                borderLeft: '1px solid rgba(255,255,255,0.12)',
+                background: 'color-mix(in srgb, var(--bg-card) 96%, transparent)',
+                borderTop: '1px solid var(--border-subtle)',
+                borderLeft: '1px solid var(--border-subtle)',
               }}
             />
 
             {/* Title */}
-            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#8494a7', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 8 }}>
               THREAT POSTURE MODEL
             </div>
 
             {/* Current score bar */}
             <div style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: '#a0b0c0' }}>Current Score</span>
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Current Score</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: stateColor, fontVariantNumeric: 'tabular-nums' }}>
                   {threatScore}/100
                 </span>
               </div>
               {/* Score bar */}
-              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
                 <div
                   style={{
                     height: '100%',
@@ -207,7 +207,7 @@ export default function TopBar({
             </div>
 
             {/* Thresholds */}
-            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 4 }}>
               STATE THRESHOLDS
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
@@ -236,7 +236,7 @@ export default function TopBar({
                       {t.state}
                     </span>
                   </div>
-                  <span style={{ fontSize: 9, color: '#5e7080', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
                     {t.state === 'QUIET' ? '0 – 15' : t.state === 'MONITORING' ? '16 – 35' : t.state === 'ELEVATED' ? '36 – 55' : t.state === 'ALERT' ? '56 – 75' : '76 – 100'}
                   </span>
                 </div>
@@ -244,12 +244,12 @@ export default function TopBar({
             </div>
 
             {/* Methodology */}
-            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#5e7080', marginBottom: 4 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 4 }}>
               METHODOLOGY
             </div>
-            <div style={{ fontSize: 9, color: '#8494a7', lineHeight: '14px' }}>
+            <div style={{ fontSize: 9, color: 'var(--text-secondary)', lineHeight: '14px' }}>
               Five domain agents (Geopolitical, Economic, Bitcoin, Disaster, Political) feed intelligence to the Threat Assessment Module.
-              Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: '#a0b0c0' }}>3-hour half-life</span>.
+              Each event contributes its impact × e<sup>−λt</sup> where λ gives a <span style={{ color: 'var(--text-secondary)' }}>3-hour half-life</span>.
               Score is the decaying sum of all impacts, capped at 100, recalculated every second.
             </div>
           </div>
@@ -258,10 +258,10 @@ export default function TopBar({
 
       {/* Right: Feed status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ color: '#8494a7', fontSize: 9, letterSpacing: '0.06em' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 9, letterSpacing: '0.06em' }}>
           {operatorCount} OPS
         </span>
-        <span style={{ color: '#8494a7', fontSize: 9, letterSpacing: '0.06em' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 9, letterSpacing: '0.06em' }}>
           {eventCount} EVT/30m
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -270,15 +270,15 @@ export default function TopBar({
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: connected ? '#00e5c8' : '#e03030',
-              boxShadow: connected ? '0 0 4px #00e5c8' : '0 0 4px #e03030',
+              background: connected ? 'var(--room-positive)' : 'var(--room-negative)',
+              boxShadow: connected ? '0 0 4px var(--room-positive)' : '0 0 4px var(--room-negative)',
             }}
           />
           <span
             style={{
               fontSize: 9,
               letterSpacing: '0.08em',
-              color: connected ? '#00e5c8' : '#e03030',
+              color: connected ? 'var(--room-positive)' : 'var(--room-negative)',
             }}
           >
             {connected ? 'LIVE' : 'OFFLINE'}

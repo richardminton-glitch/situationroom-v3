@@ -31,9 +31,18 @@ interface FlowTicker {
 interface Zone {
   id: string;
   label: string;
-  color: string;
+  /** CSS custom property name (without the `--` prefix is fine — we read with full name). */
+  colorVar: string;
   xPct: number;   // x-center as fraction of canvas width
   tickers: FlowTicker[];
+}
+
+/** Resolve a zone's CSS variable to a concrete colour. Used by both inline
+ *  JSX (where browsers resolve `var()` natively but we centralise the lookup
+ *  for caching) and by the canvas (which can't resolve CSS vars on its own). */
+function resolveZoneColor(zone: Zone, fallback = '#888'): string {
+  if (typeof window === 'undefined') return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(zone.colorVar).trim() || fallback;
 }
 
 interface NodePos {
@@ -56,7 +65,7 @@ interface Particle {
 
 const ZONES: Zone[] = [
   {
-    id: 'global', label: 'GLOBAL', color: '#4a9eff', xPct: 0.08,
+    id: 'global', label: 'GLOBAL', colorVar: '--zone-global', xPct: 0.08,
     tickers: [
       { label: 'FTSE', src: 'indices',     key: 'ftse' },
       { label: 'DAX',  src: 'indices',     key: 'dax' },
@@ -65,7 +74,7 @@ const ZONES: Zone[] = [
     ],
   },
   {
-    id: 'us', label: 'US INDICES', color: '#00d4aa', xPct: 0.25,
+    id: 'us', label: 'US INDICES', colorVar: '--zone-us', xPct: 0.25,
     tickers: [
       { label: 'NDX', src: 'indices', key: 'nasdaq' },
       { label: 'SPX', src: 'indices', key: 'sp500' },
@@ -74,7 +83,7 @@ const ZONES: Zone[] = [
     ],
   },
   {
-    id: 'btc', label: 'BTC ECOSYSTEM', color: '#f7931a', xPct: 0.50,
+    id: 'btc', label: 'BTC ECOSYSTEM', colorVar: '--zone-btc', xPct: 0.50,
     tickers: [
       { label: 'BTC',  src: 'btcMarket',   key: '' },
       { label: 'MSTR', src: 'btcEquities', key: 'mstr' },
@@ -87,7 +96,7 @@ const ZONES: Zone[] = [
     ],
   },
   {
-    id: 'fx', label: 'FX & YIELDS', color: '#ff6b4a', xPct: 0.75,
+    id: 'fx', label: 'FX & YIELDS', colorVar: '--zone-fx', xPct: 0.75,
     tickers: [
       { label: 'DXY', src: 'commodities', key: 'dxy' },
       { label: 'EUR', src: 'fx',          key: 'eur' },
@@ -99,7 +108,7 @@ const ZONES: Zone[] = [
     ],
   },
   {
-    id: 'commodities', label: 'COMMODITIES', color: '#ffd700', xPct: 0.92,
+    id: 'commodities', label: 'COMMODITIES', colorVar: '--zone-commodities', xPct: 0.92,
     tickers: [
       { label: 'GOLD', src: 'commodities', key: 'gold' },
       { label: 'SLVR', src: 'commodities', key: 'silver' },
@@ -255,13 +264,21 @@ export function CapitalFlowTopology() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
+      // Snapshot the room palette + zone colours per frame so theme changes
+      // flow through.
+      const cs = getComputedStyle(document.documentElement);
+      const accent   = cs.getPropertyValue('--room-accent').trim()   || '#00d4aa';
+      const positive = cs.getPropertyValue('--room-positive').trim() || '#00d4aa';
+      const negative = cs.getPropertyValue('--room-negative').trim() || '#ff6b4a';
+      const zoneColors: string[] = ZONES.map(z => cs.getPropertyValue(z.colorVar).trim() || '#888');
+
       const snap  = dataRef.current;
       const nodes = computeNodes();
       const cy    = h / 2;
 
       // ───────────── 1. Scan-line background ─────────────────────────
       ctx.globalAlpha = 0.02;
-      ctx.fillStyle = '#00d4aa';
+      ctx.fillStyle = accent;
       for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
       ctx.globalAlpha = 1;
 
@@ -273,7 +290,7 @@ export function CapitalFlowTopology() {
         ctx.beginPath();
         ctx.moveTo(d * w, 6);
         ctx.lineTo(d * w, h - 4);
-        ctx.strokeStyle = 'rgba(0,212,170,0.05)';
+        ctx.strokeStyle = accent + '0d'; // ~5% alpha
         ctx.stroke();
       }
       ctx.setLineDash([]);
@@ -281,9 +298,9 @@ export function CapitalFlowTopology() {
       // ───────────── 3. Horizontal scan beam ─────────────────────────
       const beamY = ((timestamp / 3500) % 1) * h;
       const beam  = ctx.createLinearGradient(0, beamY - 30, 0, beamY + 30);
-      beam.addColorStop(0,   'rgba(0,212,170,0)');
-      beam.addColorStop(0.5, 'rgba(0,212,170,0.045)');
-      beam.addColorStop(1,   'rgba(0,212,170,0)');
+      beam.addColorStop(0,   accent + '00');
+      beam.addColorStop(0.5, accent + '0c'); // ~5% alpha
+      beam.addColorStop(1,   accent + '00');
       ctx.fillStyle = beam;
       ctx.fillRect(0, beamY - 30, w, 60);
 
@@ -297,7 +314,7 @@ export function CapitalFlowTopology() {
         ctx.beginPath();
         ctx.moveTo(x, topY);
         ctx.lineTo(x, botY);
-        ctx.strokeStyle = ZONES[zi].color + '12';
+        ctx.strokeStyle = zoneColors[zi] + '12';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -332,7 +349,7 @@ export function CapitalFlowTopology() {
         ctx.beginPath();
         ctx.moveTo(fx, cy);
         ctx.bezierCurveTo(mx, cy + bow, mx, cy + bow, tx, cy);
-        ctx.strokeStyle = 'rgba(0,212,170,0.055)';
+        ctx.strokeStyle = accent + '0e'; // ~5.5% alpha
         ctx.lineWidth = 2.5;
         ctx.stroke();
       }
@@ -376,9 +393,9 @@ export function CapitalFlowTopology() {
           const intensity = Math.min(Math.abs(toAvg - fromAvg) / 2.5, 1);
           ctx.beginPath();
           ctx.arc(px, py, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = forward
-            ? `rgba(0,212,170,${(0.3 + intensity * 0.65).toFixed(2)})`
-            : `rgba(255,107,74,${(0.3 + intensity * 0.65).toFixed(2)})`;
+          // Alpha 0.3 → 0.95 mapped to hex: 0.3*255≈4d, 0.95*255≈f2.
+          const a = Math.round((0.3 + intensity * 0.65) * 255).toString(16).padStart(2, '0');
+          ctx.fillStyle = (forward ? positive : negative) + a;
           ctx.fill();
         } else {
           // BTC-equity particle — flow relative to BTC performance
@@ -399,9 +416,11 @@ export function CapitalFlowTopology() {
 
             ctx.beginPath();
             ctx.arc(px, py, p.size, 0, Math.PI * 2);
+            // Outperforming BTC → BTC-orange particle (brand colour); under-
+            // performing → theme negative.
             ctx.fillStyle = forward
               ? 'rgba(247,147,26,0.7)'
-              : 'rgba(255,107,74,0.6)';
+              : negative + '99'; // ~60% alpha
             ctx.fill();
           }
         }
@@ -419,10 +438,11 @@ export function CapitalFlowTopology() {
         const pulse   = Math.sin(timestamp / 900 + node.tickerIdx * 1.7) * 0.4;
         const r       = baseR + pulse * Math.min(absPct / 5, 1);
 
-        // Node colour: teal if up, coral if down, zone colour if flat/no data
-        let nc = zone.color;
+        // Node colour: positive if up, negative if down, zone colour if flat/no data
+        const zCol = zoneColors[node.zone];
+        let nc = zCol;
         if (changePct !== null) {
-          nc = changePct > 0 ? C.teal : changePct < 0 ? C.coral : zone.color;
+          nc = changePct > 0 ? positive : changePct < 0 ? negative : zCol;
         }
 
         // Scan-beam proximity highlight
@@ -447,10 +467,11 @@ export function CapitalFlowTopology() {
         ctx.lineWidth = 0.6;
         ctx.stroke();
 
-        // Dark fill
+        // Theme-aware fill — matches the surrounding bg in either theme
         ctx.beginPath();
         ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#060a0d';
+        ctx.fillStyle = getComputedStyle(document.documentElement)
+          .getPropertyValue('--bg-primary').trim() || '#060a0d';
         ctx.fill();
 
         // Inner coloured dot
@@ -471,7 +492,7 @@ export function CapitalFlowTopology() {
           // Change %
           if (changePct !== null) {
             ctx.font      = "8px 'Courier New'";
-            ctx.fillStyle = changePct >= 0 ? C.teal + 'bb' : C.coral + 'bb';
+            ctx.fillStyle = changePct >= 0 ? positive + 'bb' : negative + 'bb';
             ctx.fillText(
               changePct >= 0 ? `+${changePct.toFixed(1)}%` : `${changePct.toFixed(1)}%`,
               node.x, node.y + r + 17,
@@ -493,7 +514,7 @@ export function CapitalFlowTopology() {
             const px    = node.x + cos * pDist;
             const py    = node.y + sin * pDist;
             ctx.font      = "8px 'Courier New'";
-            ctx.fillStyle = changePct >= 0 ? C.teal + 'bb' : C.coral + 'bb';
+            ctx.fillStyle = changePct >= 0 ? positive + 'bb' : negative + 'bb';
             ctx.fillText(
               changePct >= 0 ? `+${changePct.toFixed(1)}%` : `${changePct.toFixed(1)}%`,
               px, py,
@@ -513,7 +534,7 @@ export function CapitalFlowTopology() {
           // Change % on opposite side
           if (changePct !== null) {
             ctx.font      = "8px 'Courier New'";
-            ctx.fillStyle = changePct >= 0 ? C.teal + 'aa' : C.coral + 'aa';
+            ctx.fillStyle = changePct >= 0 ? positive + 'aa' : negative + 'aa';
             if (rightSide) {
               ctx.textAlign = 'right';
               ctx.fillText(
@@ -534,9 +555,10 @@ export function CapitalFlowTopology() {
       // ───────────── 9. Zone labels (top) ────────────────────────────
       ctx.textBaseline = 'top';
       ctx.textAlign    = 'center';
-      for (const z of ZONES) {
+      for (let zi = 0; zi < ZONES.length; zi++) {
+        const z = ZONES[zi];
         ctx.font      = "bold 9px 'Courier New'";
-        ctx.fillStyle = z.color + '66';
+        ctx.fillStyle = zoneColors[zi] + '66';
         ctx.fillText(z.label, z.xPct * w, 6);
       }
 
@@ -589,7 +611,7 @@ export function CapitalFlowTopology() {
           >
             <span style={{
               width: '6px', height: '6px', borderRadius: '50%',
-              background: z.color, display: 'inline-block', opacity: 0.7,
+              background: `var(${z.colorVar})`, display: 'inline-block', opacity: 0.7,
             }} />
             {z.label}
           </span>

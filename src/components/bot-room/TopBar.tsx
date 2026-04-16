@@ -84,10 +84,10 @@ export function TopBar({ onFundPool, opsRoomOpen, onToggleOpsRoom, chatUnread = 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{
           fontSize: '9px', color: C.teal, padding: '1px 6px',
-          border: '1px solid rgba(0,212,170,0.2)', background: C.bgOverlay,
+          border: '1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent)', background: C.bgOverlay,
           letterSpacing: '0.08em',
         }}>
-          BOT ROOM
+          TRADING DESK
         </span>
         <span style={{ fontSize: '9px', letterSpacing: '0.1em', color: C.textDim }}>
           AUTONOMOUS TRADING — LIVE
