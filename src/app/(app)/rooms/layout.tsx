@@ -14,25 +14,17 @@
  * attribute approach over re-introducing the useEffect setTheme dance.
  */
 
-import { usePathname } from 'next/navigation';
 import { RoomsRail } from '@/components/layout/RoomsRail';
-import { PageHeader } from '@/components/layout/PageHeader';
-
-const ROOM_LABELS: Record<string, string> = {
-  '/rooms/members':       'Members Room',
-  '/rooms/trading-desk':  'Trading Desk',
-};
 
 export default function RoomsLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const roomLabel = ROOM_LABELS[pathname] ?? 'Rooms';
-  const breadcrumb = pathname === '/rooms' ? ['Rooms'] : ['Rooms', roomLabel];
-
+  // No PageHeader breadcrumb here — the room components own their full
+  // visible area (members room and trading desk both render their own
+  // status bars / headers internally). The TopBar already shows "Rooms"
+  // as the active section; the second-level breadcrumb was redundant chrome.
   return (
     <>
       <RoomsRail />
       <main className="flex-1 min-w-0 overflow-hidden flex flex-col">
-        <PageHeader breadcrumb={breadcrumb} />
         <div className="flex-1 overflow-auto">{children}</div>
       </main>
     </>

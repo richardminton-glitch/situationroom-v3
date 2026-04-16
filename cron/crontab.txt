@@ -57,6 +57,10 @@ SITE=https://situationroom.space
 # BTC price logger — every 15 minutes, appends to NDJSON for 30-day chart
 */15 * * * * node /opt/situationroom-v3/scripts/log-btc-price.js >> /opt/situationroom-v3/logs/cron.log 2>&1
 
+# BTC daily close — once at 00:10 UTC, prepends yesterday's close to btc-price-history.csv
+# (drives the "Drawdowns from ATH to Cycle Low" chart on /tools/cycle-gauge)
+10 0 * * * node /opt/situationroom-v3/scripts/log-btc-daily-close.js >> /opt/situationroom-v3/logs/cron.log 2>&1
+
 # Threat score monitor — every 60s, triggers AI analysis on state changes
 * * * * * curl -s $SITE/api/data/threat-score >> /opt/situationroom-v3/logs/cron.log 2>&1
 

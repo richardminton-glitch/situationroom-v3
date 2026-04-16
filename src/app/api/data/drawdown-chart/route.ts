@@ -48,9 +48,13 @@ const MAX_DAYS = 900; // x-axis ceiling
 // ── CSV reader ────────────────────────────────────────────────────────────────
 
 function readCsv(): DayPrice[] {
+  // Order matters: prefer the runtime-mutable copy in data/ (updated daily
+  // by scripts/log-btc-daily-close.js) over the static seed in src/lib/data/.
+  // The seed is committed to git for first-boot/CI; the runtime copy stays
+  // gitignored so daily appends don't fight `git pull` on deploy.
   const candidates = [
-    path.join(/* turbopackIgnore: true */ process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
     path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'btc-price-history.csv'),
+    path.join(/* turbopackIgnore: true */ process.cwd(), 'src', 'lib', 'data', 'btc-price-history.csv'),
   ];
 
   for (const p of candidates) {
