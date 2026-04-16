@@ -6,10 +6,13 @@
 # Replace https://situationroom.space with your domain if different.
 
 CRON_SECRET=dev-cron-secret
-# Hit v3 directly on the loopback. Avoids DNS / TLS / nginx dependencies, and
-# survives the v2→v3 domain cutover unchanged. (The site itself is still
-# served at https://situationroom.space; this is only the cron caller.)
-SITE=http://localhost:3001
+# Route cron calls through the public apex. Going via nginx is intentional:
+# middleware redirects http://localhost:3001 to https (301), so curl on the
+# loopback without -L silently no-ops. v3.situationroom.space is ALSO wrong
+# post-cutover — it now serves a static "we've moved" page that returns 200
+# HTML without ever touching the app (incident 2026-04-16: briefings silently
+# stopped for a day). situationroom.space is the canonical home.
+SITE=https://situationroom.space
 
 # Daily data refresh — UTXO age at 06:00 UTC
 0 6 * * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/data/utxo-age >> /opt/situationroom-v3/logs/cron.log 2>&1
@@ -62,3 +65,9 @@ SITE=http://localhost:3001
 
 # Country data refresh — 1st of every month at 03:00 UTC
 0 3 1 * * curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/refresh-country-data >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Cycle historian — weekly Sunday 01:00 UTC
+0 1 * * 0 curl -s -H "Authorization: Bearer $CRON_SECRET" $SITE/api/cron/cycle-historian >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Energy price refresh — weekly Sunday 03:17 UTC
+17 3 * * 0 curl -s -X POST -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-energy-prices >> /opt/situationroom-v3/logs/cron.log 2>&1
