@@ -13,6 +13,30 @@
   <meta name="apple-mobile-web-app-title" content="UTXO Cosmos">
   <link rel="apple-touch-icon" href="icon.svg">
 
+  <!-- Inherit theme from parent Situation Room (same-origin) before first
+       paint. Standalone load (no parent) falls through to the parchment
+       default. The MutationObserver picks up live theme toggles from the
+       parent's user menu / ⌘K palette without an iframe reload. -->
+  <script>
+    (function syncParentTheme() {
+      try {
+        var apply = function () {
+          var t = parent.document.documentElement.getAttribute('data-theme') || 'parchment';
+          document.documentElement.setAttribute('data-theme', t);
+        };
+        apply();
+        if (parent !== window) {
+          new MutationObserver(apply).observe(parent.document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme'],
+          });
+        }
+      } catch (e) {
+        // Cross-origin or no parent context — keep the default theme.
+      }
+    })();
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ── Theme palette ─────────────────────────────────────────────────

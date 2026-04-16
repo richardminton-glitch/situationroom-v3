@@ -11,8 +11,10 @@
 //   v1: original release
 //   v2: dark-mode + theme-aware vars + hidden burger + warm-tan rules
 //       + scope-relative shell paths
+//   v3: iframe-side self-sync of parent theme (data-theme propagated
+//       in <head> before first paint via parent.document access)
 
-const CACHE_NAME = 'utxo-cosmos-v2';
+const CACHE_NAME = 'utxo-cosmos-v3';
 
 // Scope-relative paths — the SW lives at /utxo-cosmography/sw.js so its
 // scope is /utxo-cosmography/ and these resolve correctly inside it.
