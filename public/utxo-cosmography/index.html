@@ -433,7 +433,7 @@
         <div class="block-nav">
           <button class="nav-btn" id="prev-btn" onclick="goToPrevBlock()" title="Previous block" disabled>&#9664;</button>
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
-            <span style="font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:#999">Block</span>
+            <span style="font-size:8.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--c-text-faint)">Block</span>
             <input id="block-input" type="text" placeholder="—"
                    title="Enter block height or 64-char hash, then press Enter"
                    onkeydown="if(event.key==='Enter')goToBlock(this.value)">
@@ -499,19 +499,19 @@
         <div class="legend-group-title">Size = Age (log scale)</div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="1.5" fill="#1a1a1a"/>
+            <circle cx="18" cy="11" r="1.5" fill="currentColor"/>
           </svg>
           <span>Fresh (&lt; 1 week) — speck</span>
         </div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="4.5" fill="#1a1a1a"/>
+            <circle cx="18" cy="11" r="4.5" fill="currentColor"/>
           </svg>
           <span>Mid-age (1–5 years)</span>
         </div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="8" fill="#1a1a1a"/>
+            <circle cx="18" cy="11" r="8" fill="currentColor"/>
           </svg>
           <span>Ancient (&gt; 10 years)</span>
         </div>
@@ -519,23 +519,23 @@
         <div class="legend-group-title">Ink density = Value</div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="5" fill="none" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>
+            <circle cx="18" cy="11" r="5" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>
           </svg>
           <span>Dust (&lt; 0.001 BTC) — outline</span>
         </div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="5" fill="#5a5a5a"/>
+            <circle cx="18" cy="11" r="5" fill="currentColor" opacity="0.6"/>
           </svg>
           <span>Medium (0.001–0.1 BTC)</span>
         </div>
         <div class="legend-row">
           <svg class="legend-svg" width="36" height="22" viewBox="0 0 36 22">
-            <circle cx="18" cy="11" r="5" fill="#0d0d0d"/>
-            <line x1="18" y1="3"  x2="18" y2="5"  stroke="#0d0d0d" stroke-width="1"/>
-            <line x1="18" y1="17" x2="18" y2="19" stroke="#0d0d0d" stroke-width="1"/>
-            <line x1="10" y1="11" x2="12" y2="11" stroke="#0d0d0d" stroke-width="1"/>
-            <line x1="24" y1="11" x2="26" y2="11" stroke="#0d0d0d" stroke-width="1"/>
+            <circle cx="18" cy="11" r="5" fill="currentColor"/>
+            <line x1="18" y1="3"  x2="18" y2="5"  stroke="currentColor" stroke-width="1"/>
+            <line x1="18" y1="17" x2="18" y2="19" stroke="currentColor" stroke-width="1"/>
+            <line x1="10" y1="11" x2="12" y2="11" stroke="currentColor" stroke-width="1"/>
+            <line x1="24" y1="11" x2="26" y2="11" stroke="currentColor" stroke-width="1"/>
           </svg>
           <span>Whale (&gt; 10 BTC) + rays</span>
         </div>
@@ -1922,8 +1922,8 @@
             `<div class="tt-title">Block #${hb.height.toLocaleString()} &middot; ${hb.date}</div>` +
             `<div class="tt-value">${hb.name}</div>` +
             `<div class="tt-btc" style="font-style:italic;margin-top:3px">${hb.tagline}</div>` +
-            `<div class="tt-row" style="margin-top:6px;border-top:1px solid #ddd;padding-top:5px">${hb.significance}</div>` +
-            `<div class="tt-row" style="margin-top:3px;color:#666">${hb.detail}</div>`;
+            `<div class="tt-row" style="margin-top:6px;border-top:1px solid var(--c-rule-soft);padding-top:5px">${hb.significance}</div>` +
+            `<div class="tt-row" style="margin-top:3px;color:var(--c-text-faint)">${hb.detail}</div>`;
           return;
         }
       }

@@ -13,8 +13,9 @@
 //       + scope-relative shell paths
 //   v3: iframe-side self-sync of parent theme (data-theme propagated
 //       in <head> before first paint via parent.document access)
+//   v4: legend SVGs → currentColor, remaining inline hex → var()
 
-const CACHE_NAME = 'utxo-cosmos-v3';
+const CACHE_NAME = 'utxo-cosmos-v4';
 
 // Scope-relative paths — the SW lives at /utxo-cosmography/sw.js so its
 // scope is /utxo-cosmography/ and these resolve correctly inside it.
