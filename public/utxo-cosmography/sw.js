@@ -18,8 +18,10 @@
 //       freeze live chain data client-side
 //   v6: floating canvas insets (fee oracle, mempool, hash rate) read
 //       --c-overlay-bg so they darken with the rest of the page
+//   v7: soften --c-ink-whale + --c-ink-grid (parchment) from clinical
+//       near-black to warm deep brown so ink-on-parchment reads warm
 
-const CACHE_NAME = 'utxo-cosmos-v6';
+const CACHE_NAME = 'utxo-cosmos-v7';
 
 // Scope-relative paths — the SW lives at /utxo-cosmography/sw.js so its
 // scope is /utxo-cosmography/ and these resolve correctly inside it.

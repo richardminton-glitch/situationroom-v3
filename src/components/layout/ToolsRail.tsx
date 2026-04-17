@@ -8,7 +8,7 @@
  * badge (free users see them but can't navigate).
  */
 
-import { Atom, ChartLine, Gauge, HardHat, MapTrifold } from '@phosphor-icons/react';
+import { Atom, ChartLine, Gauge, HardHat, MapTrifold, TreeStructure } from '@phosphor-icons/react';
 import { SectionRailFrame } from './SectionRailFrame';
 import { RailLink } from './RailLink';
 
@@ -44,6 +44,11 @@ export function ToolsRail() {
           href="/tools/utxo-cosmography"
           label="UTXO Cosmography"
           icon={<Atom size={ICON_SIZE} />}
+        />
+        <RailLink
+          href="/tools/txid-pathing"
+          label="TXID Pathing"
+          icon={<TreeStructure size={ICON_SIZE} />}
         />
       </div>
     </SectionRailFrame>

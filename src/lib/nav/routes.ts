@@ -89,6 +89,13 @@ export const NAV_ROUTES: NavRoute[] = [
     keywords: ['utxo', 'cosmography', 'atlas', 'cosmos', 'rings', 'art'],
     description: 'Bitcoin UTXO atlas — protocol art',
   },
+  {
+    href: '/tools/txid-pathing',
+    label: 'TXID Pathing',
+    section: 'Tools',
+    keywords: ['txid', 'pathing', 'path', 'trace', 'lineage', 'transaction', 'utxo', 'graph'],
+    description: 'Bitcoin transaction chain tracer',
+  },
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
   {

@@ -1,0 +1,21 @@
+{
+  "name": "TXID Pathing",
+  "short_name": "TXID Path",
+  "description": "Bitcoin transaction chain analysis — trace UTXO lineage across the blockchain.",
+  "start_url": "/txid-pathing/",
+  "scope": "/txid-pathing/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8f1e3",
+  "theme_color": "#f8f1e3",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"],
+  "lang": "en"
+}

@@ -65,12 +65,15 @@
       --c-tooltip-shadow: rgba(0,0,0,0.15);
       --c-backdrop:     rgba(0,0,0,0.38);
 
-      /* Canvas ink palette — varying weights of brown-black on parchment */
-      --c-ink-whale:    #1a1a1a;
+      /* Canvas ink palette — varying weights of brown-black on parchment.
+         Whale darkened from clinical #1a1a1a to #2d241a (deep warm brown)
+         so the densest legend glyphs and whale UTXO dots read as ink, not
+         stark black against the cream background. */
+      --c-ink-whale:    #2d241a;
       --c-ink-large:    #3a3024;
       --c-ink-medium:   #5a4e3c;
       --c-ink-dust:     #7a6b54;
-      --c-ink-grid:     18,12,4;     /* rgb triplet for rgba() helpers */
+      --c-ink-grid:     45,36,26;    /* rgb triplet for rgba() helpers — matches whale */
     }
     [data-theme="dark"] {
       --c-bg:           #0a0f14;
@@ -306,7 +309,12 @@
       margin-bottom: 5px;
     }
 
-    .legend-svg { flex-shrink: 0; }
+    /* Legend SVGs use fill="currentColor" to track the ink palette rather
+       than the sidebar prose colour. Swapping the SVG's own `color` to
+       --c-ink-whale makes the glyphs read as warm ink on parchment (not
+       the clinical near-black text colour) while still going full
+       teal-tinted in dark mode — same warmth the canvas drawing uses. */
+    .legend-svg { flex-shrink: 0; color: var(--c-ink-whale); }
 
     .sidebar-note {
       font-size: 10.5px;

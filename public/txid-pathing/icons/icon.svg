@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Blueprint background -->
+  <rect width="512" height="512" fill="#001F3F"/>
+  <!-- Grid lines -->
+  <line x1="0" y1="128" x2="512" y2="128" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="0" y1="256" x2="512" y2="256" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="0" y1="384" x2="512" y2="384" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="128" y1="0" x2="128" y2="512" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="256" y1="0" x2="256" y2="512" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="384" y1="0" x2="384" y2="512" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- Outer border -->
+  <rect x="20" y="20" width="472" height="472" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <!-- Bitcoin ₿ symbol -->
+  <text x="256" y="330" font-family="serif" font-size="260" font-weight="bold"
+        text-anchor="middle" fill="none" stroke="#ffffff" stroke-width="8">₿</text>
+  <text x="256" y="330" font-family="serif" font-size="260" font-weight="bold"
+        text-anchor="middle" fill="#ffffff" opacity="0.9">₿</text>
+</svg>
