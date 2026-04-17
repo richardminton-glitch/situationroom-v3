@@ -2,9 +2,22 @@
  * POST /api/payments/confirm
  *
  * Polls LNMarkets for confirmed deposits and activates tiers.
- * Called by the cron job (CRON_SECRET required).
+ * Called by the cron job every 5 minutes (CRON_SECRET required).
  *
  * Also runs processExpiredSubscriptions() for renewal checks.
+ *
+ * Robustness guarantees (added after a VIP payment was lost during an
+ * LNM API outage):
+ *
+ *   1. Ops and bot deposit histories are fetched independently — one
+ *      client failing doesn't block the other.
+ *   2. If BOTH LNM clients fail, the expiry loop is skipped entirely.
+ *      Payments stay `pending` until LNM recovers. No deposits are
+ *      auto-expired when we can't verify settlement state.
+ *   3. Expiry timeout increased from 2 hours → 24 hours — outlasts
+ *      any reasonable API outage.
+ *   4. The user's browser now actively checks LNM in the /status/
+ *      [paymentId] poll endpoint too, so cron is the BACKUP path.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,6 +28,8 @@ import { TIER_BILLING } from '@/lib/auth/tier';
 
 export const dynamic = 'force-dynamic';
 
+const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours (was 2 hours — too aggressive)
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get('x-cron-secret');
   if (secret !== process.env.CRON_SECRET) {
@@ -22,10 +37,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // ── 1. Process expired subscriptions ─────────────────────────────────────
+    // ── 1. Process expired subscriptions ─────────────────────────────────
     await processExpiredSubscriptions();
 
-    // ── 2. Check pending payments ─────────────────────────────────────────────
+    // ── 2. Check pending payments ────────────────────────────────────────
     const pending = await prisma.subscriptionPayment.findMany({
       where: { status: 'pending', lnmDepositId: { not: null } },
       orderBy: { createdAt: 'desc' },
@@ -36,15 +51,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ confirmed: 0, expired: 0 });
     }
 
-    const lnm = getOpsClient();
-
     // Pool donations use the bot client; subscriptions use ops client
     const poolPending = pending.filter((p) => p.tier === 'pool_donation');
     const opsPending  = pending.filter((p) => p.tier !== 'pool_donation');
 
-    // Fetch deposit history from both clients as needed
-    const opsHistory  = opsPending.length > 0 ? await lnm.getDepositHistory(100) : [];
-    const botHistory  = poolPending.length > 0 ? await getBotClient().getDepositHistory(100) : [];
+    // ── 3. Fetch deposit histories — each in its own try/catch ──────────
+    //    One client's API failure must not block the other or prevent
+    //    the route from returning useful results.
+    type LnmDeposit = { id: string; amount: number; settledAt: string | null; comment: string; createdAt: string };
+    let opsHistory: LnmDeposit[] = [];
+    let botHistory: LnmDeposit[] = [];
+    let opsOk = false;
+    let botOk = false;
+
+    if (opsPending.length > 0) {
+      try {
+        opsHistory = await getOpsClient().getDepositHistory(100);
+        opsOk = true;
+      } catch (err) {
+        console.error('[confirm] ops deposit fetch failed:', (err as Error).message);
+      }
+    } else {
+      opsOk = true; // nothing to check — treat as "available"
+    }
+
+    if (poolPending.length > 0) {
+      try {
+        botHistory = await getBotClient().getDepositHistory(100);
+        botOk = true;
+      } catch (err) {
+        console.error('[confirm] bot deposit fetch failed:', (err as Error).message);
+      }
+    } else {
+      botOk = true;
+    }
 
     // v3: settled deposits have a non-null settledAt field
     const confirmedById = new Map([
@@ -60,9 +100,14 @@ export async function POST(request: NextRequest) {
 
       const deposit = confirmedById.get(payment.lnmDepositId);
       if (!deposit) {
-        // Mark old pending payments (>2 hours) as expired
+        // ── Expiry check ────────────────────────────────────────────────
+        // Only expire if the RELEVANT LNM client was reachable this tick.
+        // If it wasn't, we can't know whether the deposit is settled —
+        // leave it pending until the next tick when the client is back.
+        const clientAvailable = payment.tier === 'pool_donation' ? botOk : opsOk;
         const ageMs = Date.now() - payment.createdAt.getTime();
-        if (ageMs > 2 * 60 * 60 * 1000) {
+
+        if (clientAvailable && ageMs > EXPIRY_MS) {
           await prisma.subscriptionPayment.update({
             where: { id: payment.id },
             data:  { status: 'expired' },
@@ -105,7 +150,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ confirmed, expired, checked: pending.length });
+    return NextResponse.json({
+      confirmed,
+      expired,
+      checked: pending.length,
+      lnm: { opsOk, botOk },
+    });
   } catch (error) {
     console.error('Payment confirm error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
