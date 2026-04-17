@@ -18,11 +18,22 @@ interface SpiralGaugeData {
 }
 
 // ── SVG constants (must match route) ─────────────────────────────────────────
-const SIZE      = 360;
-const CX        = 180;
-const CY        = 180;
-const R_CENTER  = 42;
-const SPIRAL_SW = 2.5;
+// SIZE is the internal coordinate space — it MUST stay 360 to match
+// /api/data/spiral-gauge's baked-in SPIRAL_CX/CY=170 and R_OUTER=132.
+// DISPLAY_SIZE is the rendered pixel size — bump this to grow the chart
+// visually without touching server geometry.
+const SIZE         = 360;
+const DISPLAY_SIZE = 420;
+const CX           = 180;
+const CY           = 180;
+const R_CENTER     = 42;
+const SPIRAL_SW    = 2.5;
+
+// Refetch the spiral once a day. The server route caches 1h internally and
+// the underlying price data only moves once per daily close, so a 24h
+// client poll is the right cadence. Visibility-change handler catches
+// laptops opened after a long sleep.
+const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const FONT_MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -47,10 +58,29 @@ export function HeroGauge({ composite, phase, phaseColor, confidence }: Props) {
   const [spiral, setSpiral] = useState<SpiralGaugeData | null>(null);
 
   useEffect(() => {
-    fetch('/api/data/spiral-gauge')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setSpiral(d))
-      .catch(() => {});
+    let cancelled = false;
+    async function load() {
+      try {
+        // `cache: 'no-store'` so the 24h poll actually reaches the server
+        // after a deploy. The route has its own 1h in-memory cache, so
+        // bypassing the browser cache doesn't add real upstream load.
+        const r = await fetch('/api/data/spiral-gauge', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled) setSpiral(d);
+      } catch { /* network blip — next tick retries */ }
+    }
+    load();
+    const interval = setInterval(load, REFRESH_INTERVAL_MS);
+    function onVisible() {
+      if (document.visibilityState === 'visible') load();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Theme colours
@@ -77,7 +107,7 @@ export function HeroGauge({ composite, phase, phaseColor, confidence }: Props) {
 
       {/* ── SVG ───────────────────────────────────────────────────────── */}
       <svg
-        width={SIZE} height={SIZE}
+        width={DISPLAY_SIZE} height={DISPLAY_SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         style={{ display: 'block', overflow: 'visible' }}
       >

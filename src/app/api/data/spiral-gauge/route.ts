@@ -106,8 +106,11 @@ const CACHE_TTL = 3_600_000;
 
 // ── Computation ───────────────────────────────────────────────────────────────
 async function compute(): Promise<SpiralGaugeData> {
-  // Full history from DB (CSV-seeded, gap-filled to today via CoinGecko)
-  const all = await fetchCoinGeckoHistory();
+  // Full history back to 2010 — the spiral needs all 15+ years so the
+  // log-radius mapping produces multiple cycle loops. Without `full: true`
+  // the helper returns only the trailing 1500 days, which compresses
+  // everything to one near-circular ring.
+  const all = await fetchCoinGeckoHistory({ full: true });
   if (!all.length) throw new Error('No price data');
 
   // Weekly sample

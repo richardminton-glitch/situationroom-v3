@@ -134,13 +134,27 @@ async function backfillDb(rows: DayPrice[], existingDates: Set<string>): Promise
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+interface FetchOpts {
+  /** Return the full available history (all CSV/DB rows, ~5700+ days back
+   *  to 2010) instead of truncating to the last FETCH_DAYS. Needed by the
+   *  spiral gauge, which must plot multiple 4-year cycles for the
+   *  log-radius to spread into actual spiral loops. DCA engine and other
+   *  trailing-window consumers should leave this off. */
+  full?: boolean;
+}
+
 /**
- * Return up to FETCH_DAYS of daily BTC/USD prices, sorted ascending.
+ * Return daily BTC/USD prices, sorted ascending.
  *
- * Fast path: DB has ≥ FETCH_DAYS rows → return DB data.
+ * Fast path: DB has ≥ FETCH_DAYS rows → return DB data (full history).
  * Slow path (first run): read CSV + gap-fill with CoinGecko, backfill DB.
+ *
+ * By default the slow path truncates to the trailing FETCH_DAYS (enough for
+ * the DCA engine). Pass `{ full: true }` to get the full merged set.
  */
-export async function fetchCoinGeckoHistory(): Promise<DayPrice[]> {
+export async function fetchCoinGeckoHistory(opts: FetchOpts = {}): Promise<DayPrice[]> {
+  const returnFull = opts.full === true;
+
   // ── Fast path: DB is fully seeded ─────────────────────────────────────────
   const dbRows      = await readFromDb();
   const existingSet = new Set(dbRows.map(r => r.date));
@@ -180,6 +194,5 @@ export async function fetchCoinGeckoHistory(): Promise<DayPrice[]> {
   // Backfill DB (async, non-fatal) — after this the fast path will be taken
   backfillDb(allRows, existingSet).catch(() => { /* non-fatal */ });
 
-  // Return last FETCH_DAYS rows
-  return allRows.slice(-FETCH_DAYS);
+  return returnFull ? allRows : allRows.slice(-FETCH_DAYS);
 }
