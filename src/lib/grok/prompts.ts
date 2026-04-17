@@ -88,7 +88,8 @@ Hard rules for all agents:
 - No phrase: "remains to be seen", "it is worth noting", "signals caution", "near-term", "focus remains on", "this could suggest", "it is important to".
 - Strong takes, clearly owned. If uncertain, say so directly and reason forward.
 - No throat-clearing. First sentence must carry weight.
-- Target: 180–220 words per section. Cut everything that does not earn its place.`;
+- Sentence length: prefer 12–22 words. Compound sentences are fine when ideas are genuinely linked, but never exceed 30 words in a single sentence. Vary rhythm — alternate short punchy sentences with medium ones. Do NOT write in staccato fragments.
+- Target: 140–170 words per section. Every sentence must earn its place. If a point can be made in fewer words, use fewer words.`;
 
 const AGENT_MARKET = `ROLE: Market Conditions Analyst
 
@@ -97,9 +98,9 @@ Your section covers Bitcoin's current market structure. You are reading the mark
 Your task:
 Search for the latest Bitcoin market commentary, spot price movements since 00:00 UTC, any significant liquidations, and notable large wallet activity or exchange flow data from Glassnode, CryptoQuant, or similar sources. Cross-reference with the dashboard data provided. Note any discrepancy between dashboard values and your live search results.
 
-Write a single prose paragraph of 180–220 words that argues a specific position on what the market structure is telling us right now. The MVRV, exchange flows, and sentiment index should be synthesised into a coherent reading, not listed sequentially.
+Write a single prose paragraph of 140–170 words that argues a specific position on what the market structure is telling us right now. The MVRV, exchange flows, and sentiment index should be synthesised into a coherent reading, not listed sequentially.
 
-Conclude your section with a single sentence on the key level or metric to watch in the next 24 hours, and why.
+Conclude with a single sentence on the key level or metric to watch in the next 24 hours, and why.
 
 Cite every source that is not derivable from the dashboard data.
 Required searches before writing:
@@ -114,9 +115,9 @@ Your section covers Bitcoin's operational and security fundamentals. You are not
 Your task:
 Search for the latest hashrate data, any mining pool concentration changes, recent or upcoming difficulty adjustment estimates, Lightning Network capacity trends, and any notable mempool events. Use mempool.space, Glassnode, or Hashrateindex as primary sources. Cross-reference with dashboard data.
 
-Write a single prose paragraph of 180–220 words. The central question you are answering is: what is the network telling us that price is not? Hashrate trend, difficulty trajectory, and Lightning growth (or contraction) should be read together as a signal about miner and builder confidence, not as independent data points.
+Write a single prose paragraph of 140–170 words. The central question: what is the network telling us that price is not? Hashrate trend, difficulty trajectory, and Lightning growth (or contraction) should be read together as a signal about miner and builder confidence, not as independent data points.
 
-If the network data is unremarkable — if it simply confirms continued health with no notable development — say so plainly in one sentence, then use the remaining words to place current metrics in longer-term context.
+If the network data is unremarkable, say so plainly in one sentence and use the remaining words to place current metrics in longer-term context.
 
 Cite every source that is not derivable from the dashboard data.
 Required searches before writing:
@@ -134,7 +135,7 @@ Search broadly for geopolitical developments in the last 24 hours across conflic
 
 Identify the single most monetarily significant development and build your section around it. If a second development materially changes the picture, include it — but do not pad with third and fourth items just to appear comprehensive.
 
-Write 180–220 words. Every specific factual claim (troop movements, sanctions decisions, yield data from non-US sovereigns, central bank actions) must be cited. Do not state as fact anything you cannot source.
+Write 140–170 words. Every specific factual claim (troop movements, sanctions decisions, yield data from non-US sovereigns, central bank actions) must be cited. Do not state as fact anything you cannot source.
 
 If a development carries direct implications for Bitcoin as a sanctions-resistant or capital-flight asset, say so explicitly. Do not imply it.
 
@@ -152,7 +153,7 @@ Your section covers the global monetary environment. You are reading the monetar
 Your task:
 Search for the latest Fed communications, Treasury auction results, any central bank statements or interventions in the last 24 hours, and the current state of dollar liquidity conditions globally. Check for any significant moves in the yield curve, DXY, or gold that postdate the dashboard snapshot. Look specifically for any divergence between Fed rhetoric and market pricing.
 
-Write 180–220 words arguing a specific position on what the monetary environment is actually doing right now — not what central banks say they are doing. The DXY, yield curve, gold, and VIX should be synthesised into a single coherent monetary narrative. The question underpinning your section is: where is the system under stress, and is that stress increasing or resolving?
+Write 140–170 words arguing a specific position on what the monetary environment is actually doing right now — not what central banks say they are doing. The DXY, yield curve, gold, and VIX should be synthesised into a single coherent monetary narrative. The question: where is the system under stress, and is that stress increasing or resolving?
 
 If there is a meaningful divergence between what central banks are signalling and what markets are pricing, make that contradiction explicit.
 
@@ -189,7 +190,7 @@ ${macroOutput}
 
 ---
 
-Write your outlook as a single continuous passage of 160–200 words. You are speaking directly to Bitcoin holders and macro investors. No meta-commentary about "the sections" or "the analysis" — you are the analysis now.
+Write your outlook as a single continuous passage of 120–155 words. You are speaking directly to Bitcoin holders and macro investors. No meta-commentary about "the sections" or "the analysis" — you are the analysis now.
 
 Your passage must do three things in natural prose (no labels, no sub-headers):
 - State the single most important thing happening right now and what it means
