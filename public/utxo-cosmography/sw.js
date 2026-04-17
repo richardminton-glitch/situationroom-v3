@@ -14,8 +14,12 @@
 //   v3: iframe-side self-sync of parent theme (data-theme propagated
 //       in <head> before first paint via parent.document access)
 //   v4: legend SVGs → currentColor, remaining inline hex → var()
+//   v5: bypass /api/* (mempool proxy) so cache-first logic doesn't
+//       freeze live chain data client-side
+//   v6: floating canvas insets (fee oracle, mempool, hash rate) read
+//       --c-overlay-bg so they darken with the rest of the page
 
-const CACHE_NAME = 'utxo-cosmos-v4';
+const CACHE_NAME = 'utxo-cosmos-v6';
 
 // Scope-relative paths — the SW lives at /utxo-cosmography/sw.js so its
 // scope is /utxo-cosmography/ and these resolve correctly inside it.
@@ -48,6 +52,11 @@ self.addEventListener('fetch', event => {
   // External requests (mempool.space API etc.) go straight to network —
   // the app already has its own offline fallback for those.
   if (url.origin !== self.location.origin) return;
+
+  // Same-origin API calls (e.g. /api/mempool/* proxy) must never be
+  // cached by the SW — block data is cached server-side with the right
+  // TTLs, and client-side caching would pin stale tip/mempool/fee data.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Only handle GETs.
   if (event.request.method !== 'GET') return;

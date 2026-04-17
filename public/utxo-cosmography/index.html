@@ -570,7 +570,10 @@
   // ============================================================
 
   // ---- API CONFIG ----
-  const API_BASE  = 'https://mempool.space/api';
+  // Proxy path (served by src/app/api/mempool/[...path]/route.ts) —
+  // adds caching + concurrency gating so the 1000+ parent-tx lookups
+  // per block load don't trip mempool.space's 429 per-IP rate limit.
+  const API_BASE  = '/api/mempool';
   const MAX_UTXOS = 1500;  // cap for smooth rendering
 
   // ---- NAVIGATION STATE ----
@@ -1106,6 +1109,10 @@
       dust:   cs.getPropertyValue('--c-ink-dust').trim()   || '#4a4a4a',
       gridRgb: cs.getPropertyValue('--c-ink-grid').trim()  || '18,12,4',
       bg:     cs.getPropertyValue('--c-bg').trim()         || '#f8f1e3',
+      // Opaque-over-canvas panel fill for floating insets (fee oracle,
+      // mempool, hash rate). Uses --c-overlay-bg so the panels adopt the
+      // dark palette alongside everything else instead of staying parchment.
+      overlayBg: cs.getPropertyValue('--c-overlay-bg').trim() || 'rgba(248,241,227,0.94)',
     };
   }
   function valueToInkStyle(valueSats) {
@@ -1594,7 +1601,7 @@
   const _iInk = a => `rgba(${getInkPalette().gridRgb},${a})`;
 
   function drawAtlasInset(x, y, w, h, label) {
-    ctx.fillStyle = 'rgba(248,241,227,0.94)';
+    ctx.fillStyle = getInkPalette().overlayBg;
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = _iInk(0.40); ctx.lineWidth = 0.9;
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
