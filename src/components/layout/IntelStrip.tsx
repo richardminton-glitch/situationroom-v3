@@ -140,7 +140,9 @@ export function IntelStrip() {
     return () => clearInterval(i);
   }, []);
 
-  // Funding
+  // Funding — polls every 5 min, plus an immediate re-fetch whenever a
+  // payment is confirmed (SubscriptionModal / DonationModal / PoolDonateModal
+  // dispatch 'sr:funding-refresh' on the window).
   useEffect(() => {
     async function load() {
       try {
@@ -153,7 +155,12 @@ export function IntelStrip() {
     }
     load();
     const i = setInterval(load, 300_000);
-    return () => clearInterval(i);
+    const onPayment = () => load();
+    window.addEventListener('sr:funding-refresh', onPayment);
+    return () => {
+      clearInterval(i);
+      window.removeEventListener('sr:funding-refresh', onPayment);
+    };
   }, []);
 
   // Viewers — heartbeat POST every 30s

@@ -94,6 +94,9 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
         if (status === 'confirmed') {
           await refresh();
           setStep('success');
+          // Nudge the funding bar to re-fetch so the new payment
+          // reflects immediately (IntelStrip listens for this event).
+          window.dispatchEvent(new Event('sr:funding-refresh'));
           onSuccess?.(selectedTier);
         }
       } catch { /* silently retry */ }

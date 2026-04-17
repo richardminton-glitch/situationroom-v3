@@ -34,6 +34,7 @@ export function DonationModal({ onClose }: DonationModalProps) {
         if (data.found) {
           setReceivedAmount(data.amount ?? 0);
           setReceived(true);
+          window.dispatchEvent(new Event('sr:funding-refresh'));
         }
       } catch { /* retry */ }
     };
