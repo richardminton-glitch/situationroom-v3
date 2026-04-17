@@ -22,7 +22,7 @@ interface CycleGaugeResponse {
   confidence: ConfidenceBand;
   timestamp: string;
 }
-import { IndicatorGrid }      from './IndicatorGrid';
+import { IndicatorCard }      from './IndicatorGrid';
 import { ConfidenceDisplay }  from './ConfidenceDisplay';
 import { HistoricalAnalogues } from './HistoricalAnalogues';
 import { DrawdownChart }       from './DrawdownChart';
@@ -138,13 +138,17 @@ export function CycleGaugePage({ data, loading, error }: Props) {
             confidence={data.confidence}
           />
 
-          {/* Right: signal breakdown + confidence */}
+          {/* Right: 5 signals + confidence render together as a 2×3 grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <p style={{ fontSize: 9, letterSpacing: '0.14em', color: textMuted, margin: 0, textTransform: 'uppercase' }}>
               Signal Breakdown
             </p>
-            <IndicatorGrid indicators={data.indicators} columns="repeat(2, 1fr)" />
-            <ConfidenceDisplay confidence={data.confidence} indicators={data.indicators} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              {data.indicators.map(ind => (
+                <IndicatorCard key={ind.key} indicator={ind} />
+              ))}
+              <ConfidenceDisplay confidence={data.confidence} indicators={data.indicators} />
+            </div>
           </div>
         </div>
 

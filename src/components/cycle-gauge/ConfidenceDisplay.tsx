@@ -35,48 +35,56 @@ export function ConfidenceDisplay({ confidence, indicators }: Props) {
   const dirDot     = useDirDot();
   const color      = levelColor(confidence.level);
 
+  // Styled to match IndicatorCard so it sits naturally as a 6th cell
+  // inside the same grid — gives a clean 2×3 layout against the spiral.
   return (
     <div style={{
-      background: 'var(--bg-card)',
-      border:     '1px solid var(--border-subtle)',
-      padding:    '12px 16px',
-      display:    'flex',
-      alignItems: 'center',
-      gap:        16,
-      flexWrap:   'wrap',
-      fontFamily: FONT,
+      borderLeft:      `3px solid ${color}`,
+      background:      'var(--bg-card)',
+      border:          '1px solid var(--border-subtle)',
+      borderLeftColor: color,
+      padding:         '14px 16px',
+      display:         'flex',
+      flexDirection:   'column',
+      gap:             6,
+      fontFamily:      FONT,
     }}>
-      {/* Label + level */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Row 1: section label + agreement count (mirrors "name + raw value") */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 9, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
           Confidence
         </span>
-        <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.1em' }}>
-          {confidence.level.toUpperCase()}
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+          {confidence.agreementCount}/{indicators.length} {confidence.dominantDirection}
         </span>
       </div>
 
-      {/* Signal direction dots */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {indicators.map(ind => (
-          <div
-            key={ind.key}
-            title={`${ind.name}: ${ind.direction}`}
-            style={{
-              width:        8,
-              height:       8,
-              borderRadius: '50%',
-              background:   dirDot(ind.direction),
-              flexShrink:   0,
-            }}
-          />
-        ))}
+      {/* Row 2: level label (mirrors "zone label") */}
+      <div style={{ fontSize: 13, fontWeight: 600, color, letterSpacing: '0.04em' }}>
+        {confidence.level}
       </div>
 
-      {/* Agreement text */}
-      <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-        {confidence.agreementCount} of {indicators.length} indicators {confidence.dominantDirection}
-      </span>
+      {/* Row 3: direction dots (mirrors "interpretation + score") */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.5, flex: 1 }}>
+          {indicators.length} signals aligned by direction
+        </span>
+        <div style={{ display: 'flex', gap: 5, flexShrink: 0, paddingBottom: 3 }}>
+          {indicators.map(ind => (
+            <div
+              key={ind.key}
+              title={`${ind.name}: ${ind.direction}`}
+              style={{
+                width:        10,
+                height:       10,
+                borderRadius: '50%',
+                background:   dirDot(ind.direction),
+                flexShrink:   0,
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

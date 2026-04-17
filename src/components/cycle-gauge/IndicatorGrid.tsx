@@ -20,7 +20,7 @@ function useDirColor() {
   };
 }
 
-function IndicatorCard({ indicator: ind }: { indicator: CycleIndicatorResult }) {
+export function IndicatorCard({ indicator: ind }: { indicator: CycleIndicatorResult }) {
   const dirColor = useDirColor();
   const color    = dirColor(ind.direction);
 
