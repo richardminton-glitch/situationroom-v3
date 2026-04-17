@@ -19,6 +19,17 @@
  *   grok-4-1-fast-non-reasoning:           $0.20/M in, $0.50/M out
  *   grok-3:                                $3.00/M in, $15.00/M out
  *   grok-3-mini-fast:                      ~$0.10/M in, $0.40/M out
+ *
+ * Calibration (2026-04-17):
+ *   xAI billing dashboard reports ~$1.37/day sustained over the last 3
+ *   days (~$41/month). The original row-by-row model summed to ~$0.68/day,
+ *   under-stating actuals by ~2.03×. Every row's est7d/est30d figures
+ *   below are the original best-estimates multiplied by 2.027 to match
+ *   observed spend. callsPerDay and costPerCall are kept as illustrative
+ *   structural numbers — the scale factor absorbs what's almost certainly
+ *   a mix of larger prompt/response sizes and higher on-demand call
+ *   volume than the initial model anticipated. Recalibrate from this file
+ *   whenever the xAI daily figure drifts by more than ~15%.
  */
 
 export interface AiUsageRow {
@@ -49,8 +60,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 6,
     // (3000 × $3/M) + (400 × $15/M) + ~3 web searches × $0.005 = $0.030
     costPerCall: 0.030,
-    est7dCost: 1.26,
-    est30dCost: 5.40,
+    est7dCost: 2.55,
+    est30dCost: 10.95,
   },
   {
     feature: 'VIP Briefings',
@@ -60,8 +71,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 250,
     callsPerDay: 10,  // ~5 VIP users × 2 calls
     costPerCall: 0.0005,
-    est7dCost: 0.04,
-    est30dCost: 0.15,
+    est7dCost: 0.08,
+    est30dCost: 0.30,
   },
   {
     feature: 'RSS Classifier',
@@ -72,8 +83,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 75,  // 50–100 depending on feed velocity
     // (1250 × $0.20/M) + (175 × $0.50/M) = $0.0003
     costPerCall: 0.0003,
-    est7dCost: 0.16,
-    est30dCost: 0.68,
+    est7dCost: 0.32,
+    est30dCost: 1.38,
   },
   {
     feature: 'Signal Annotation',
@@ -83,8 +94,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 125,
     callsPerDay: 10,
     costPerCall: 0.0002,
-    est7dCost: 0.01,
-    est30dCost: 0.06,
+    est7dCost: 0.02,
+    est30dCost: 0.12,
   },
   {
     feature: 'Signal Interpreter',
@@ -94,8 +105,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 750,
     callsPerDay: 5,
     costPerCall: 0.0009,
-    est7dCost: 0.03,
-    est30dCost: 0.14,
+    est7dCost: 0.06,
+    est30dCost: 0.28,
   },
   {
     feature: 'Cohort Analysis',
@@ -105,8 +116,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 430,
     callsPerDay: 4,
     costPerCall: 0.0006,
-    est7dCost: 0.02,
-    est30dCost: 0.07,
+    est7dCost: 0.04,
+    est30dCost: 0.14,
   },
   {
     feature: 'Bitcoin Argument',
@@ -116,8 +127,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 500,
     callsPerDay: 2,
     costPerCall: 0.0007,
-    est7dCost: 0.01,
-    est30dCost: 0.04,
+    est7dCost: 0.02,
+    est30dCost: 0.08,
   },
   {
     feature: 'Pattern Historian',
@@ -127,8 +138,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 430,
     callsPerDay: 3,
     costPerCall: 0.0005,
-    est7dCost: 0.01,
-    est30dCost: 0.05,
+    est7dCost: 0.02,
+    est30dCost: 0.10,
   },
   {
     feature: 'Briefing Search',
@@ -138,8 +149,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 1_100,
     callsPerDay: 2,
     costPerCall: 0.0026,
-    est7dCost: 0.04,
-    est30dCost: 0.16,
+    est7dCost: 0.08,
+    est30dCost: 0.32,
   },
   {
     feature: 'Briefing Retrospective',
@@ -149,8 +160,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 450,
     callsPerDay: 3,
     costPerCall: 0.0007,
-    est7dCost: 0.02,
-    est30dCost: 0.06,
+    est7dCost: 0.04,
+    est30dCost: 0.12,
   },
   {
     feature: 'Threat Analysis',
@@ -160,8 +171,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 175,
     callsPerDay: 15,
     costPerCall: 0.0003,
-    est7dCost: 0.03,
-    est30dCost: 0.14,
+    est7dCost: 0.06,
+    est30dCost: 0.28,
   },
   {
     feature: 'On-Chain Analysis (Members)',
@@ -172,8 +183,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 6,  // ~10 members × ~0.6 calls/day (12h window)
     // (2500 × $3/M) + (900 × $15/M) = $0.0075 + $0.0135 = $0.021
     costPerCall: 0.021,
-    est7dCost: 0.88,
-    est30dCost: 3.78,
+    est7dCost: 1.78,
+    est30dCost: 7.66,
   },
   {
     feature: 'On-Chain Analysis (VIP)',
@@ -184,8 +195,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
     // (3000 × $3/M) + (1400 × $15/M) = $0.009 + $0.021 = $0.030
     costPerCall: 0.030,
-    est7dCost: 0.84,
-    est30dCost: 3.60,
+    est7dCost: 1.70,
+    est30dCost: 7.30,
   },
   {
     feature: 'Macro Analysis (General)',
@@ -197,8 +208,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     // grok-3-mini-fast: ~$0.10/M in, $0.40/M out
     // (2000 × $0.10/M) + (500 × $0.40/M) = $0.0002 + $0.0002 = $0.0004
     costPerCall: 0.0004,
-    est7dCost: 0.003,
-    est30dCost: 0.01,
+    est7dCost: 0.006,
+    est30dCost: 0.02,
   },
   {
     feature: 'Macro Analysis (Members)',
@@ -209,8 +220,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 2,  // 2 per 12h window (shared cache)
     // (3000 × $3/M) + (900 × $15/M) = $0.009 + $0.0135 = $0.023
     costPerCall: 0.023,
-    est7dCost: 0.32,
-    est30dCost: 1.38,
+    est7dCost: 0.65,
+    est30dCost: 2.80,
   },
   {
     feature: 'Macro Analysis (VIP)',
@@ -221,8 +232,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
     // (3500 × $3/M) + (1400 × $15/M) = $0.0105 + $0.021 = $0.032
     costPerCall: 0.032,
-    est7dCost: 0.90,
-    est30dCost: 3.84,
+    est7dCost: 1.82,
+    est30dCost: 7.78,
   },
   {
     feature: 'Trading AI Engine',
@@ -233,8 +244,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 24,  // 24 cycles/day × 1 Grok call per cycle
     // (2000 × $0.20/M) + (1200 × $0.50/M) = $0.0004 + $0.0006 = $0.001
     costPerCall: 0.001,
-    est7dCost: 0.17,
-    est30dCost: 0.72,
+    est7dCost: 0.34,
+    est30dCost: 1.46,
   },
 ];
 
