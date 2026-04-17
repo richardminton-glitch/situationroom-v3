@@ -22,7 +22,6 @@ import { useOpsRoom } from '@/hooks/useOpsRoom';
 import { useAgentEvents } from '@/hooks/useAgentEvents';
 import { useThreatScore } from '@/hooks/useThreatScore';
 import { useAgentLog } from '@/hooks/useAgentLog';
-import TopBar from './TopBar';
 import NostrChatSlot from './NostrChatSlot';
 import AgentLogPanel from './AgentLogPanel';
 import BtcInfoPanel from './BtcInfoPanel';
@@ -85,15 +84,6 @@ export default function MembersRoom() {
           color: 'var(--text-primary)',
         }}
       >
-        {/* ── Top bar ── */}
-        <TopBar
-          threatState={threat.state}
-          threatScore={threat.score}
-          connected={connected}
-          operatorCount={data.operatorCount}
-          eventCount={events.length}
-        />
-
         {/* ── Main content ── */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* ── Left column ── */}
