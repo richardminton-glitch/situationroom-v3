@@ -6,7 +6,7 @@
  */
 
 import type { AgentDomain, AgentEvent } from './agentDomains';
-import { classifyTier, TIER_IMPACT } from './severityTiers';
+import { classifyTier, matchesTerm, TIER_IMPACT } from './severityTiers';
 
 interface ClassifiedArticleInput {
   title: string;
@@ -100,10 +100,14 @@ function matchDomains(headline: string, category: string): AgentDomain[] {
   const baseDomain = CATEGORY_DOMAIN_MAP[category];
   if (baseDomain) matched.add(baseDomain);
 
-  // Keyword matching across all domains
+  // Keyword matching across all domains.
+  // Uses word-boundary matching so short keywords like "ban", "war", "arms",
+  // "iran" don't phantom-match on "Lebanon", "reward", "farms", "hiring".
+  // Previously used substring includes(), which was hitting 3+ domains on
+  // benign stories and pinning the threat score via Tier-4 auto-promotion.
   for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORD_MAP)) {
     for (const kw of keywords) {
-      if (lower.includes(kw)) {
+      if (matchesTerm(lower, kw)) {
         matched.add(domain as AgentDomain);
         break;
       }

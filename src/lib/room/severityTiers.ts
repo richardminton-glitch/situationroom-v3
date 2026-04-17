@@ -98,7 +98,7 @@ const TIER_4_TERMS = [
  */
 const termRegexCache = new Map<string, RegExp>();
 
-function matchesTerm(lower: string, term: string): boolean {
+export function matchesTerm(lower: string, term: string): boolean {
   let re = termRegexCache.get(term);
   if (!re) {
     re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
@@ -121,13 +121,16 @@ export function classifyTier(
   headline: string,
   _relevance: number,
   confidence: number,
-  domainCount: number,
+  _domainCount: number,
 ): 1 | 2 | 3 | 4 {
   const lower = headline.toLowerCase();
 
-  // Tier 4: extreme terms OR multi-domain convergence
+  // Tier 4: reserved for explicit shock vocabulary only. Previously we also
+  // promoted on domainCount >= 3 ("multi-domain convergence"), but with
+  // the substring-based domain matcher in eventMapper this fired on benign
+  // stories (Netflix retirements, UK petrol prices). Topical breadth ≠
+  // severity — leave Tier 4 to the TIER_4_TERMS list.
   if (TIER_4_TERMS.some((t) => matchesTerm(lower, t))) return 4;
-  if (domainCount >= 3) return 4;
 
   // Tier 3: high-impact terms with HIGH classifier confidence.
   // Confidence gate at 0.7 prevents editorial "crisis language" from
