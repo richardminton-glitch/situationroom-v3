@@ -9,18 +9,17 @@ type InlineNode =
   | { type: 'citation'; n: string; url: string }
   | { type: 'link';     label: string; url: string };
 
-/**
- * Clean model artifacts from section text:
- *  - Strip "(198 words)" word counts (anywhere in text)
- *  - Strip trailing "Sources integrated: [Name](url), ..." blocks
- *  - Strip trailing "Sources: [Name](url), ..." blocks
- */
+// Grok sometimes echoes the section name as a leading label before the prose
+// (e.g. "Market Conditions Large holders distribute..."). The section header
+// is already rendered by the parent, so strip any known label at the very start.
+const LEADING_SECTION_LABEL =
+  /^\s*(?:[IVX]+\.\s*)?(?:Market Conditions|Network Health|Geopolitical Watch|Macro Pulse|Outlook)\s*[:\-–—]?\s+/i;
+
 function cleanModelArtifacts(text: string): string {
   let cleaned = text;
-  // Remove word count parenthetical anywhere
   cleaned = cleaned.replace(/\s*\(\d+\s+words?\)/gi, '');
-  // Remove trailing "Sources integrated:" / "Sources:" / "Source:" block
   cleaned = cleaned.replace(/\s*Sources?\s*(?:integrated|cited|used)?:\s*\[.+$/is, '');
+  cleaned = cleaned.replace(LEADING_SECTION_LABEL, '');
   return cleaned.trim();
 }
 

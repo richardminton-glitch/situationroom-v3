@@ -32,15 +32,18 @@ type InlineNode =
   | { type: 'citation'; n: string; url: string }
   | { type: 'link';     label: string; url: string };
 
+// Grok sometimes echoes the section name as a leading label before the prose
+// (e.g. "Market Conditions Large holders distribute..."). The section header
+// is already rendered by the parent, so strip any known label at the very start.
+const LEADING_SECTION_LABEL =
+  /^\s*(?:[IVX]+\.\s*)?(?:Market Conditions|Network Health|Geopolitical Watch|Macro Pulse|Outlook)\s*[:\-–—]?\s+/i;
+
 function cleanModelArtifacts(text: string): string {
   let cleaned = text;
-  // "(198 words)" anywhere
   cleaned = cleaned.replace(/\s*\(\d+\s+words?\)/gi, '');
-  // Trailing "Sources: [...]" / "Sources integrated: [...]" block
   cleaned = cleaned.replace(/\s*Sources?\s*(?:integrated|cited|used)?:\s*\[.+$/is, '');
-  // Strip all ** — briefing prose should not render bold (Grok uses it
-  // decoratively for lead sentences, which looks wrong in a prose briefing).
   cleaned = cleaned.replace(/\*\*/g, '');
+  cleaned = cleaned.replace(LEADING_SECTION_LABEL, '');
   return cleaned.trim();
 }
 
