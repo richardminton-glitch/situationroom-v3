@@ -16,8 +16,9 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CaretLeft, CaretRight, List, X } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, X } from '@phosphor-icons/react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { SECTION_RAIL_OPEN_EVENT } from './sectionRailBus';
 
 // ── Collapsed context ─────────────────────────────────────────────────────
 const RailCollapsedCtx = createContext<boolean>(false);
@@ -35,7 +36,6 @@ interface SectionRailFrameProps {
 }
 
 const STORAGE_PREFIX = 'sr-rail-collapsed-';
-const MOBILE_TRIGGER_OFFSET = 56; // leaves room for the TopBar hamburger above us
 
 export function SectionRailFrame({ sectionKey, title, children }: SectionRailFrameProps) {
   const isMobile = useIsMobile();
@@ -56,30 +56,19 @@ export function SectionRailFrame({ sectionKey, title, children }: SectionRailFra
     sessionStorage.setItem(`${STORAGE_PREFIX}${sectionKey}`, collapsed ? '1' : '0');
   }, [collapsed, sectionKey, mounted]);
 
+  // Listen for TopBar's "open section rail" trigger (mobile only — replaces
+  // the old floating hamburger so we don't have two burgers on screen).
+  useEffect(() => {
+    const handler = () => setDrawerOpen(true);
+    window.addEventListener(SECTION_RAIL_OPEN_EVENT, handler);
+    return () => window.removeEventListener(SECTION_RAIL_OPEN_EVENT, handler);
+  }, []);
+
   // On mobile, force expanded inside the drawer; collapsed state is desktop-only
   const effectiveCollapsed = isMobile ? false : collapsed;
 
   return (
     <RailCollapsedCtx.Provider value={effectiveCollapsed}>
-      {/* Mobile trigger — floating button below the TopBar's own controls */}
-      {isMobile && !drawerOpen && (
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="fixed left-3 z-40 flex items-center justify-center rounded"
-          style={{
-            top: `${MOBILE_TRIGGER_OFFSET}px`,
-            width: '36px',
-            height: '36px',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-primary)',
-            color: 'var(--text-primary)',
-          }}
-          aria-label={`Open ${title} menu`}
-        >
-          <List size={16} weight="bold" />
-        </button>
-      )}
-
       {/* Mobile backdrop */}
       {isMobile && drawerOpen && (
         <div

@@ -31,6 +31,7 @@ import {
 } from '@phosphor-icons/react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { UserMenu } from './UserMenu';
+import { openSectionRail } from './sectionRailBus';
 
 interface Destination {
   label:    string;
@@ -38,6 +39,9 @@ interface Destination {
   /** Pathname is "active" when it strictly equals href OR starts with one of these prefixes. */
   matches:  (path: string) => boolean;
   icon:     React.ReactNode;
+  /** True when this destination owns a SectionRail — tapping while already
+   *  on this section should open the rail drawer, not re-navigate. */
+  hasRail?: boolean;
 }
 
 const DESTINATIONS: Destination[] = [
@@ -46,6 +50,7 @@ const DESTINATIONS: Destination[] = [
     href:    '/',
     matches: (p) => p === '/',
     icon:    <SquaresFour size={14} />,
+    hasRail: true,
   },
   {
     label:   'Briefings',
@@ -58,12 +63,14 @@ const DESTINATIONS: Destination[] = [
     href:    '/tools/dca-signal',
     matches: (p) => p.startsWith('/tools'),
     icon:    <Wrench size={14} />,
+    hasRail: true,
   },
   {
     label:   'Rooms',
     href:    '/rooms/members',
     matches: (p) => p.startsWith('/rooms'),
     icon:    <Crosshair size={14} />,
+    hasRail: true,
   },
   {
     label:   'Support',
@@ -270,20 +277,48 @@ export function TopBar({
           >
             {DESTINATIONS.map((dest) => {
               const active = dest.matches(pathname);
+              const rowStyle = {
+                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                backgroundColor: active ? 'var(--bg-card)' : 'transparent',
+                borderColor: 'var(--border-subtle)',
+                fontSize: '13px',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase' as const,
+                fontFamily: 'var(--font-mono)',
+              };
+
+              // On mobile, if the user is already on a section that owns a
+              // rail, tapping that destination opens the rail drawer
+              // (sub-nav) instead of being a no-op nav to the same URL.
+              if (active && dest.hasRail) {
+                return (
+                  <button
+                    key={dest.href}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openSectionRail();
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 border-b transition-colors w-full text-left"
+                    style={rowStyle}
+                  >
+                    <span>{dest.icon}</span>
+                    <span>{dest.label}</span>
+                    <span
+                      className="ml-auto"
+                      style={{ fontSize: '10px', opacity: 0.6 }}
+                    >
+                      Section menu →
+                    </span>
+                  </button>
+                );
+              }
+
               return (
                 <Link
                   key={dest.href}
                   href={dest.href}
                   className="flex items-center gap-3 px-4 py-3 border-b transition-colors"
-                  style={{
-                    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    backgroundColor: active ? 'var(--bg-card)' : 'transparent',
-                    borderColor: 'var(--border-subtle)',
-                    fontSize: '13px',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    fontFamily: 'var(--font-mono)',
-                  }}
+                  style={rowStyle}
                 >
                   <span>{dest.icon}</span>
                   <span>{dest.label}</span>

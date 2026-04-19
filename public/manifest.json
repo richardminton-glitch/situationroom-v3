@@ -3,7 +3,7 @@
   "short_name": "SitRoom",
   "description": "Bitcoin & Global Macro Intelligence",
   "start_url": "/",
-  "display": "standalone",
+  "display": "minimal-ui",
   "background_color": "#3e2c1a",
   "theme_color": "#3e2c1a",
   "orientation": "portrait",
