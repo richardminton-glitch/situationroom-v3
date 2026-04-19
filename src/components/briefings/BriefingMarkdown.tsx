@@ -15,8 +15,14 @@ type InlineNode =
 const LEADING_SECTION_LABEL =
   /^\s*(?:[IVX]+\.\s*)?(?:Market Conditions|Network Health|Geopolitical Watch|Macro Pulse|Outlook)\s*[:\-–—]?\s+/i;
 
+// Trailing self-referential meta parenthetical — e.g.
+// "(152 words)" or "(The paragraph above is 152 words. …)"
+const TRAILING_META_PAREN =
+  /\s*\([^()]*(?:\d+\s+words?|paragraph above|word count)[^()]*\)\s*$/i;
+
 function cleanModelArtifacts(text: string): string {
   let cleaned = text;
+  cleaned = cleaned.replace(TRAILING_META_PAREN, '');
   cleaned = cleaned.replace(/\s*\(\d+\s+words?\)/gi, '');
   cleaned = cleaned.replace(/\s*Sources?\s*(?:integrated|cited|used)?:\s*\[.+$/is, '');
   cleaned = cleaned.replace(LEADING_SECTION_LABEL, '');
