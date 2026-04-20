@@ -19,6 +19,7 @@ import { useData } from '@/components/layout/DataProvider';
 import { DashboardGrid } from '@/components/layout/DashboardGrid';
 import { MobileDashboardGrid } from '@/components/layout/MobileDashboardGrid';
 import { PanelPicker } from '@/components/layout/PanelPicker';
+import { ShareDashboardModal } from '@/components/vip/ShareDashboardModal';
 import { getDefaultForTheme, getPresetsForTheme, getPresetByIdForTheme, type LayoutPanelItem } from '@/lib/panels/layouts';
 import { getPanelById } from '@/lib/panels/registry';
 import { useTier } from '@/hooks/useTier';
@@ -28,6 +29,7 @@ import { usePricing, formatTierPrice } from '@/hooks/usePricing';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import Link from 'next/link';
 import { useWorkspaceControls } from './WorkspaceContext';
+import type { SharedWithMe } from './WorkspaceContext';
 import type { Theme, Tier } from '@/types';
 
 // Tier requirements + locked view descriptions
@@ -49,9 +51,12 @@ export default function DashboardPage() {
   // Always start on Full Overview; restore saved preset only for logged-in users
   const [activePreset, setActivePreset] = useState<string>('default');
   const [activeCustomId, setActiveCustomId] = useState<string | null>(null);
+  const [activeSharedId, setActiveSharedId] = useState<string | null>(null);
   const [layout, setLayout] = useState<LayoutPanelItem[]>(() => {
     return getDefaultForTheme(theme).panels;
   });
+  const [sharedWithMe, setSharedWithMe] = useState<SharedWithMe[]>([]);
+  const [shareModalLayoutId, setShareModalLayoutId] = useState<string | null>(null);
   const restoredRef = useRef(false);
 
   // Once auth is resolved, restore the user's last preset from localStorage
@@ -134,14 +139,59 @@ export default function DashboardPage() {
       setLayout(preset.panels);
       setActivePreset(presetId);
       setActiveCustomId(null);
+      setActiveSharedId(null);
       setEditMode(false);
     }
   }, [theme]);
 
+  // Fetch dashboards shared WITH this user (from VIP friends/family). Live
+  // filter: VIP-revoked or tier-lapsed shares disappear on refetch. Only
+  // signed-in users trigger this.
+  useEffect(() => {
+    if (!user) {
+      setSharedWithMe([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/shared/mine');
+        if (res.ok && !cancelled) {
+          setSharedWithMe(await res.json());
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // If the active shared dashboard disappears from the list (owner revoked
+  // or lapsed), drop back to the default preset.
+  useEffect(() => {
+    if (activeSharedId && sharedWithMe.length > 0) {
+      if (!sharedWithMe.some((s) => s.shareId === activeSharedId)) {
+        setActiveSharedId(null);
+        setActivePreset('default');
+        setLayout(getDefaultForTheme(theme).panels);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharedWithMe, activeSharedId]);
+
   const switchCustom = useCallback((dashboard: { id: string; name: string; panels: LayoutPanelItem[] }) => {
     setLayout(dashboard.panels);
     setActiveCustomId(dashboard.id);
+    setActiveSharedId(null);
     setActivePreset('');
+  }, []);
+
+  const switchShared = useCallback((shared: SharedWithMe) => {
+    setLayout(shared.panels);
+    setActiveSharedId(shared.shareId);
+    setActiveCustomId(null);
+    setActivePreset('');
+    setEditMode(false);
   }, []);
 
   const handleLayoutChange = useCallback((newLayout: LayoutPanelItem[]) => {
@@ -206,22 +256,27 @@ export default function DashboardPage() {
       presets: getPresetsForTheme(theme).map((p) => ({ id: p.id, name: p.name, description: p.description })),
       activePreset,
       activeCustomId,
+      activeSharedId,
       onSwitchPreset: switchPreset,
       onSwitchCustom: switchCustom,
+      onSwitchShared: switchShared,
       editMode,
       onToggleEdit: () => setEditMode((prev) => !prev),
       customDashboards: customDashboards.map((l) => ({ id: l.id, name: l.name, panels: l.panels })),
+      sharedWithMe,
       canCreateDashboard,
       maxDashboards,
       onCreateDashboard: handleCreateDashboard,
       onDeleteDashboard: handleDeleteDashboard,
       onRenameDashboard: renameDashboard,
+      onShareDashboard: (id: string) => setShareModalLayoutId(id),
     });
     // Clear on unmount so navigating away from workspace returns the rail to its placeholder
     return () => setControls(null);
   }, [
-    theme, activePreset, activeCustomId, switchPreset, switchCustom, editMode,
-    customDashboards, canCreateDashboard, maxDashboards,
+    theme, activePreset, activeCustomId, activeSharedId,
+    switchPreset, switchCustom, switchShared, editMode,
+    customDashboards, sharedWithMe, canCreateDashboard, maxDashboards,
     handleCreateDashboard, handleDeleteDashboard, renameDashboard, setControls,
   ]);
 
@@ -381,6 +436,16 @@ export default function DashboardPage() {
           onAdd={addPanel}
           onClose={() => setShowPicker(false)}
           excludeAdmin
+        />
+      )}
+
+      {shareModalLayoutId && (
+        <ShareDashboardModal
+          layoutId={shareModalLayoutId}
+          dashboardName={
+            customDashboards.find((d) => d.id === shareModalLayoutId)?.name ?? 'Dashboard'
+          }
+          onClose={() => setShareModalLayoutId(null)}
         />
       )}
     </>

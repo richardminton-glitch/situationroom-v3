@@ -78,6 +78,7 @@ type Feature =
   | 'onchain_ai_analysis'      // Grok-3 on-chain analysis (cron-generated for members)
   // ── VIP ──
   | 'edit_layout'
+  | 'share_dashboard'           // share one custom dashboard read-only with up to 5 invitees
   | 'personal_conviction'
   | 'alerts'
   | 'vip_briefing'
@@ -112,6 +113,7 @@ const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
   onchain_ai_analysis:    'members',
   // VIP
   edit_layout:            'vip',
+  share_dashboard:        'vip',
   personal_conviction:    'vip',
   alerts:                 'vip',
   vip_briefing:           'vip',

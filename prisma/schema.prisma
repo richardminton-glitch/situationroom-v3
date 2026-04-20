@@ -68,6 +68,8 @@ model User {
   bookmarks   UserBookmark[]
   preferences UserPreference[]
   payments    SubscriptionPayment[]
+  sharesOwned DashboardShare[] @relation("SharesOwned")
+  sharesBound DashboardShare[] @relation("SharesBound")
 
   @@map("users")
 }
@@ -117,10 +119,40 @@ model UserLayout {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares DashboardShare[]
 
   @@index([userId])
   @@map("user_layouts")
+}
+
+// ── Dashboard Sharing (VIP) ───────────────────────────────────────────────────
+// VIP users can share ONE of their custom UserLayouts with up to 5 named
+// invitees via unique tokenised URLs. An invitee who registers a free account
+// gets bound to the share and retains read-only access as long as the VIP
+// owner remains on the vip tier. Revocation is either explicit (revokedAt)
+// or implicit (owner tier drops below vip, checked live on every view).
+
+model DashboardShare {
+  id           String    @id @default(cuid())
+  ownerId      String    @map("owner_id")
+  layoutId     String    @map("layout_id")
+  token        String    @unique
+  label        String    @default("")
+  inviteEmail  String?   @map("invite_email")
+  boundUserId  String?   @map("bound_user_id")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastViewedAt DateTime? @map("last_viewed_at")
+
+  owner     User       @relation("SharesOwned", fields: [ownerId],     references: [id], onDelete: Cascade)
+  boundUser User?      @relation("SharesBound", fields: [boundUserId], references: [id], onDelete: SetNull)
+  layout    UserLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([boundUserId])
+  @@index([layoutId])
+  @@map("dashboard_shares")
 }
 
 model UserWatchlist {

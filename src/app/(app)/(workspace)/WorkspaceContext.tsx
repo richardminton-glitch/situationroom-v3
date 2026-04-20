@@ -25,20 +25,32 @@ export interface CustomDashboard {
   panels: LayoutPanelItem[];
 }
 
+export interface SharedWithMe {
+  shareId:      string;
+  layoutId:     string;
+  name:         string;
+  panels:       LayoutPanelItem[];
+  ownerDisplay: string;
+}
+
 export interface DashboardControls {
   presets:           { id: string; name: string; description: string }[];
   activePreset:      string;
   activeCustomId:    string | null;
+  activeSharedId:    string | null;
   onSwitchPreset:    (id: string) => void;
   onSwitchCustom:    (dashboard: CustomDashboard) => void;
+  onSwitchShared:    (shared: SharedWithMe) => void;
   editMode:          boolean;
   onToggleEdit:      () => void;
   customDashboards:  CustomDashboard[];
+  sharedWithMe:      SharedWithMe[];
   canCreateDashboard: boolean;
   maxDashboards:     number;
   onCreateDashboard: (name: string) => void;
   onDeleteDashboard: (id: string) => void;
   onRenameDashboard: (id: string, name: string) => void;
+  onShareDashboard:  (id: string) => void;
 }
 
 interface CtxValue {

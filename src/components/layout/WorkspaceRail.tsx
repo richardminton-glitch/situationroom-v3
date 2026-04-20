@@ -10,10 +10,10 @@
  */
 
 import { useState } from 'react';
-import { PencilSimple, Plus } from '@phosphor-icons/react';
+import { PencilSimple, Plus, Share } from '@phosphor-icons/react';
 import { SectionRailFrame, useRailCollapsed } from './SectionRailFrame';
 import { useWorkspaceControls } from '@/app/(app)/(workspace)/WorkspaceContext';
-import type { CustomDashboard, DashboardControls } from '@/app/(app)/(workspace)/WorkspaceContext';
+import type { CustomDashboard, DashboardControls, SharedWithMe } from '@/app/(app)/(workspace)/WorkspaceContext';
 import { useTier } from '@/hooks/useTier';
 import { TIER_LABELS } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
@@ -180,6 +180,14 @@ function ExpandedBody({ controls }: { controls: DashboardControls }) {
                         {cd.name}
                       </button>
                       <button
+                        onClick={() => controls.onShareDashboard(cd.id)}
+                        className="px-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        title="Share with friends & family"
+                      >
+                        <Share size={11} />
+                      </button>
+                      <button
                         onClick={() => {
                           setRenamingId(cd.id);
                           setRenameValue(cd.name);
@@ -262,6 +270,46 @@ function ExpandedBody({ controls }: { controls: DashboardControls }) {
                 {controls.maxDashboards}/{controls.maxDashboards} dashboards
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Dashboards shared WITH this user ── */}
+      {controls.sharedWithMe.length > 0 && (
+        <div>
+          <RailSubhead>Shared With Me</RailSubhead>
+          <div className="space-y-0.5">
+            {controls.sharedWithMe.map((s: SharedWithMe) => {
+              const isActive = controls.activeSharedId === s.shareId;
+              return (
+                <button
+                  key={s.shareId}
+                  onClick={() => controls.onSwitchShared(s)}
+                  className="flex flex-col items-start w-full text-left px-2 py-1 rounded text-xs transition-colors"
+                  style={{
+                    backgroundColor: isActive ? 'var(--bg-card)' : 'transparent',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                    fontFamily: 'inherit',
+                  }}
+                  title={`${s.name} · curated by ${s.ownerDisplay}`}
+                >
+                  <span className="truncate w-full">{s.name}</span>
+                  <span
+                    className="truncate w-full"
+                    style={{
+                      fontSize: 9,
+                      color: 'var(--text-muted)',
+                      letterSpacing: '0.06em',
+                      fontFamily: 'var(--font-mono)',
+                      marginTop: 1,
+                    }}
+                  >
+                    by {s.ownerDisplay}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

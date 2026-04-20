@@ -8,6 +8,16 @@ import { useRouter } from 'next/navigation';
 type Tab = 'signin' | 'signup' | 'nostr';
 type SignUpStep = 'email' | 'pin';
 
+// Only allow same-origin relative redirects (e.g. /shared/<token>). Prevents
+// open-redirect attacks via the ?redirect query param from hostile share URLs.
+function safeRedirect(): string {
+  if (typeof window === 'undefined') return '/';
+  const param = new URLSearchParams(window.location.search).get('redirect');
+  if (!param) return '/';
+  if (!param.startsWith('/') || param.startsWith('//')) return '/';
+  return param;
+}
+
 export default function LoginPage() {
   const [tab, setTab] = useState<Tab>('signin');
   const [signUpStep, setSignUpStep] = useState<SignUpStep>('email');
@@ -59,7 +69,7 @@ export default function LoginPage() {
         return;
       }
       await refresh();
-      router.push('/');
+      router.push(safeRedirect());
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -112,7 +122,7 @@ export default function LoginPage() {
       }
 
       await refresh();
-      router.push('/');
+      router.push(safeRedirect());
     } catch (err) {
       if (err instanceof Error && err.message.includes('denied')) {
         setError('Signature request was denied.');
