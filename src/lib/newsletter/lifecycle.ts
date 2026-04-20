@@ -12,7 +12,6 @@
 import { render } from '@react-email/components';
 import { TIER_LABELS } from '@/lib/auth/tier';
 import type { Tier } from '@/types';
-import { createNewsletterToken } from '@/lib/newsletter/tokens';
 import { FROM_ADDRESS, SITE_URL, getResend } from '@/lib/newsletter/resend';
 import { WelcomeEmail, welcomeEmailSubject } from '@/emails/WelcomeEmail';
 import {
@@ -39,19 +38,17 @@ function formatLongDate(d: Date): string {
 
 // ── Welcome ────────────────────────────────────────────────────────────────────
 
-export async function sendWelcomeEmail(userId: string, email: string): Promise<boolean> {
+export async function sendWelcomeEmail(
+  userId: string,
+  email: string,
+  pin: string,
+): Promise<boolean> {
   if (!isRealEmail(email)) return false;
-
-  const confirmToken = createNewsletterToken(userId, 'confirm', 86400); // 24h
-  const unsubToken   = createNewsletterToken(userId, 'unsubscribe', 90 * 86400);
+  void userId; // retained for API parity / future tracking
 
   try {
     const html = await render(
-      WelcomeEmail({
-        confirmUrl:     `${SITE_URL}/api/newsletter/confirm?token=${confirmToken}`,
-        unsubscribeUrl: `${SITE_URL}/api/newsletter/unsubscribe?token=${unsubToken}`,
-        siteUrl:        SITE_URL,
-      }),
+      WelcomeEmail({ pin, siteUrl: SITE_URL }),
     );
     await getResend().emails.send({
       from:    FROM_ADDRESS,

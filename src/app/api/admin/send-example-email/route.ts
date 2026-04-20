@@ -189,7 +189,7 @@ async function sendFreeBatch(to: string, userId: string): Promise<SendResult[]> 
   results.push(await safeSend('PIN sign-in', '[Example] Situation Room — Your Sign-In PIN', pinHtml, to));
 
   // 2. Welcome email — uses the real lifecycle helper so it's identical to production
-  const welcomeOk = await sendWelcomeEmail(userId, to);
+  const welcomeOk = await sendWelcomeEmail(userId, to, '482956');
   results.push({
     template: 'Welcome',
     subject:  '[Example] Welcome to Situation Room',

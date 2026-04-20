@@ -40,11 +40,7 @@ export async function POST(req: NextRequest) {
   const data: Record<string, unknown> = {};
 
   if (typeof body.newsletterEnabled === 'boolean') {
-    // Disabling is always allowed; enabling requires a later confirmation step
     data.newsletterEnabled = body.newsletterEnabled;
-    if (!body.newsletterEnabled) {
-      data.newsletterConfirmedAt = null;
-    }
   }
 
   if (body.newsletterFrequency !== undefined) {

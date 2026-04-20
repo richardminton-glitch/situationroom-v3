@@ -1,18 +1,22 @@
 /**
  * GET /api/cron/newsletter-daily
- * Daily at 06:15 UTC — sends briefing emails to General, Members, and VIP subscribers.
+ * Mon–Sat at 06:15 UTC — sends the daily briefing email to General, Members,
+ * and VIP subscribers who have explicitly opted into daily delivery.
+ *
+ * On Sundays this route no-ops: the weekly digest (`newsletter-digest`) fires
+ * at the same 06:15 UTC slot and replaces the daily for everyone, so nobody
+ * gets two emails on Sunday.
  *
  * Eligibility:
  *   - newsletterEnabled = true
- *   - newsletterConfirmedAt NOT NULL
  *   - tier IN ('general', 'members', 'vip')
- *   - (frequency='daily') OR (frequency='weekly' AND today=newsletterDay)
+ *   - newsletterFrequency = 'daily'  (explicit opt-in)
  *   - newsletterLastSent < 20 hours ago (or null) — prevents double-sends
  *
- * Members/VIP get the pool status block.
- * VIP users get the VipBriefingEmail template with personalised content if a VipBriefing
- * record exists for today; otherwise falls back to GeneralBriefingEmail.
- * Pool status is fetched once per run and included for all members/VIP.
+ * Members/VIP get the pool status block. VIP users get the VipBriefingEmail
+ * template with personalised content if a VipBriefing record exists for today;
+ * otherwise falls back to GeneralBriefingEmail. Pool status is fetched once
+ * per run and included for all members/VIP.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -128,6 +132,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Sunday = weekly digest day; let newsletter-digest handle it so users
+  // never get two emails the same morning.
+  if (todayUTCDay() === 0) {
+    return NextResponse.json({ skipped: true, reason: 'Sunday — weekly digest replaces daily' });
+  }
+
   // ── Latest briefing ───────────────────────────────────────────────────────
   const briefing = await prisma.briefing.findFirst({ orderBy: { date: 'desc' } });
   if (!briefing) return NextResponse.json({ skipped: true, reason: 'No briefing' });
@@ -141,22 +151,17 @@ export async function GET(request: NextRequest) {
   })();
   const ds = briefing.dataSnapshotJson;
 
-  const todayDay = todayUTCDay();
   const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000);
 
   // ── Eligible users ────────────────────────────────────────────────────────
+  // Daily email = explicit opt-in. Weekly subscribers receive the Sunday
+  // digest, not this email.
   const users = await prisma.user.findMany({
     where: {
       newsletterEnabled: true,
-      newsletterConfirmedAt: { not: null },
       tier: { in: ['general', 'members', 'vip'] },
-      OR: [
-        { newsletterFrequency: 'daily' },
-        { newsletterFrequency: 'weekly', newsletterDay: todayDay },
-      ],
-      AND: [
-        { OR: [{ newsletterLastSent: null }, { newsletterLastSent: { lt: twentyHoursAgo } }] },
-      ],
+      newsletterFrequency: 'daily',
+      OR: [{ newsletterLastSent: null }, { newsletterLastSent: { lt: twentyHoursAgo } }],
     },
     select: { id: true, email: true, tier: true },
   });

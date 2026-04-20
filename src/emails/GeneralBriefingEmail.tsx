@@ -43,6 +43,7 @@ export interface GeneralBriefingEmailProps {
   briefingUrl: string;
   unsubscribeUrl: string;
   viewInBrowserUrl: string;
+  siteUrl?: string;
   // Optional pool status (Members only)
   poolStatus?: {
     balanceSats: number;
@@ -88,6 +89,7 @@ const valueStyle = {
 // shared helper handles bold, italic, [[N]](url) citations, [label](url)
 // inline links, paragraph breaks, and HTML escaping.
 import { renderBriefingHtml } from './shared/briefingMarkdown';
+import { EmailHeader } from './shared/EmailHeader';
 
 const SECTION_TITLES = [
   { key: 'market',  label: 'I. Market Conditions' },
@@ -101,7 +103,7 @@ export function GeneralBriefingEmail({
   date, headline, threatLevel, convictionScore, sourcesCount,
   sections, btcPrice, btcChange24h, fearGreed, hashrate, mvrv,
   blockHeight, sp500, vix, gold, dxy, us10y, oil,
-  briefingUrl, unsubscribeUrl, viewInBrowserUrl, poolStatus, alerts,
+  briefingUrl, unsubscribeUrl, viewInBrowserUrl, siteUrl, poolStatus, alerts,
 }: GeneralBriefingEmailProps) {
   return (
     <Html lang="en">
@@ -117,20 +119,17 @@ export function GeneralBriefingEmail({
           </Section>
 
           {/* Header */}
-          <Section style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, padding: '24px 28px 16px' }}>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 4px' }}>
-              SITUATION ROOM · DAILY BRIEFING
-            </Text>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.muted, margin: '0 0 12px' }}>
+          <EmailHeader siteUrl={siteUrl} subtitle="DAILY BRIEFING">
+            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.muted, margin: '0 0 6px' }}>
               {date}{'  ·  '}CONVICTION {convictionScore}/100{'  ·  '}{sourcesCount} SOURCES
             </Text>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.accent, margin: '0 0 14px' }}>
+            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.accent, margin: '0 0 12px' }}>
               THREAT: {threatLevel}
             </Text>
             <Text style={{ fontFamily: font.serif, fontSize: '22px', fontWeight: 'normal', lineHeight: '1.35', color: C.text, margin: '0' }}>
               {headline}
             </Text>
-          </Section>
+          </EmailHeader>
 
           {/* Data snapshot */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '0 28px 0' }}>

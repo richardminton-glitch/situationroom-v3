@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getOrCreatePin } from '@/lib/auth/pin';
 import { generateAssignedKeypair, assignedDisplayName } from '@/lib/auth/keypair';
 import { getResend, FROM_ADDRESS } from '@/lib/newsletter/resend';
+import { sendWelcomeEmail, isRealEmail } from '@/lib/newsletter/lifecycle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find or create user
+    // Find or create user. New users are implicitly subscribed to the weekly
+    // digest — registering is the consent, no double opt-in.
     let user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -23,12 +25,13 @@ export async function POST(request: NextRequest) {
       const keypair = generateAssignedKeypair();
       user = await prisma.user.create({
         data: {
-          email:              normalizedEmail,
-          assignedNpub:       keypair.npub,
-          assignedPrivkeyEnc: keypair.encryptedPrivkey,
-          nostrAuthType:      'assigned',
-          chatDisplayName:    assignedDisplayName(),
-          chatIcon:           'email',
+          email:                 normalizedEmail,
+          assignedNpub:          keypair.npub,
+          assignedPrivkeyEnc:    keypair.encryptedPrivkey,
+          nostrAuthType:         'assigned',
+          chatDisplayName:       assignedDisplayName(),
+          chatIcon:              'email',
+          newsletterConfirmedAt: new Date(),
         },
       });
     }
@@ -41,7 +44,22 @@ export async function POST(request: NextRequest) {
       console.log(`[DEV] PIN for ${normalizedEmail}: ${pin}`);
     }
 
-    // Send PIN via Resend
+    // First send for this user → combined welcome + PIN email (includes newsletter
+    // policy). Subsequent sends are the plain PIN reminder.
+    const isFirstContact = !user.welcomeEmailSentAt && isRealEmail(user.email);
+
+    if (isFirstContact) {
+      const sent = await sendWelcomeEmail(user.id, user.email, pin);
+      if (sent) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data:  { welcomeEmailSentAt: new Date() },
+        });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // Returning user — plain PIN email
     try {
       const resend = getResend();
       await resend.emails.send({
@@ -64,7 +82,6 @@ export async function POST(request: NextRequest) {
       });
       console.log(`[Auth] PIN email sent to ${normalizedEmail}`);
     } catch (emailErr) {
-      // Log but don't fail the request — user can retry
       console.error('[Auth] PIN email send failed:', emailErr);
     }
 

@@ -1,20 +1,20 @@
 /**
  * GET /api/cron/newsletter-digest
  *
- * Free tier weekly digest — runs Sunday 18:00 UTC via cron.
+ * Weekly digest — Sunday 06:15 UTC. Replaces the daily briefing on Sundays
+ * for every subscriber from the free tier upwards. Registering is consent;
+ * no double opt-in. Users can opt out from their Account page.
  *
- * Logic:
- *  1. Verify CRON_SECRET (Authorization: Bearer [secret])
- *  2. Query free-tier users with:
- *       newsletterEnabled=true, newsletterConfirmedAt NOT NULL,
- *       tier='free', newsletterDay=0 (Sunday)
- *       AND (newsletterLastSent is null OR newsletterLastSent < 6 days ago)
- *  3. Pull most recent Briefing from DB
- *  4. Build email from FreeDigestEmail template
- *  5. Send via Resend
- *  6. Update newsletterLastSent, log to newsletter_sends
+ * Eligibility:
+ *   - newsletterEnabled = true
+ *   - any tier (free → vip)
+ *   - newsletterLastSent < 6 days ago (or null) — guards against re-runs
  *
- * Error handling: log failures, do not retry, do not surface to user.
+ * Template:
+ *   - All tiers currently receive the FreeDigestEmail template. It summarises
+ *     the week via the outlook section and the current data snapshot, and
+ *     carries the right CTA per reader (upgrade prompt for free; standing
+ *     subscriber footer for paid tiers). We can specialise later.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -85,21 +85,18 @@ export async function GET(request: NextRequest) {
   const label = convictionLabel(score);
   const ds = briefing.dataSnapshotJson;
 
-  // ── Eligible users ────────────────────────────────────────────────────────
+  // ── Eligible users — every enabled subscriber, any tier ──────────────────
   const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
 
   const users = await prisma.user.findMany({
     where: {
       newsletterEnabled: true,
-      newsletterConfirmedAt: { not: null },
-      tier: 'free',
-      newsletterDay: 0, // Sunday
       OR: [
         { newsletterLastSent: null },
         { newsletterLastSent: { lt: sixDaysAgo } },
       ],
     },
-    select: { id: true, email: true },
+    select: { id: true, email: true, tier: true },
   });
 
   if (users.length === 0) {
@@ -116,6 +113,12 @@ export async function GET(request: NextRequest) {
   let failed = 0;
 
   for (const user of users) {
+    // Skip placeholder email addresses (NIP-07 sign-ins). The lifecycle
+    // helper does the same check for other flows.
+    if (!user.email || user.email.startsWith('nostr:') || !user.email.includes('@')) {
+      continue;
+    }
+
     const unsubscribeToken = createNewsletterToken(user.id, 'unsubscribe', 90 * 86400);
     const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?token=${unsubscribeToken}`;
     const viewInBrowserUrl = `${SITE_URL}/briefing/${briefingDate.toISOString().split('T')[0]}`;
@@ -127,6 +130,7 @@ export async function GET(request: NextRequest) {
         outlook: briefing.outlookSection,
         unsubscribeUrl,
         viewInBrowserUrl,
+        siteUrl: SITE_URL,
         btcPrice:    snap(ds, 'btcPrice'),
         btcChange24h: snap(ds, 'btcChange24h'),
         fearGreed:   snap(ds, 'fearGreed', '—'),
@@ -175,7 +179,7 @@ export async function GET(request: NextRequest) {
         data: {
           userId: user.id,
           briefingDate,
-          tier: 'free',
+          tier: user.tier,
           status,
           error: error ?? null,
           sentAt: new Date(),

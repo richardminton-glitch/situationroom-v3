@@ -10,6 +10,7 @@ import {
   Text, Hr, Link, Row, Column,
 } from '@react-email/components';
 import { renderBriefingHtml } from './shared/briefingMarkdown';
+import { EmailHeader } from './shared/EmailHeader';
 
 export interface FreeDigestEmailProps {
   weekOf: string;           // e.g. "3 April 2026"
@@ -17,6 +18,7 @@ export interface FreeDigestEmailProps {
   outlook: string;          // full outlook section text
   unsubscribeUrl: string;
   viewInBrowserUrl: string;
+  siteUrl?: string;
   // Data snapshot values
   btcPrice: string;
   btcChange24h: string;
@@ -58,6 +60,7 @@ export function FreeDigestEmail({
   outlook,
   unsubscribeUrl,
   viewInBrowserUrl,
+  siteUrl,
   btcPrice,
   btcChange24h,
   fearGreed,
@@ -88,18 +91,12 @@ export function FreeDigestEmail({
           </Section>
 
           {/* Header */}
-          <Section style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, padding: '24px 28px 16px' }}>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 6px' }}>
-              SITUATION ROOM
-            </Text>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, margin: '0 0 12px' }}>
-              BITCOIN &amp; GLOBAL MACRO INTELLIGENCE
-            </Text>
+          <EmailHeader siteUrl={siteUrl} subtitle="WEEKLY DIGEST">
             <Text style={{ fontFamily: font.mono, fontSize: '11px', color: C.muted, margin: '0', letterSpacing: '0.06em' }}>
               Week of {weekOf}{'  ·  '}
               <span style={{ color: C.accent }}>{threatLevel}</span>
             </Text>
-          </Section>
+          </EmailHeader>
 
           {/* Data snapshot */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '0 28px 0' }}>

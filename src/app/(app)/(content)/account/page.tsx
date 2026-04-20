@@ -175,10 +175,10 @@ export default function AccountPage() {
     }
   }
 
-  async function handleFrequencyChange(newFrequency: string) {
-    if (newFrequency === 'daily' && !canDaily) return;
-    setFrequency(newFrequency);
-    setNewsletterEnabled(true);
+  async function saveNewsletterPrefs(next: { enabled: boolean; frequency: string }) {
+    if (next.frequency === 'daily' && !canDaily) return;
+    setNewsletterEnabled(next.enabled);
+    setFrequency(next.frequency);
     setNlLoading(true);
     setNlSaved(false);
     setError('');
@@ -187,8 +187,8 @@ export default function AccountPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newsletterEnabled: true,
-          newsletterFrequency: newFrequency,
+          newsletterEnabled: next.enabled,
+          newsletterFrequency: next.frequency,
         }),
       });
       if (!res.ok) {
@@ -493,62 +493,82 @@ export default function AccountPage() {
       <div style={sectionStyle}>
         <span style={labelStyle}>Newsletter</span>
         <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '8px' }}>
-          Intelligence briefings delivered to your inbox.
-        </p>
-        <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
-          {canDaily
-            ? 'New accounts default to weekly — switch to daily below to receive the full briefing every morning.'
-            : 'New accounts default to the free Sunday digest. Daily briefings unlock from the General tier.'}
+          By registering, you&rsquo;re subscribed to the weekly digest (Sunday 06:15 UTC,
+          free for every tier). The daily briefing is an explicit opt-in for General+
+          subscribers, and you can opt out of email entirely at any time.
         </p>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {/* Daily */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+          {/* Weekly digest — the baseline; toggling off = full opt-out */}
           <button
-            onClick={() => handleFrequencyChange('daily')}
-            disabled={!canDaily || nlLoading}
-            style={{
-              flex: 1, padding: '14px 16px', textAlign: 'left' as const,
-              backgroundColor: frequency === 'daily' && newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
-              border: `1px solid ${frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-              cursor: !canDaily ? 'not-allowed' : 'pointer',
-              opacity: !canDaily ? 0.5 : 1,
-              transition: 'all 0.15s',
-            }}
-          >
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {frequency === 'daily' && newsletterEnabled && <span style={{ fontSize: '8px' }}>●</span>}
-              DAILY
-              {!canDaily && <span style={{ fontSize: '9px', fontWeight: 'normal', color: 'var(--text-muted)' }}>GENERAL ↑</span>}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
-              Every morning · 06:00 UTC
-            </div>
-          </button>
-
-          {/* Weekly */}
-          <button
-            onClick={() => handleFrequencyChange('weekly')}
+            onClick={() => saveNewsletterPrefs({ enabled: !newsletterEnabled, frequency: frequency === 'daily' ? 'daily' : 'weekly' })}
             disabled={nlLoading}
             style={{
-              flex: 1, padding: '14px 16px', textAlign: 'left' as const,
-              backgroundColor: frequency === 'weekly' && newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
-              border: `1px solid ${frequency === 'weekly' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '12px 14px', textAlign: 'left',
+              fontFamily: 'var(--font-mono)', fontSize: '11px',
+              backgroundColor: newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
+              color: newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              border: `1px solid ${newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+              cursor: nlLoading ? 'wait' : 'pointer',
               transition: 'all 0.15s',
             }}
           >
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: frequency === 'weekly' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {frequency === 'weekly' && newsletterEnabled && <span style={{ fontSize: '8px' }}>●</span>}
-              WEEKLY
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)' }}>
-              Every Sunday · 06:00 UTC
-            </div>
+            <span style={{
+              width: '16px', height: '16px', flexShrink: 0,
+              border: `1px solid ${newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
+              backgroundColor: newsletterEnabled ? 'var(--accent-primary)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', color: 'var(--bg-primary)',
+            }}>
+              {newsletterEnabled ? '✓' : ''}
+            </span>
+            <span style={{ flex: 1 }}>
+              <span style={{ fontWeight: 600, display: 'block', marginBottom: '2px' }}>WEEKLY DIGEST</span>
+              <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                Sunday · 06:15 UTC · all tiers. Required unless you opt out of email entirely.
+              </span>
+            </span>
+          </button>
+
+          {/* Daily briefing — explicit opt-in, gated by General+ */}
+          <button
+            onClick={() => saveNewsletterPrefs({ enabled: true, frequency: frequency === 'daily' ? 'weekly' : 'daily' })}
+            disabled={!canDaily || nlLoading || !newsletterEnabled}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '12px 14px', textAlign: 'left',
+              fontFamily: 'var(--font-mono)', fontSize: '11px',
+              backgroundColor: frequency === 'daily' && newsletterEnabled ? 'rgba(247, 147, 26, 0.1)' : 'var(--bg-secondary)',
+              color: frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              border: `1px solid ${frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+              cursor: !canDaily || !newsletterEnabled ? 'not-allowed' : (nlLoading ? 'wait' : 'pointer'),
+              opacity: !canDaily || !newsletterEnabled ? 0.5 : 1,
+              transition: 'all 0.15s',
+            }}
+          >
+            <span style={{
+              width: '16px', height: '16px', flexShrink: 0,
+              border: `1px solid ${frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
+              backgroundColor: frequency === 'daily' && newsletterEnabled ? 'var(--accent-primary)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', color: 'var(--bg-primary)',
+            }}>
+              {frequency === 'daily' && newsletterEnabled ? '✓' : ''}
+            </span>
+            <span style={{ flex: 1 }}>
+              <span style={{ fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                DAILY BRIEFING{!canDaily && <span style={{ fontWeight: 'normal', color: 'var(--text-muted)', marginLeft: '6px', fontSize: '9px' }}>GENERAL ↑</span>}
+              </span>
+              <span style={{ fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                Mon–Sat · 06:15 UTC · full 5-section briefing. On Sunday the weekly digest replaces it.
+              </span>
+            </span>
           </button>
         </div>
 
         {nlSaved && (
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-success)', marginTop: '10px' }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-success)', marginTop: '4px' }}>
             ✓ Saved
           </p>
         )}

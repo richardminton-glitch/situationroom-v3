@@ -133,9 +133,17 @@ export function TopBar({
 
           <Link
             href="/"
-            className="flex items-baseline gap-2 px-1 transition-opacity hover:opacity-80"
+            className="flex items-center gap-2 px-1 transition-opacity hover:opacity-80"
             style={{ textDecoration: 'none' }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/icon-192.png"
+              alt=""
+              width={isMobile ? 22 : 26}
+              height={isMobile ? 22 : 26}
+              style={{ display: 'block', border: '1px solid var(--border-subtle)', borderRadius: '4px' }}
+            />
             <span
               style={{
                 fontFamily: "Georgia, 'Times New Roman', serif",

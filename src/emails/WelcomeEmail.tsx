@@ -1,21 +1,22 @@
 /**
- * Welcome email — sent on a user's first successful PIN verification.
+ * Welcome email — sent on a user's first PIN request (i.e. signup).
  *
- * Doubles as the newsletter double opt-in: includes a confirm link that
- * activates the weekly digest. Users start on `weekly` frequency by default;
- * the email explains they can upgrade to General+ for daily delivery.
+ * Delivers the sign-in PIN and explains the newsletter policy: registering
+ * implicitly subscribes to the weekly digest (Sunday 06:15 UTC, every tier).
+ * The daily briefing is an explicit opt-in from the Account page, and any
+ * user can opt out of email entirely from the same page. No double opt-in.
  *
- * Subject: Welcome to Situation Room
+ * Subject: Welcome to Situation Room — Your Sign-In PIN
  */
 
 import {
   Html, Head, Body, Container, Section,
   Text, Hr, Link,
 } from '@react-email/components';
+import { EmailHeader } from './shared/EmailHeader';
 
 export interface WelcomeEmailProps {
-  confirmUrl: string;
-  unsubscribeUrl: string;
+  pin:     string;
   siteUrl: string;
 }
 
@@ -34,7 +35,7 @@ const font = {
   mono:  '"Courier New", Courier, monospace',
 };
 
-export function WelcomeEmail({ confirmUrl, unsubscribeUrl, siteUrl }: WelcomeEmailProps) {
+export function WelcomeEmail({ pin, siteUrl }: WelcomeEmailProps) {
   return (
     <Html lang="en">
       <Head />
@@ -42,89 +43,76 @@ export function WelcomeEmail({ confirmUrl, unsubscribeUrl, siteUrl }: WelcomeEma
         <Container style={{ maxWidth: '600px', margin: '0 auto', padding: '20px 0' }}>
 
           {/* Header */}
-          <Section style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, padding: '24px 28px 16px' }}>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 6px' }}>
-              SITUATION ROOM
-            </Text>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, margin: '0 0 12px' }}>
-              BITCOIN &amp; GLOBAL MACRO INTELLIGENCE
-            </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '20px', color: C.text, margin: '0', letterSpacing: '0.02em' }}>
+          <EmailHeader siteUrl={siteUrl}>
+            <Text style={{ fontFamily: font.serif, fontSize: '22px', color: C.text, margin: '0', letterSpacing: '0.02em' }}>
               Welcome aboard.
             </Text>
-          </Section>
+          </EmailHeader>
 
-          {/* Body */}
+          {/* Intro + PIN */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '12px 28px 4px' }}>
             <Hr style={{ borderColor: C.dimBorder, margin: '0 0 16px' }} />
-            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 14px' }}>
-              You&apos;re now set up on Situation Room — a dashboard and briefing
-              service tracking Bitcoin, global macro, and geopolitical signal in
-              one place.
+            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 18px' }}>
+              You&rsquo;re now set up on Situation Room &mdash; a dashboard and briefing service
+              tracking Bitcoin, global macro, and geopolitical signal in one place.
             </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 14px' }}>
-              By default, we&apos;ve enrolled you in the <strong>free weekly digest</strong>,
-              delivered every Sunday at 18:00 UTC. To start receiving it, please
-              confirm your subscription below.
+
+            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.16em', color: C.muted, margin: '0 0 8px' }}>
+              YOUR SIGN-IN PIN
+            </Text>
+            <div style={{
+              fontFamily: font.mono, fontSize: '36px', letterSpacing: '0.5em',
+              fontWeight: 'bold', textAlign: 'center', padding: '18px',
+              backgroundColor: '#ffffff', border: `1px solid ${C.border}`,
+              color: C.text, margin: '0 0 10px',
+            }}>
+              {pin}
+            </div>
+            <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.muted, lineHeight: '1.6', margin: '0 0 18px' }}>
+              This PIN is permanent. It stays the same every time you sign in &mdash; keep it somewhere safe.
             </Text>
           </Section>
 
-          {/* Confirm CTA */}
-          <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '8px 28px 24px', textAlign: 'center' }}>
-            <Link
-              href={confirmUrl}
-              style={{
-                display: 'inline-block', padding: '12px 32px',
-                backgroundColor: C.accent, color: C.bg,
-                fontFamily: font.mono, fontSize: '12px',
-                letterSpacing: '0.14em', fontWeight: 'bold',
-                textDecoration: 'none',
-              }}
-            >
-              CONFIRM SUBSCRIPTION
-            </Link>
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', color: C.muted, margin: '12px 0 0', letterSpacing: '0.04em' }}>
-              Link expires in 24 hours
-            </Text>
-          </Section>
-
-          {/* Daily upgrade note */}
+          {/* Newsletter policy */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: '0 28px 20px' }}>
             <Hr style={{ borderColor: C.dimBorder, margin: '0 0 16px' }} />
-            <Text style={{ fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 8px' }}>
-              ── WANT DAILY BRIEFINGS? ───────────────
+            <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.18em', color: C.muted, margin: '0 0 10px' }}>
+              YOUR NEWSLETTER SUBSCRIPTION
             </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0 0 10px' }}>
-              The full 5-section daily briefing — market, network, geopolitical,
-              macro, and outlook — is available from the <strong>General</strong> tier
-              upwards.
+            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 12px' }}>
+              By registering, you&rsquo;ve agreed to receive our <strong>weekly digest</strong>, delivered every
+              Sunday at 06:15 UTC. It&rsquo;s a short summary of the week&rsquo;s briefings and the current state
+              of the market &mdash; free for every tier.
             </Text>
-            <Text style={{ fontFamily: font.serif, fontSize: '13px', color: C.text, lineHeight: '1.7', margin: '0 0 12px' }}>
-              After upgrading, switch your delivery to daily from the
-              <Link href={`${siteUrl}/account`} style={{ color: C.accent, textDecoration: 'none' }}> Account page</Link>
-              {' '}— it stays on weekly until you flip it manually.
+            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 12px' }}>
+              You can also opt into the <strong>daily briefing email</strong> &mdash; the full five-section analysis
+              delivered at 06:15 UTC, Monday through Saturday &mdash; from your Account page. On Sundays, the
+              weekly digest replaces the daily briefing so you only get one email that day.
             </Text>
-            <Link
-              href={`${siteUrl}/support`}
-              style={{
-                display: 'inline-block', padding: '8px 20px',
-                border: `1px solid ${C.accent}`, color: C.accent,
-                fontFamily: font.mono, fontSize: '11px',
-                letterSpacing: '0.12em', fontWeight: 'bold',
-                textDecoration: 'none',
-              }}
-            >
-              VIEW TIERS ⚡
-            </Link>
+            <Text style={{ fontFamily: font.serif, fontSize: '14px', color: C.text, lineHeight: '1.7', margin: '0 0 18px' }}>
+              If you&rsquo;d rather not receive email at all, you can opt out from the same page. Your
+              preferences take effect immediately &mdash; no confirmation click required.
+            </Text>
+
+            <Section style={{ textAlign: 'center', margin: '6px 0 4px' }}>
+              <Link
+                href={`${siteUrl}/account`}
+                style={{
+                  display: 'inline-block', padding: '12px 32px',
+                  backgroundColor: C.accent, color: C.bg,
+                  fontFamily: font.mono, fontSize: '12px',
+                  letterSpacing: '0.14em', fontWeight: 'bold',
+                  textDecoration: 'none',
+                }}
+              >
+                MANAGE PREFERENCES
+              </Link>
+            </Section>
           </Section>
 
-          {/* Footer */}
+          {/* Bottom rule of card */}
           <Section style={{ backgroundColor: C.card, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '0 28px 20px' }}>
-            <Hr style={{ borderColor: C.dimBorder, margin: '0 0 12px' }} />
-            <Text style={{ fontFamily: font.mono, fontSize: '10px', color: C.muted, margin: '0', lineHeight: '1.6' }}>
-              If you didn&apos;t sign up for Situation Room, you can safely ignore
-              this email — no further messages will be sent.
-            </Text>
+            <Hr style={{ borderColor: C.dimBorder, margin: '0' }} />
           </Section>
 
           {/* Outer footer */}
@@ -136,8 +124,8 @@ export function WelcomeEmail({ confirmUrl, unsubscribeUrl, siteUrl }: WelcomeEma
                 situationroom.space
               </Link>
               {'  ·  '}
-              <Link href={unsubscribeUrl} style={{ color: C.muted, textDecoration: 'underline' }}>
-                Unsubscribe
+              <Link href={`${siteUrl}/account`} style={{ color: C.muted, textDecoration: 'underline' }}>
+                Opt out
               </Link>
             </Text>
           </Section>
@@ -148,4 +136,4 @@ export function WelcomeEmail({ confirmUrl, unsubscribeUrl, siteUrl }: WelcomeEma
   );
 }
 
-export const welcomeEmailSubject = 'Welcome to Situation Room';
+export const welcomeEmailSubject = 'Welcome to Situation Room — Your Sign-In PIN';
