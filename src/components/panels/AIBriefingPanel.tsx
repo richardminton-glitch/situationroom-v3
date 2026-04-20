@@ -20,11 +20,12 @@ interface BriefingData {
 }
 
 // Compact paragraph style for the dashboard panel — smaller than the full
-// briefing detail page. Matches the prior `text-sm leading-relaxed` look.
+// briefing detail page. Size + line-height are theme-scoped CSS vars because
+// dark mode's monospace body font renders visually larger at the same px.
 const PANEL_PARA_STYLE: React.CSSProperties = {
   fontFamily: 'var(--font-body)',
-  fontSize:   '14px',
-  lineHeight: 1.625,
+  fontSize:   'var(--briefing-panel-body-fs)',
+  lineHeight: 'var(--briefing-panel-body-lh)',
   color:      'var(--text-primary)',
 };
 

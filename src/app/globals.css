@@ -32,6 +32,12 @@
   --font-data: 'Source Serif 4', 'Georgia', serif;
   --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
 
+  /* Briefing panel body prose — serif at 14px reads comfortably. Paired with
+     --briefing-panel-body-lh below; the dark theme shrinks both because its
+     monospace body font visually renders larger per pixel. */
+  --briefing-panel-body-fs: 14px;
+  --briefing-panel-body-lh: 1.625;
+
   /* ── Room-specific palette (Members Room + Bot Room) ──
      Same conceptual roles in both themes — "positive" reads as positive,
      "danger" as danger — but the actual hue swaps from teal/coral (dark
@@ -96,6 +102,11 @@
   --font-body: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
   --font-data: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
   --font-mono: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+
+  /* Mono body font renders visually larger at the same px as parchment's
+     serif — shrink briefing prose to match density. */
+  --briefing-panel-body-fs: 12.5px;
+  --briefing-panel-body-lh: 1.7;
 
   /* ── Room-specific palette (dark variant — original ops-room aesthetic) ── */
   --room-positive:        #00e5c8;
