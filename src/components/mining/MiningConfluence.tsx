@@ -136,6 +136,7 @@ export function MiningConfluence({
       {/* Status text */}
       <div
         style={{
+          fontFamily: isDark ? MONO : "'Georgia', 'Times New Roman', serif",
           fontSize: 13,
           fontWeight: 700,
           color: statusColor,

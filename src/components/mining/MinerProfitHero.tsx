@@ -124,7 +124,7 @@ export function MinerProfitHero({
           </div>
           <div
             style={{
-              fontFamily: 'var(--font-heading)',
+              fontFamily: isDark ? MONO : "'Georgia', 'Times New Roman', serif",
               fontSize: 20,
               fontWeight: 700,
               color: 'var(--text-primary)',

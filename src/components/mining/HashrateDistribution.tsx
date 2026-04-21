@@ -5,7 +5,8 @@ import { useTheme } from '@/components/layout/ThemeProvider';
 
 const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
-const RC: Record<string, string> = {
+// Dark theme — saturated ops-room palette
+const RC_DARK: Record<string, string> = {
   US: '#3b82f6',
   CN: '#ef4444',
   RU: '#8b5cf6',
@@ -16,6 +17,20 @@ const RC: Record<string, string> = {
   ET: '#f97316',
   GULF: '#ec4899',
   OTHER: '#6b7280',
+};
+
+// Parchment theme — muted earth tones matching the design identity
+const RC_PARCHMENT: Record<string, string> = {
+  US: '#3a5a7c',      // faded navy
+  CN: '#9b3232',      // deep maroon
+  RU: '#6b4a7c',      // dusty purple
+  KZ: '#b8860b',      // dark goldenrod
+  CA: '#2a6e6e',      // faded teal
+  LATAM: '#4a7c59',   // parchment green
+  EU: '#5a5a8a',      // slate blue
+  ET: '#b85a25',      // burnt sienna
+  GULF: '#a8547a',    // muted rose
+  OTHER: '#8a7e6c',   // parchment muted
 };
 
 interface Props {
@@ -47,6 +62,7 @@ export function HashrateDistribution({
   const isDark = theme !== 'parchment';
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
+  const RC = isDark ? RC_DARK : RC_PARCHMENT;
   const top5 = regions.slice(0, 5);
 
   const trendColor = (trend: string) => {

@@ -443,3 +443,197 @@ export function computeHashRibbon(
     currentMa60: last?.ma60 ?? 0,
   };
 }
+
+// ── Miner Treasury / Capitulation ───────────────────────────────────────────
+
+export interface MinerTreasuryRow {
+  ticker: string;
+  name: string;
+  btcHeld: number;
+  monthlyBtcProduced: number;
+  allInCostPerBtc: number;
+  directCostPerBtc: number;
+  fleetEfficiencyJth: number;
+  quarterlyMarginPct: number;
+  prevQuarterlyMarginPct: number;
+}
+
+export interface MinerTreasuryDerived extends MinerTreasuryRow {
+  treasuryUsd: number;            // btcHeld * btcPrice
+  monthlyRevenueUsd: number;      // monthlyBtcProduced * btcPrice
+  monthlyAllInCostUsd: number;    // monthlyBtcProduced * allInCostPerBtc
+  monthlyDirectCostUsd: number;   // monthlyBtcProduced * directCostPerBtc
+  treasuryCoverMonths: number;    // treasuryUsd / max(monthlyAllInCostUsd, 1)
+  marginDeltaPct: number;         // quarterly - prev
+  stressBand: 'healthy' | 'tight' | 'stressed' | 'critical';
+}
+
+export interface CapitulationDriver {
+  label: string;
+  contribution: number;   // 0..100 (raw weighted points contributed to score)
+  detail: string;
+}
+
+export interface CapitulationResult {
+  score: number;          // 0..100, higher = more capitulation pressure
+  band: 'LOW' | 'ELEVATED' | 'HIGH' | 'ACUTE';
+  drivers: CapitulationDriver[];
+}
+
+export interface MinerTreasurySummary {
+  updatedAt: string;
+  source: string;
+  btcPrice: number;
+  miners: MinerTreasuryDerived[];
+  fleet: {
+    totalBtcHeld: number;
+    totalTreasuryUsd: number;
+    totalMonthlyBtc: number;
+    totalMonthlyAllInUsd: number;
+    weightedMarginPct: number;          // production-weighted
+    weightedMarginDeltaPct: number;     // QoQ change
+    aggregateCoverMonths: number;       // total treasury / total monthly all-in
+  };
+  capitulation: CapitulationResult;
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function classifyStress(ratio: number, marginPct: number): MinerTreasuryDerived['stressBand'] {
+  // ratio = treasuryCoverMonths
+  if (marginPct <= -8 || ratio < 1) return 'critical';
+  if (marginPct < 0 || ratio < 3)   return 'stressed';
+  if (marginPct < 8 || ratio < 6)   return 'tight';
+  return 'healthy';
+}
+
+/**
+ * Derive per-miner USD figures + fleet aggregates from raw treasury rows.
+ */
+export function deriveMinerTreasuries(
+  rows: MinerTreasuryRow[],
+  btcPrice: number,
+): {
+  miners: MinerTreasuryDerived[];
+  fleet: MinerTreasurySummary['fleet'];
+} {
+  const miners: MinerTreasuryDerived[] = rows.map((r) => {
+    const treasuryUsd          = r.btcHeld * btcPrice;
+    const monthlyRevenueUsd    = r.monthlyBtcProduced * btcPrice;
+    const monthlyAllInCostUsd  = r.monthlyBtcProduced * r.allInCostPerBtc;
+    const monthlyDirectCostUsd = r.monthlyBtcProduced * r.directCostPerBtc;
+    const treasuryCoverMonths  = monthlyAllInCostUsd > 0
+      ? treasuryUsd / monthlyAllInCostUsd
+      : 999;
+    const marginDeltaPct       = r.quarterlyMarginPct - r.prevQuarterlyMarginPct;
+    const stressBand           = classifyStress(treasuryCoverMonths, r.quarterlyMarginPct);
+
+    return {
+      ...r,
+      treasuryUsd,
+      monthlyRevenueUsd,
+      monthlyAllInCostUsd,
+      monthlyDirectCostUsd,
+      treasuryCoverMonths,
+      marginDeltaPct,
+      stressBand,
+    };
+  });
+
+  // Fleet aggregates (production-weighted)
+  let totalBtcHeld = 0;
+  let totalTreasuryUsd = 0;
+  let totalMonthlyBtc = 0;
+  let totalMonthlyAllInUsd = 0;
+  let weightedMarginNumerator = 0;
+  let weightedDeltaNumerator = 0;
+
+  for (const m of miners) {
+    totalBtcHeld          += m.btcHeld;
+    totalTreasuryUsd      += m.treasuryUsd;
+    totalMonthlyBtc       += m.monthlyBtcProduced;
+    totalMonthlyAllInUsd  += m.monthlyAllInCostUsd;
+    weightedMarginNumerator += m.quarterlyMarginPct * m.monthlyBtcProduced;
+    weightedDeltaNumerator  += m.marginDeltaPct      * m.monthlyBtcProduced;
+  }
+
+  const weightedMarginPct      = totalMonthlyBtc > 0 ? weightedMarginNumerator / totalMonthlyBtc : 0;
+  const weightedMarginDeltaPct = totalMonthlyBtc > 0 ? weightedDeltaNumerator  / totalMonthlyBtc : 0;
+  const aggregateCoverMonths   = totalMonthlyAllInUsd > 0
+    ? totalTreasuryUsd / totalMonthlyAllInUsd
+    : 999;
+
+  return {
+    miners,
+    fleet: {
+      totalBtcHeld,
+      totalTreasuryUsd,
+      totalMonthlyBtc,
+      totalMonthlyAllInUsd,
+      weightedMarginPct,
+      weightedMarginDeltaPct,
+      aggregateCoverMonths,
+    },
+  };
+}
+
+/**
+ * Capitulation probability blend (0..100). Inputs:
+ *  - hashRibbonSignal: bullish/neutral/bearish
+ *  - networkMarginPct: hashprice vs breakeven margin (negative = pressure)
+ *  - fleetMarginPct:   production-weighted miner-level margin
+ *  - aggregateCoverMonths: fleet treasury / fleet monthly all-in
+ *
+ * Each driver contributes 0..25 points; sum capped at 100.
+ */
+export function computeCapitulationProbability(args: {
+  hashRibbonSignal: 'bullish' | 'bearish' | 'neutral';
+  networkMarginPct: number;
+  fleetMarginPct: number;
+  aggregateCoverMonths: number;
+}): CapitulationResult {
+  const { hashRibbonSignal, networkMarginPct, fleetMarginPct, aggregateCoverMonths } = args;
+
+  // 1. Hash ribbon (network-level miner stress)
+  const ribbonPts = hashRibbonSignal === 'bearish' ? 25
+                  : hashRibbonSignal === 'neutral' ? 12
+                  : 0;
+  const ribbonDetail = hashRibbonSignal === 'bearish'
+    ? '30d MA below 60d MA — network-wide stress'
+    : hashRibbonSignal === 'neutral' ? 'MAs converging' : 'Recovery — 30d > 60d';
+
+  // 2. Network margin (negative = pressure). Map [-30%, +30%] → [25, 0].
+  const netNorm = clamp((-networkMarginPct + 30) / 60, 0, 1);   // -30% → 1, +30% → 0
+  const networkPts = netNorm * 25;
+  const networkDetail = `Network hashprice margin ${networkMarginPct >= 0 ? '+' : ''}${networkMarginPct.toFixed(1)}%`;
+
+  // 3. Fleet margin (production-weighted miner P&L). Same mapping.
+  const fleetNorm = clamp((-fleetMarginPct + 30) / 60, 0, 1);
+  const fleetPts = fleetNorm * 25;
+  const fleetDetail = `Fleet weighted margin ${fleetMarginPct >= 0 ? '+' : ''}${fleetMarginPct.toFixed(1)}%`;
+
+  // 4. Treasury cover (months). <2 → 25, 12+ → 0.
+  const coverNorm = clamp((12 - aggregateCoverMonths) / 10, 0, 1);
+  const coverPts = coverNorm * 25;
+  const coverDetail = `Aggregate treasury covers ${aggregateCoverMonths.toFixed(1)} months of all-in cost`;
+
+  const score = Math.round(clamp(ribbonPts + networkPts + fleetPts + coverPts, 0, 100));
+  const band: CapitulationResult['band'] =
+    score >= 75 ? 'ACUTE'
+    : score >= 50 ? 'HIGH'
+    : score >= 25 ? 'ELEVATED'
+    : 'LOW';
+
+  return {
+    score,
+    band,
+    drivers: [
+      { label: 'Hash Ribbon',     contribution: Math.round(ribbonPts),  detail: ribbonDetail  },
+      { label: 'Network margin',  contribution: Math.round(networkPts), detail: networkDetail },
+      { label: 'Fleet margin',    contribution: Math.round(fleetPts),   detail: fleetDetail   },
+      { label: 'Treasury cover',  contribution: Math.round(coverPts),   detail: coverDetail   },
+    ],
+  };
+}

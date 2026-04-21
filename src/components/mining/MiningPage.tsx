@@ -17,6 +17,7 @@ import { EnergyGravityChart } from './EnergyGravityChart';
 import { MiningConfluence } from './MiningConfluence';
 import { HashrateDistribution } from './HashrateDistribution';
 import { SecurityOutlook } from './SecurityOutlook';
+import { MinerTreasuryStress } from './MinerTreasuryStress';
 
 const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -64,6 +65,18 @@ export function MiningPage({ data, loading, error }: Props) {
   /* ── Find 2028 halving projection for SecurityOutlook ────── */
   const nextHalving = data.securityBudget.base.find(p => p.year === 2028) ?? null;
 
+  /* ── Layout helpers ───────────────────────────────────────── */
+  const isWide   = !isMobile;          // ≥ 768
+  const isXWide  = !isMobile;          // CSS handles >=1280 via responsive grid
+  const sectionLabelStyle: React.CSSProperties = {
+    fontFamily: MONO,
+    fontSize: 9,
+    letterSpacing: '0.16em',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  };
+
   /* ── Render ───────────────────────────────────────────────── */
   return (
     <div style={{
@@ -71,12 +84,12 @@ export function MiningPage({ data, loading, error }: Props) {
       backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)',
     }}>
       <div style={{
-        maxWidth: 920, margin: '0 auto', width: '100%',
-        padding: isMobile ? '16px 12px 32px' : '28px 36px 56px',
-        display: 'flex', flexDirection: 'column', gap: 0,
+        width: '100%',
+        padding: isMobile ? '16px 12px 32px' : '24px 28px 48px',
+        display: 'flex', flexDirection: 'column', gap: isMobile ? 24 : 28,
       }}>
 
-        {/* ═══ 1. HERO — Mining Profitability Signal ════════════ */}
+        {/* ═══ ROW 1 — HERO (full width, includes page header) ══ */}
         <MinerProfitHero
           marginPct={data.hashPrice.marginPct}
           signal={data.hashPrice.signal}
@@ -92,68 +105,84 @@ export function MiningPage({ data, loading, error }: Props) {
           timestamp={data.timestamp}
         />
 
-        {/* ═══ 2. CHARTS — Hash Price + Hash Ribbon ═════════════ */}
-        <section style={{ marginTop: 36 }}>
-          <div style={{
-            fontFamily: MONO, fontSize: 9, letterSpacing: '0.16em',
-            color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 16,
-          }}>
-            MINER ECONOMICS
-          </div>
+        {/* ═══ ROW 2 — TREASURY STRESS MONITOR ══════════════════ */}
+        {data.minerTreasuries.miners.length > 0 && (
+          <section>
+            <div style={sectionLabelStyle}>BALANCE SHEET PRESSURE</div>
+            <MinerTreasuryStress data={data.minerTreasuries} />
+          </section>
+        )}
 
+        {/* ═══ ROW 3 — Hash Price + Hash Ribbon + Confluence ════ */}
+        <section>
+          <div style={sectionLabelStyle}>MINER ECONOMICS</div>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-            gap: isMobile ? 16 : 24,
+            gridTemplateColumns: isMobile
+              ? '1fr'
+              : isXWide ? 'repeat(12, 1fr)' : 'repeat(2, 1fr)',
+            gap: isMobile ? 16 : 20,
           }}>
-            <HashPriceChart
-              history={data.hashPrice.history}
-              breakevenHashPrice={data.hashPrice.breakevenHashPrice}
-              signal={data.hashPrice.signal}
-              theme={theme}
-            />
-            <HashRibbonChart
-              data={data.hashRibbon.data}
-              signal={data.hashRibbon.signal}
-              currentHashrate={data.hashRibbon.currentHashrate}
-              theme={theme}
-            />
+            <div style={{ gridColumn: isMobile ? 'auto' : isXWide ? 'span 4' : 'span 1' }}>
+              <HashPriceChart
+                history={data.hashPrice.history}
+                breakevenHashPrice={data.hashPrice.breakevenHashPrice}
+                signal={data.hashPrice.signal}
+                theme={theme}
+              />
+            </div>
+            <div style={{ gridColumn: isMobile ? 'auto' : isXWide ? 'span 4' : 'span 1' }}>
+              <HashRibbonChart
+                data={data.hashRibbon.data}
+                signal={data.hashRibbon.signal}
+                currentHashrate={data.hashRibbon.currentHashrate}
+                theme={theme}
+              />
+            </div>
+            <div style={{ gridColumn: isMobile ? 'auto' : isXWide ? 'span 4' : 'span 2' }}>
+              <MiningConfluence
+                hashPriceSignal={data.hashPrice.signal}
+                marginPct={data.hashPrice.marginPct}
+                hashRibbonSignal={data.hashRibbon.signal}
+                energyPremiumPct={data.energyValue.premiumPct}
+                subsidyPct={data.securityBudget.current.subsidyPct}
+              />
+            </div>
           </div>
+        </section>
 
-          {/* Energy Gravity — full width below */}
-          <div style={{ marginTop: 24 }}>
-            <EnergyGravityChart
-              history={data.energyGravity.history}
-              currentGravityKwh={data.energyGravity.current}
-              globalAvgKwh={data.energyPrices.globalWeightedAvg}
-              theme={theme}
-            />
+        {/* ═══ ROW 4 — Energy Gravity (8) + Hashrate Dist (4) ══ */}
+        <section>
+          <div style={sectionLabelStyle}>ENERGY &amp; HASHRATE</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile
+              ? '1fr'
+              : isWide ? 'repeat(12, 1fr)' : '1fr',
+            gap: isMobile ? 16 : 20,
+          }}>
+            <div style={{ gridColumn: isMobile ? 'auto' : 'span 8' }}>
+              <EnergyGravityChart
+                history={data.energyGravity.history}
+                currentGravityKwh={data.energyGravity.current}
+                globalAvgKwh={data.energyPrices.globalWeightedAvg}
+                theme={theme}
+              />
+            </div>
+            <div style={{ gridColumn: isMobile ? 'auto' : 'span 4' }}>
+              <HashrateDistribution
+                regions={data.hashrateGeo.regions.slice(0, 5)}
+                totalHashrateEH={data.hashrateGeo.totalHashrateEH}
+                alerts={data.geoAlerts.slice(0, 2)}
+                updatedAt={data.hashrateGeo.updatedAt}
+              />
+            </div>
           </div>
         </section>
 
-        {/* ═══ 3. CONFLUENCE — 4 Mining Signals ═════════════════ */}
-        <section style={{ marginTop: 32 }}>
-          <MiningConfluence
-            hashPriceSignal={data.hashPrice.signal}
-            marginPct={data.hashPrice.marginPct}
-            hashRibbonSignal={data.hashRibbon.signal}
-            energyPremiumPct={data.energyValue.premiumPct}
-            subsidyPct={data.securityBudget.current.subsidyPct}
-          />
-        </section>
-
-        {/* ═══ 4. HASHRATE DISTRIBUTION (top 5) ═════════════════ */}
-        <section style={{ marginTop: 36 }}>
-          <HashrateDistribution
-            regions={data.hashrateGeo.regions.slice(0, 5)}
-            totalHashrateEH={data.hashrateGeo.totalHashrateEH}
-            alerts={data.geoAlerts.slice(0, 2)}
-            updatedAt={data.hashrateGeo.updatedAt}
-          />
-        </section>
-
-        {/* ═══ 5. THE LONG VIEW — Editorial + Security Budget ═══ */}
-        <section style={{ marginTop: 36 }}>
+        {/* ═══ ROW 5 — Security Outlook (full width) ════════════ */}
+        <section>
+          <div style={sectionLabelStyle}>THE LONG VIEW</div>
           <SecurityOutlook
             editorial={data.editorial}
             current={data.securityBudget.current}

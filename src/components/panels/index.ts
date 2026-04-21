@@ -41,6 +41,16 @@ import { SignalInterpreterPanel } from './SignalInterpreterPanel';
 import { CohortAnalysisPanel } from './CohortAnalysisPanel';
 import { OnChainAnalysisPanel } from './OnChainAnalysisPanel';
 import { MacroAnalysisPanel } from './MacroAnalysisPanel';
+import {
+  MinerProfitPanel,
+  HashPricePanel,
+  HashRibbonMinerPanel,
+  EnergyGravityPanel,
+  MiningConfluencePanel,
+  HashrateDistributionPanel,
+  SecurityOutlookPanel,
+  MinerTreasuryPanel,
+} from './mining';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
@@ -81,4 +91,13 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'cohort-analysis':    CohortAnalysisPanel,
   'onchain-analysis':   OnChainAnalysisPanel,
   'macro-analysis':     MacroAnalysisPanel,
+  // Mining Intel — sourced from /api/mining-intel via useMiningIntel
+  'mining-profit':         MinerProfitPanel,
+  'mining-hash-price':     HashPricePanel,
+  'mining-hash-ribbon':    HashRibbonMinerPanel,
+  'mining-energy-gravity': EnergyGravityPanel,
+  'mining-confluence':     MiningConfluencePanel,
+  'mining-hashrate-dist':  HashrateDistributionPanel,
+  'mining-security':       SecurityOutlookPanel,
+  'mining-treasury':       MinerTreasuryPanel,
 };

@@ -13,6 +13,7 @@ interface PanelPickerProps {
 
 const CATEGORY_LABELS: Record<string, string> = {
   bitcoin: 'Bitcoin',
+  mining: 'Mining',
   macro: 'Macro',
   onchain: 'On-Chain',
   geopolitical: 'Geopolitical',
@@ -21,7 +22,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // Display order for categories in the picker
-const CATEGORY_ORDER = ['bitcoin', 'macro', 'onchain', 'geopolitical', 'ai', 'ui'];
+const CATEGORY_ORDER = ['bitcoin', 'mining', 'macro', 'onchain', 'geopolitical', 'ai', 'ui'];
 
 export function PanelPicker({ currentPanels, onAdd, onClose, excludeAdmin }: PanelPickerProps) {
   const currentIds = new Set(currentPanels.map((p) => p.panelId));

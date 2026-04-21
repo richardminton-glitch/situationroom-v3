@@ -23,8 +23,13 @@ import {
   computeEnergyValue,
   computeHashRibbon,
   computeEnergyGravitySeries,
+  deriveMinerTreasuries,
+  computeCapitulationProbability,
 } from '@/lib/signals/mining-engine';
-import type { HashPricePoint, EnergyGravityPoint, MarginSignal, SecurityBudgetProjection, EnergyValueResult, HashRibbonResult } from '@/lib/signals/mining-engine';
+import type {
+  HashPricePoint, EnergyGravityPoint, MarginSignal, SecurityBudgetProjection,
+  EnergyValueResult, HashRibbonResult, MinerTreasurySummary, MinerTreasuryRow,
+} from '@/lib/signals/mining-engine';
 // EnergyGravityPoint is used in the response type
 
 export const dynamic = 'force-dynamic';
@@ -135,6 +140,9 @@ export interface MiningIntelResponse {
 
   // Energy Value Model (Capriole / Fidelity)
   energyValue: EnergyValueResult;
+
+  // Public miner treasuries + capitulation probability (refreshed daily)
+  minerTreasuries: MinerTreasurySummary;
 
   // Common
   btcPrice: number;
@@ -301,6 +309,40 @@ export async function GET() {
     // ── Compute hash ribbon ──
     const hashRibbonResult = computeHashRibbon(hashrates, dates);
 
+    // ── Compute miner-treasury summary + capitulation ──
+    const treasurySeed = readJSON<{ updatedAt: string; source: string; miners: MinerTreasuryRow[] }>(
+      'miner-treasuries.json',
+    );
+    let minerTreasuries: MinerTreasurySummary;
+    if (treasurySeed) {
+      const { miners: derivedMiners, fleet } = deriveMinerTreasuries(treasurySeed.miners, btcPrice);
+      const capitulation = computeCapitulationProbability({
+        hashRibbonSignal: hashRibbonResult.signal,
+        networkMarginPct: marginResult.marginPct,
+        fleetMarginPct: fleet.weightedMarginPct,
+        aggregateCoverMonths: fleet.aggregateCoverMonths,
+      });
+      minerTreasuries = {
+        updatedAt: treasurySeed.updatedAt,
+        source: treasurySeed.source,
+        btcPrice,
+        miners: derivedMiners,
+        fleet,
+        capitulation,
+      };
+    } else {
+      minerTreasuries = {
+        updatedAt: '', source: 'unavailable', btcPrice,
+        miners: [],
+        fleet: {
+          totalBtcHeld: 0, totalTreasuryUsd: 0, totalMonthlyBtc: 0,
+          totalMonthlyAllInUsd: 0, weightedMarginPct: 0,
+          weightedMarginDeltaPct: 0, aggregateCoverMonths: 0,
+        },
+        capitulation: { score: 0, band: 'LOW', drivers: [] },
+      };
+    }
+
     // ── Compute security budget ──
     // Estimate daily fees from recent mempool data (rough: ~50 BTC/day in fees)
     const estimatedDailyFeesUsd = 50 * btcPrice; // conservative estimate
@@ -352,6 +394,7 @@ export async function GET() {
       },
       hashRibbon: hashRibbonResult,
       energyValue: energyValueResult,
+      minerTreasuries,
       btcPrice,
       hashrateEH,
       difficultyT,

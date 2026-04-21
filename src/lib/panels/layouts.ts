@@ -108,6 +108,26 @@ const ONCHAIN_PRESET: DashboardLayout = {
   ],
 };
 
+const MINING_FOCUS_PRESET: DashboardLayout = {
+  id: 'mining-focus',
+  name: 'Mining Focus',
+  description: 'Public miner balance sheets, hash economics, capitulation pressure',
+  panels: [
+    // Row 1 — Profit hero (left) + Treasury monitor (right)
+    { panelId: 'mining-profit',         x:   0, y:   0, w: 660, h: 308, collapsed: false, resizable: true },
+    { panelId: 'mining-treasury',       x: 660, y:   0, w: 792, h: 484, collapsed: false, resizable: true },
+    // Row 2 — Hash price + ribbon under profit
+    { panelId: 'mining-hash-price',     x:   0, y: 308, w: 330, h: 308, collapsed: false, resizable: true },
+    { panelId: 'mining-hash-ribbon',    x: 330, y: 308, w: 330, h: 308, collapsed: false, resizable: true },
+    // Row 3 — Energy gravity (wide) + confluence + hashrate dist
+    { panelId: 'mining-energy-gravity', x:   0, y: 616, w: 660, h: 308, collapsed: false, resizable: true },
+    { panelId: 'mining-confluence',     x: 660, y: 484, w: 396, h: 308, collapsed: false, resizable: true },
+    { panelId: 'mining-hashrate-dist',  x: 1056, y: 484, w: 396, h: 396, collapsed: false, resizable: true },
+    // Row 4 — Security outlook full width
+    { panelId: 'mining-security',       x:   0, y: 924, w: 1452, h: 484, collapsed: false, resizable: true },
+  ],
+};
+
 const AI_PRESET: DashboardLayout = {
   id: 'ai',
   name: 'AI Analysis',
@@ -157,6 +177,7 @@ export const PARCHMENT_PRESETS: DashboardLayout[] = [
   PARCHMENT_DEFAULT_LAYOUT,
   FULL_DATA_PARCHMENT,
   MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
+  MINING_FOCUS_PRESET, // General tier — public miner balance sheets
   AI_PRESET,           // Members tier
   ONCHAIN_PRESET,      // Members tier
 ];
@@ -194,6 +215,7 @@ export const DARK_PRESETS: DashboardLayout[] = [
   DARK_DEFAULT_LAYOUT,
   FULL_DATA_DARK,
   MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
+  MINING_FOCUS_PRESET, // General tier — public miner balance sheets
   AI_PRESET,           // Members tier
   ONCHAIN_PRESET,      // Members tier
 ];
