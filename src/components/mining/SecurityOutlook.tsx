@@ -64,11 +64,42 @@ export function SecurityOutlook({
           letterSpacing: '0.16em',
           color: 'var(--text-muted)',
           textTransform: 'uppercase',
-          marginBottom: 16,
+          marginBottom: 10,
         }}
       >
         THE LONG VIEW
       </div>
+
+      {/* Editorial title + body */}
+      {editorial.title && (
+        <div
+          style={{
+            fontFamily: isDark ? MONO : "'Georgia', 'Times New Roman', serif",
+            fontSize: 18,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}
+        >
+          {editorial.title}
+        </div>
+      )}
+      {editorial.body && (
+        <div
+          style={{
+            fontFamily: isDark ? MONO : 'var(--font-body)',
+            fontSize: isDark ? 12 : 14,
+            lineHeight: isDark ? 1.55 : 1.6,
+            color: 'var(--text-secondary)',
+            marginBottom: 18,
+            whiteSpace: 'pre-wrap',
+            maxWidth: 820,
+          }}
+        >
+          {editorial.body}
+        </div>
+      )}
 
       {/* Security budget strip */}
       <div

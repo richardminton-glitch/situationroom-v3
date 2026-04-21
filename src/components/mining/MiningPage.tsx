@@ -180,9 +180,8 @@ export function MiningPage({ data, loading, error }: Props) {
           </div>
         </section>
 
-        {/* ═══ ROW 5 — Security Outlook (full width) ════════════ */}
+        {/* ═══ ROW 5 — Security Outlook (full width, own heading) ═ */}
         <section>
-          <div style={sectionLabelStyle}>THE LONG VIEW</div>
           <SecurityOutlook
             editorial={data.editorial}
             current={data.securityBudget.current}
