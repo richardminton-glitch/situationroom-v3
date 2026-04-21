@@ -62,7 +62,12 @@ export function ThemeProvider({
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
     root.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('sr-theme', theme);
+    // Skip persisting when an external flow (shared-dashboard viewer,
+    // Members Room) is forcing the theme — we'd otherwise overwrite the
+    // viewer's own preference with the forced value.
+    if (!sessionStorage.getItem('sr-ops-room-prev-theme')) {
+      localStorage.setItem('sr-theme', theme);
+    }
   }, [theme]);
 
   // Enforce tier: revert free users from dark to parchment after auth loads

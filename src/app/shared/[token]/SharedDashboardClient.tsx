@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { DashboardGrid } from '@/components/layout/DashboardGrid';
 import { MobileDashboardGrid } from '@/components/layout/MobileDashboardGrid';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useTheme } from '@/components/layout/ThemeProvider';
 import type { LayoutPanelItem } from '@/lib/panels/layouts';
+import type { Theme } from '@/types';
 
 interface Props {
   panels: LayoutPanelItem[];
@@ -12,6 +15,7 @@ interface Props {
   ownerDisplay: string;
   viewerIsAuthed: boolean;
   token: string;
+  shareTheme: Theme;
 }
 
 /**
@@ -25,8 +29,27 @@ export function SharedDashboardClient({
   ownerDisplay,
   viewerIsAuthed,
   token,
+  shareTheme,
 }: Props) {
   const isMobile = useIsMobile();
+  const { theme: viewerTheme, setTheme } = useTheme();
+
+  // Force the owner's chosen theme while this dashboard is mounted. The
+  // sessionStorage flag is the existing "theme is externally controlled"
+  // signal ThemeProvider already respects — it bypasses the tier gate (so
+  // free invitees can be served dark) and prevents the viewer's stored
+  // preference from leaking back in through the hydration effect.
+  useEffect(() => {
+    const prev: Theme = viewerTheme === 'dark' ? 'dark' : 'parchment';
+    sessionStorage.setItem('sr-ops-room-prev-theme', prev);
+    setTheme(shareTheme);
+    return () => {
+      sessionStorage.removeItem('sr-ops-room-prev-theme');
+      setTheme(prev);
+    };
+    // Run once on mount — viewerTheme is captured as the snapshot to restore.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareTheme]);
 
   // Signup redirect funnels invitees back here so the server component can
   // bind their new userId to the share on next load.

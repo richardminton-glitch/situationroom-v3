@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { Theme } from '@/types';
 
 export interface ShareSlot {
   id: string;
   token: string;
   label: string;
   inviteEmail: string | null;
+  theme: Theme;
   createdAt: string;
   lastViewedAt: string | null;
   boundUserId: string | null;
@@ -55,12 +57,12 @@ export function useSharedDashboard(layoutId: string | null) {
   }, [refresh]);
 
   const create = useCallback(
-    async (label: string, inviteEmail?: string): Promise<CreateResult> => {
+    async (label: string, theme: Theme, inviteEmail?: string): Promise<CreateResult> => {
       if (!layoutId) return { ok: false, conflict: false, error: 'No layout' };
       const res = await fetch(`/api/layouts/${layoutId}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label, inviteEmail: inviteEmail || undefined }),
+        body: JSON.stringify({ label, theme, inviteEmail: inviteEmail || undefined }),
       });
       if (res.ok) {
         const slot = (await res.json()) as ShareSlot;

@@ -66,6 +66,8 @@ export default async function SharedDashboardPage({
   const ownerDisplay =
     share.owner.displayName?.trim() || share.owner.email.split('@')[0];
 
+  const shareTheme = share.theme === 'dark' ? 'dark' : 'parchment';
+
   return (
     <SharedDashboardClient
       panels={panels}
@@ -73,6 +75,7 @@ export default async function SharedDashboardPage({
       ownerDisplay={ownerDisplay}
       viewerIsAuthed={!!session}
       token={token}
+      shareTheme={shareTheme}
     />
   );
 }

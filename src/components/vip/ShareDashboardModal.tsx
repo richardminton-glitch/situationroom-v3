@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Copy, Check } from '@phosphor-icons/react';
 import { useSharedDashboard, shareUrl, type ShareSlot } from '@/hooks/useSharedDashboard';
+import type { Theme } from '@/types';
 
 interface Props {
   layoutId: string;
@@ -20,6 +21,7 @@ export function ShareDashboardModal({ layoutId, dashboardName, onClose }: Props)
   const { max, slots, loading, canCreate, create, revoke } = useSharedDashboard(layoutId);
   const [label, setLabel] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [theme, setTheme] = useState<Theme>('parchment');
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -32,7 +34,7 @@ export function ShareDashboardModal({ layoutId, dashboardName, onClose }: Props)
       return;
     }
     setCreating(true);
-    const result = await create(trimmed, inviteEmail.trim() || undefined);
+    const result = await create(trimmed, theme, inviteEmail.trim() || undefined);
     setCreating(false);
     if (result.ok) {
       setLabel('');
@@ -200,6 +202,60 @@ export function ShareDashboardModal({ layoutId, dashboardName, onClose }: Props)
                   }}
                 />
               </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    letterSpacing: '0.12em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  THEME
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-label="Share theme"
+                  style={{
+                    display: 'inline-flex',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  {(['parchment', 'dark'] as const).map((t) => {
+                    const active = theme === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setTheme(t)}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: 10,
+                          letterSpacing: '0.1em',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: active ? 700 : 400,
+                          backgroundColor: active ? 'var(--accent-primary)' : 'transparent',
+                          color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               {error && (
                 <div
                   style={{
@@ -287,6 +343,19 @@ function SlotRow({ slot, onRevoke }: { slot: ShareSlot; onRevoke: () => void }) 
           }}
         >
           <span className="truncate">{slot.label || '(no label)'}</span>
+          <span
+            style={{
+              fontSize: 9,
+              letterSpacing: '0.08em',
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              padding: '1px 6px',
+              border: '1px solid var(--border-subtle)',
+            }}
+            title={`Viewer sees this dashboard in ${slot.theme} mode`}
+          >
+            {slot.theme}
+          </span>
           {bound && (
             <span
               style={{

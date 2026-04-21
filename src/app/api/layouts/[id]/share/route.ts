@@ -39,9 +39,10 @@ export async function POST(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const body = await request.json() as { label?: string; inviteEmail?: string };
+  const body = await request.json() as { label?: string; inviteEmail?: string; theme?: string };
   const label = (body.label ?? '').trim().slice(0, 60);
   const inviteEmail = body.inviteEmail?.trim().toLowerCase() || null;
+  const theme = body.theme === 'dark' ? 'dark' : 'parchment';
 
   const activeShares = await prisma.dashboardShare.findMany({
     where: { ownerId: session.user.id, revokedAt: null },
@@ -72,8 +73,9 @@ export async function POST(
       token,
       label,
       inviteEmail,
+      theme,
     },
-    select: { id: true, token: true, label: true, inviteEmail: true, createdAt: true, lastViewedAt: true, boundUserId: true },
+    select: { id: true, token: true, label: true, inviteEmail: true, theme: true, createdAt: true, lastViewedAt: true, boundUserId: true },
   });
 
   return NextResponse.json(share, { status: 201 });
@@ -105,6 +107,7 @@ export async function GET(
       token: true,
       label: true,
       inviteEmail: true,
+      theme: true,
       createdAt: true,
       lastViewedAt: true,
       boundUserId: true,

@@ -139,6 +139,7 @@ model DashboardShare {
   layoutId     String    @map("layout_id")
   token        String    @unique
   label        String    @default("")
+  theme        String    @default("parchment")
   inviteEmail  String?   @map("invite_email")
   boundUserId  String?   @map("bound_user_id")
   revokedAt    DateTime? @map("revoked_at")
