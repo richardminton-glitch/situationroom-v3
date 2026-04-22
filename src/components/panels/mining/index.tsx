@@ -163,6 +163,7 @@ export function SecurityOutlookPanel() {
         editorial={data.editorial}
         current={data.securityBudget.current}
         nextHalving={nextHalving}
+        projections={data.securityBudget.base}
         energyValueFair={data.energyValue.fairValue}
         energyValuePremiumPct={data.energyValue.premiumPct}
         fleetEfficiency={data.energyValue.fleetEfficiency}
