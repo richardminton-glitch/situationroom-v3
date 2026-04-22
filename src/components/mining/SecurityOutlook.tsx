@@ -330,179 +330,111 @@ export function SecurityOutlook({
                 By {projections[projections.length - 1].year}: subsidy {projections[projections.length - 1].subsidyPct.toFixed(0)}% of budget. Network security becomes a {projections[projections.length - 1].feePct.toFixed(0)}% fee economy.
               </div>
             )}
-          </div>
-        )}
-      </div>
 
-      {/* Security budget strip */}
-      <div
-        style={{
-          display: 'flex',
-          borderTop: '1px solid var(--border-subtle)',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
-      >
-        {/* DAILY BUDGET cell */}
-        <div
-          style={{
-            flex: 1,
-            padding: '10px 12px',
-            borderRight: '1px solid var(--border-subtle)',
-          }}
-        >
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: 8,
-              letterSpacing: '0.12em',
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            DAILY BUDGET
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-data)',
-              fontSize: 16,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              fontVariantNumeric: 'tabular-nums',
-              marginBottom: 6,
-            }}
-          >
-            {fmtUsd(current.dailyTotalUsd)}
-          </div>
-          {/* Proportional bar */}
-          <div style={{ display: 'flex', height: 6, width: 60 }}>
+            {/* ── Today snapshot strip (was full-width below) ── */}
             <div
               style={{
-                width: subsidyBarWidth,
-                backgroundColor: 'var(--accent-primary)',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                marginTop: 12,
+                borderTop: '1px solid var(--border-subtle)',
+                borderBottom: '1px solid var(--border-subtle)',
               }}
-            />
+            >
+              {/* DAILY BUDGET */}
+              <div style={{ padding: '8px 10px', borderRight: '1px solid var(--border-subtle)' }}>
+                <div style={{
+                  fontFamily: MONO, fontSize: 8, letterSpacing: '0.12em',
+                  color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4,
+                }}>
+                  DAILY BUDGET
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-data)', fontSize: 14, fontWeight: 700,
+                  color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
+                  marginBottom: 4,
+                }}>
+                  {fmtUsd(current.dailyTotalUsd)}
+                </div>
+                <div style={{ display: 'flex', height: 5, width: 50 }}>
+                  <div style={{ width: subsidyBarWidth * (50 / 60), backgroundColor: subsidyCol }} />
+                  <div style={{ width: feesBarWidth    * (50 / 60), backgroundColor: feeCol }} />
+                </div>
+              </div>
+
+              {/* SUBSIDY */}
+              <div style={{ padding: '8px 10px', borderRight: '1px solid var(--border-subtle)' }}>
+                <div style={{
+                  fontFamily: MONO, fontSize: 8, letterSpacing: '0.12em',
+                  color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4,
+                }}>
+                  SUBSIDY
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-data)', fontSize: 14, fontWeight: 700,
+                  color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {current.subsidyPct.toFixed(0)}%
+                </div>
+                <div style={{
+                  fontFamily: MONO, fontSize: 9, color: 'var(--text-muted)', marginTop: 1,
+                }}>
+                  of total
+                </div>
+              </div>
+
+              {/* NEXT HALVING */}
+              <div style={{ padding: '8px 10px' }}>
+                <div style={{
+                  fontFamily: MONO, fontSize: 8, letterSpacing: '0.12em',
+                  color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4,
+                }}>
+                  NEXT HALVING ({nextHalving?.year ?? 2028})
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-data)', fontSize: 14, fontWeight: 700,
+                  color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {nextHalving ? fmtUsd(nextHalving.dailyTotalUsd) : '\u2014'}
+                </div>
+                {nextHalving && (
+                  <div style={{
+                    fontFamily: MONO, fontSize: 9, color: 'var(--text-muted)', marginTop: 1,
+                  }}>
+                    daily budget
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Energy value note ── */}
             <div
               style={{
-                width: feesBarWidth,
-                backgroundColor: '#f59e0b',
+                fontFamily: MONO,
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                marginTop: 10,
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: 1.5,
               }}
-            />
-          </div>
-        </div>
+            >
+              Energy Value model: {fmtFairValue(energyValueFair)} fair value — spot {Math.abs(energyValuePremiumPct).toFixed(0)}% {energyValuePremiumPct < 0 ? 'below' : 'above'} fair value (fleet: {fleetEfficiency} J/TH)
+            </div>
 
-        {/* SUBSIDY cell */}
-        <div
-          style={{
-            flex: 1,
-            padding: '10px 12px',
-            borderRight: '1px solid var(--border-subtle)',
-          }}
-        >
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: 8,
-              letterSpacing: '0.12em',
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            SUBSIDY
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-data)',
-              fontSize: 16,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {current.subsidyPct.toFixed(0)}%
-          </div>
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: 9,
-              color: 'var(--text-muted)',
-              marginTop: 2,
-            }}
-          >
-            of total
-          </div>
-        </div>
-
-        {/* NEXT HALVING cell */}
-        <div
-          style={{
-            flex: 1,
-            padding: '10px 12px',
-          }}
-        >
-          <div
-            style={{
-              fontFamily: MONO,
-              fontSize: 8,
-              letterSpacing: '0.12em',
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            NEXT HALVING (2028)
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-data)',
-              fontSize: 16,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {nextHalving ? fmtUsd(nextHalving.dailyTotalUsd) : '\u2014'}
-          </div>
-          {nextHalving && (
+            {/* ── Updated timestamp ── */}
             <div
               style={{
                 fontFamily: MONO,
                 fontSize: 9,
                 color: 'var(--text-muted)',
-                marginTop: 2,
+                textAlign: 'right',
+                marginTop: 6,
               }}
             >
-              daily budget
+              Updated {editorial.updatedAt}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Energy value note */}
-      <div
-        style={{
-          fontFamily: MONO,
-          fontSize: 10,
-          color: 'var(--text-muted)',
-          marginTop: 12,
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        Energy Value model: {fmtFairValue(energyValueFair)} fair value — spot {Math.abs(energyValuePremiumPct).toFixed(0)}% {energyValuePremiumPct < 0 ? 'below' : 'above'} fair value (fleet: {fleetEfficiency} J/TH)
-      </div>
-
-      {/* Updated timestamp */}
-      <div
-        style={{
-          fontFamily: MONO,
-          fontSize: 9,
-          color: 'var(--text-muted)',
-          textAlign: 'right',
-          marginTop: 8,
-        }}
-      >
-        Updated {editorial.updatedAt}
+          </div>
+        )}
       </div>
     </div>
   );
