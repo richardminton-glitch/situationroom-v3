@@ -20,6 +20,7 @@ import { MiningConfluence }      from '@/components/mining/MiningConfluence';
 import { HashrateDistribution }  from '@/components/mining/HashrateDistribution';
 import { SecurityOutlook }       from '@/components/mining/SecurityOutlook';
 import { MinerTreasuryStress }   from '@/components/mining/MinerTreasuryStress';
+import { HashpriceSpread }       from '@/components/mining/HashpriceSpread';
 
 function PanelError({ msg }: { msg: string }) {
   return (
@@ -168,6 +169,24 @@ export function SecurityOutlookPanel() {
         btcPrice={data.btcPrice}
       />
     </Wrap>
+  );
+}
+
+export function HashpriceSpreadPanel() {
+  const { data, loading, error } = useMiningIntel();
+  if (loading) return <PanelLoading />;
+  if (error || !data || !data.regionalSpread.regions.length) {
+    return <PanelError msg="Hashprice spread unavailable" />;
+  }
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <HashpriceSpread
+        spread={data.regionalSpread}
+        joulesPerBtc={data.joulesPerBtc}
+        btcPrice={data.btcPrice}
+        globalAvgKwh={data.energyPrices.globalWeightedAvg}
+      />
+    </div>
   );
 }
 

@@ -50,6 +50,7 @@ import {
   HashrateDistributionPanel,
   SecurityOutlookPanel,
   MinerTreasuryPanel,
+  HashpriceSpreadPanel,
 } from './mining';
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
@@ -100,4 +101,5 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'mining-hashrate-dist':  HashrateDistributionPanel,
   'mining-security':       SecurityOutlookPanel,
   'mining-treasury':       MinerTreasuryPanel,
+  'mining-spread':         HashpriceSpreadPanel,
 };

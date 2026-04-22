@@ -476,6 +476,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'mining',
   },
   {
+    id: 'mining-spread',
+    name: 'Mining — Hashprice Spread',
+    category: 'mining',
+    defaultW: 880, defaultH: 484, minW: 528, minH: 396,
+    resizable: true,
+    refreshInterval: 86400,
+    dataSources: ['miningIntel'],
+    description: 'Per-region hashprice vs electricity breakeven; 1 BTC priced in joules',
+    icon: 'mining',
+  },
+  {
     id: 'mining-treasury',
     name: 'Mining — Treasury Stress',
     category: 'mining',

@@ -25,10 +25,13 @@ import {
   computeEnergyGravitySeries,
   deriveMinerTreasuries,
   computeCapitulationProbability,
+  computeRegionalHashpriceSpread,
+  computeJoulesPerBtc,
 } from '@/lib/signals/mining-engine';
 import type {
   HashPricePoint, EnergyGravityPoint, MarginSignal, SecurityBudgetProjection,
   EnergyValueResult, HashRibbonResult, MinerTreasurySummary, MinerTreasuryRow,
+  RegionalSpreadResult, JoulesPerBtcResult,
 } from '@/lib/signals/mining-engine';
 // EnergyGravityPoint is used in the response type
 
@@ -143,6 +146,10 @@ export interface MiningIntelResponse {
 
   // Public miner treasuries + capitulation probability (refreshed daily)
   minerTreasuries: MinerTreasurySummary;
+
+  // Hashprice vs region electricity cost spread + 1 BTC priced in joules
+  regionalSpread: RegionalSpreadResult;
+  joulesPerBtc:   JoulesPerBtcResult;
 
   // Common
   btcPrice: number;
@@ -309,6 +316,19 @@ export async function GET() {
     // ── Compute hash ribbon ──
     const hashRibbonResult = computeHashRibbon(hashrates, dates);
 
+    // ── Compute regional hashprice-vs-energy spread ──
+    const regionalSpread = computeRegionalHashpriceSpread(
+      currentHashPrice,
+      energyData?.regions ?? {},
+      fleetEfficiency,
+      globalAvgEnergy,
+    );
+
+    // ── Compute "1 BTC in joules" energy backing ──
+    const joulesPerBtcResult = computeJoulesPerBtc(
+      hashrateEH, fleetEfficiency, btcPrice, globalAvgEnergy,
+    );
+
     // ── Compute miner-treasury summary + capitulation ──
     const treasurySeed = readJSON<{ updatedAt: string; source: string; miners: MinerTreasuryRow[] }>(
       'miner-treasuries.json',
@@ -395,6 +415,8 @@ export async function GET() {
       hashRibbon: hashRibbonResult,
       energyValue: energyValueResult,
       minerTreasuries,
+      regionalSpread,
+      joulesPerBtc: joulesPerBtcResult,
       btcPrice,
       hashrateEH,
       difficultyT,

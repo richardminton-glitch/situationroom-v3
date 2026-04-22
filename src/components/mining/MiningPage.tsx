@@ -18,6 +18,7 @@ import { MiningConfluence } from './MiningConfluence';
 import { HashrateDistribution } from './HashrateDistribution';
 import { SecurityOutlook } from './SecurityOutlook';
 import { MinerTreasuryStress } from './MinerTreasuryStress';
+import { HashpriceSpread } from './HashpriceSpread';
 
 const MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -150,6 +151,19 @@ export function MiningPage({ data, loading, error }: Props) {
             </div>
           </div>
         </section>
+
+        {/* ═══ ROW 3.5 — Hashprice vs Energy-Cost Spread (full) ═ */}
+        {data.regionalSpread.regions.length > 0 && (
+          <section>
+            <div style={sectionLabelStyle}>WHERE MINING PAYS</div>
+            <HashpriceSpread
+              spread={data.regionalSpread}
+              joulesPerBtc={data.joulesPerBtc}
+              btcPrice={data.btcPrice}
+              globalAvgKwh={data.energyPrices.globalWeightedAvg}
+            />
+          </section>
+        )}
 
         {/* ═══ ROW 4 — Energy Gravity (8) + Hashrate Dist (4) ══ */}
         <section>

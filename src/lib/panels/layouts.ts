@@ -123,8 +123,10 @@ const MINING_FOCUS_PRESET: DashboardLayout = {
     { panelId: 'mining-energy-gravity', x:   0, y: 616, w: 660, h: 308, collapsed: false, resizable: true },
     { panelId: 'mining-confluence',     x: 660, y: 484, w: 396, h: 308, collapsed: false, resizable: true },
     { panelId: 'mining-hashrate-dist',  x: 1056, y: 484, w: 396, h: 396, collapsed: false, resizable: true },
-    // Row 4 — Security outlook full width
-    { panelId: 'mining-security',       x:   0, y: 924, w: 1452, h: 484, collapsed: false, resizable: true },
+    // Row 4 — Hashprice spread (full width)
+    { panelId: 'mining-spread',         x:   0, y: 924, w: 1452, h: 484, collapsed: false, resizable: true },
+    // Row 5 — Security outlook full width
+    { panelId: 'mining-security',       x:   0, y: 1408, w: 1452, h: 484, collapsed: false, resizable: true },
   ],
 };
 

@@ -444,6 +444,128 @@ export function computeHashRibbon(
   };
 }
 
+// ── Hashprice vs Energy-Cost Spread (per region) ────────────────────────────
+
+export interface RegionSpreadRow {
+  id: string;
+  label: string;
+  pricePerKwh: number;
+  breakevenHashPrice: number;   // USD/TH/day at this region's electricity
+  spread: number;               // currentHashPrice - breakeven (USD/TH/day)
+  marginPct: number;            // spread / currentHashPrice * 100
+}
+
+export interface RegionalSpreadResult {
+  hashPrice: number;            // current network hashprice (USD/TH/day)
+  globalBreakeven: number;      // breakeven at globalWeightedAvg $/kWh
+  globalSpread: number;
+  globalMarginPct: number;
+  fleetEfficiencyJPerTH: number;
+  kwhPerThDay: number;          // energy cost basis: 1 TH/s for 1 day
+  regions: RegionSpreadRow[];   // sorted by spread descending (best first)
+}
+
+/**
+ * For each region, compute the breakeven hashprice given that region's
+ * industrial electricity price + the assumed fleet efficiency. Spread is the
+ * gap between today's network hashprice and that breakeven — positive means
+ * miners in that region are profitable, negative means they're underwater.
+ *
+ * Energy cost per TH/s for one day:
+ *   E = fleetEff (J/TH) × 86400 s = J/day
+ *   kWh = E / 3,600,000
+ *   $/day = kWh × $/kWh
+ */
+export function computeRegionalHashpriceSpread(
+  hashPriceUsdPerThDay: number,
+  energyPriceRegions: Record<string, { priceKwh: number; label: string }>,
+  fleetEfficiencyJPerTH: number,
+  globalAvgKwh: number,
+): RegionalSpreadResult {
+  const SECONDS_PER_DAY = 86400;
+  const J_PER_KWH = 3_600_000;
+  const kwhPerThDay = (fleetEfficiencyJPerTH * SECONDS_PER_DAY) / J_PER_KWH;
+
+  const breakevenForKwh = (kwh: number) => kwhPerThDay * kwh;
+
+  const regions: RegionSpreadRow[] = Object.entries(energyPriceRegions)
+    .map(([id, r]) => {
+      const breakeven = breakevenForKwh(r.priceKwh);
+      const spread = hashPriceUsdPerThDay - breakeven;
+      return {
+        id,
+        label: r.label,
+        pricePerKwh: r.priceKwh,
+        breakevenHashPrice: breakeven,
+        spread,
+        marginPct: hashPriceUsdPerThDay > 0
+          ? (spread / hashPriceUsdPerThDay) * 100
+          : 0,
+      };
+    })
+    .sort((a, b) => b.spread - a.spread);
+
+  const globalBreakeven = breakevenForKwh(globalAvgKwh);
+  const globalSpread    = hashPriceUsdPerThDay - globalBreakeven;
+  const globalMarginPct = hashPriceUsdPerThDay > 0
+    ? (globalSpread / hashPriceUsdPerThDay) * 100
+    : 0;
+
+  return {
+    hashPrice: hashPriceUsdPerThDay,
+    globalBreakeven,
+    globalSpread,
+    globalMarginPct,
+    fleetEfficiencyJPerTH,
+    kwhPerThDay,
+    regions,
+  };
+}
+
+// ── Bitcoin priced in joules ────────────────────────────────────────────────
+
+export interface JoulesPerBtcResult {
+  joulesPerBtc: number;             // J of grid energy per 1 BTC mined
+  kwhPerBtc: number;                // = J / 3.6e6
+  energyDollarsPerBtc: number;      // kWh × global avg $/kWh — raw energy cost only
+  costPremiumOverEnergyPct: number; // (btcPrice - energyDollars) / energyDollars × 100
+  networkPowerGW: number;           // network draw (GW)
+}
+
+/**
+ * "What is 1 BTC worth in joules?" The energy backing of a freshly mined coin
+ * — useful as the absolute floor for production-cost discussions, separate
+ * from the Capriole Energy Value model (which prices the whole stock).
+ */
+export function computeJoulesPerBtc(
+  hashrateEH: number,
+  fleetEfficiencyJPerTH: number,
+  btcPrice: number,
+  globalAvgKwh: number,
+  subsidyBtc: number = 3.125,
+  blocksPerDay: number = 144,
+): JoulesPerBtcResult {
+  // Network power: 1 EH/s = 1e6 TH/s; J/s per TH/s == J/TH (dimensions check).
+  const networkPowerW  = hashrateEH * 1e6 * fleetEfficiencyJPerTH;
+  const networkPowerGW = networkPowerW / 1e9;
+
+  const btcPerSecond = (subsidyBtc * blocksPerDay) / 86400;
+  const joulesPerBtc = btcPerSecond > 0 ? networkPowerW / btcPerSecond : 0;
+  const kwhPerBtc    = joulesPerBtc / 3_600_000;
+  const energyDollarsPerBtc = kwhPerBtc * globalAvgKwh;
+  const costPremiumOverEnergyPct = energyDollarsPerBtc > 0
+    ? ((btcPrice - energyDollarsPerBtc) / energyDollarsPerBtc) * 100
+    : 0;
+
+  return {
+    joulesPerBtc,
+    kwhPerBtc,
+    energyDollarsPerBtc,
+    costPremiumOverEnergyPct,
+    networkPowerGW,
+  };
+}
+
 // ── Miner Treasury / Capitulation ───────────────────────────────────────────
 
 export interface MinerTreasuryRow {
