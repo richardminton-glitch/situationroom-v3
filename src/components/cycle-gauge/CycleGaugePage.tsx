@@ -26,6 +26,7 @@ import { IndicatorCard }      from './IndicatorGrid';
 import { ConfidenceDisplay }  from './ConfidenceDisplay';
 import { HistoricalAnalogues } from './HistoricalAnalogues';
 import { DrawdownChart }       from './DrawdownChart';
+import { AscentChart }         from './AscentChart';
 
 interface Props {
   data:    CycleGaugeResponse | null;
@@ -160,6 +161,9 @@ export function CycleGaugePage({ data, loading, error }: Props) {
 
         {/* Drawdown chart */}
         <DrawdownChart />
+
+        {/* Ascent chart — inverse pair: cycle low → next cycle top */}
+        <AscentChart />
 
         {/* Footer */}
         <div style={{
