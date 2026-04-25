@@ -8,7 +8,7 @@
  * members tier and above.
  */
 
-import { Crosshair, ChartLineUp } from '@phosphor-icons/react';
+import { Crosshair, ChartLineUp, Waveform } from '@phosphor-icons/react';
 import { SectionRailFrame } from './SectionRailFrame';
 import { RailLink } from './RailLink';
 
@@ -28,6 +28,12 @@ export function RoomsRail() {
           href="/rooms/trading-desk"
           label="Trading Desk"
           icon={<ChartLineUp size={ICON_SIZE} />}
+          requiredTier="members"
+        />
+        <RailLink
+          href="/rooms/macro-cycle"
+          label="Macro Cycle"
+          icon={<Waveform size={ICON_SIZE} />}
           requiredTier="members"
         />
       </div>

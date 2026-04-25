@@ -20,16 +20,18 @@
  *   grok-3:                                $3.00/M in, $15.00/M out
  *   grok-3-mini-fast:                      ~$0.10/M in, $0.40/M out
  *
- * Calibration (2026-04-17):
- *   xAI billing dashboard reports ~$1.37/day sustained over the last 3
- *   days (~$41/month). The original row-by-row model summed to ~$0.68/day,
- *   under-stating actuals by ~2.03×. Every row's est7d/est30d figures
- *   below are the original best-estimates multiplied by 2.027 to match
- *   observed spend. callsPerDay and costPerCall are kept as illustrative
- *   structural numbers — the scale factor absorbs what's almost certainly
- *   a mix of larger prompt/response sizes and higher on-demand call
- *   volume than the initial model anticipated. Recalibrate from this file
- *   whenever the xAI daily figure drifts by more than ~15%.
+ * Calibration (2026-04-25):
+ *   xAI billing dashboard reports $87.04 over the trailing 31 days
+ *   (26 Mar – 25 Apr 2026), averaging $2.80/day with a peak of $6.16.
+ *   The previous calibration (2026-04-17) targeted $1.37/day off a
+ *   ~$0.68/day raw model via a 2.027× scale factor. Sustained spend
+ *   has since roughly doubled — driven mostly by heavier on-demand
+ *   member/VIP analysis traffic and bigger Grok-3 prompts on the
+ *   on-chain and macro routes. Each row's est7d/est30d below is now
+ *   the prior figure × 2.044 (i.e. raw model × ~4.14). callsPerDay
+ *   and costPerCall remain illustrative structural numbers — the
+ *   scale factor absorbs the gap. Recalibrate whenever the xAI daily
+ *   figure drifts by more than ~15% from the $2.80/day target.
  */
 
 export interface AiUsageRow {
@@ -60,8 +62,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 6,
     // (3000 × $3/M) + (400 × $15/M) + ~3 web searches × $0.005 = $0.030
     costPerCall: 0.030,
-    est7dCost: 2.55,
-    est30dCost: 10.95,
+    est7dCost: 5.21,
+    est30dCost: 22.38,
   },
   {
     feature: 'VIP Briefings',
@@ -71,8 +73,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 250,
     callsPerDay: 10,  // ~5 VIP users × 2 calls
     costPerCall: 0.0005,
-    est7dCost: 0.08,
-    est30dCost: 0.30,
+    est7dCost: 0.16,
+    est30dCost: 0.61,
   },
   {
     feature: 'RSS Classifier',
@@ -83,8 +85,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 75,  // 50–100 depending on feed velocity
     // (1250 × $0.20/M) + (175 × $0.50/M) = $0.0003
     costPerCall: 0.0003,
-    est7dCost: 0.32,
-    est30dCost: 1.38,
+    est7dCost: 0.65,
+    est30dCost: 2.82,
   },
   {
     feature: 'Signal Annotation',
@@ -94,8 +96,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 125,
     callsPerDay: 10,
     costPerCall: 0.0002,
-    est7dCost: 0.02,
-    est30dCost: 0.12,
+    est7dCost: 0.04,
+    est30dCost: 0.25,
   },
   {
     feature: 'Signal Interpreter',
@@ -105,8 +107,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 750,
     callsPerDay: 5,
     costPerCall: 0.0009,
-    est7dCost: 0.06,
-    est30dCost: 0.28,
+    est7dCost: 0.12,
+    est30dCost: 0.57,
   },
   {
     feature: 'Cohort Analysis',
@@ -116,8 +118,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 430,
     callsPerDay: 4,
     costPerCall: 0.0006,
-    est7dCost: 0.04,
-    est30dCost: 0.14,
+    est7dCost: 0.08,
+    est30dCost: 0.29,
   },
   {
     feature: 'Bitcoin Argument',
@@ -127,8 +129,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 500,
     callsPerDay: 2,
     costPerCall: 0.0007,
-    est7dCost: 0.02,
-    est30dCost: 0.08,
+    est7dCost: 0.04,
+    est30dCost: 0.16,
   },
   {
     feature: 'Pattern Historian',
@@ -138,8 +140,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 430,
     callsPerDay: 3,
     costPerCall: 0.0005,
-    est7dCost: 0.02,
-    est30dCost: 0.10,
+    est7dCost: 0.04,
+    est30dCost: 0.20,
   },
   {
     feature: 'Briefing Search',
@@ -149,8 +151,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 1_100,
     callsPerDay: 2,
     costPerCall: 0.0026,
-    est7dCost: 0.08,
-    est30dCost: 0.32,
+    est7dCost: 0.16,
+    est30dCost: 0.65,
   },
   {
     feature: 'Briefing Retrospective',
@@ -160,8 +162,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 450,
     callsPerDay: 3,
     costPerCall: 0.0007,
-    est7dCost: 0.04,
-    est30dCost: 0.12,
+    est7dCost: 0.08,
+    est30dCost: 0.25,
   },
   {
     feature: 'Threat Analysis',
@@ -171,8 +173,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     outputTokens: 175,
     callsPerDay: 15,
     costPerCall: 0.0003,
-    est7dCost: 0.06,
-    est30dCost: 0.28,
+    est7dCost: 0.12,
+    est30dCost: 0.57,
   },
   {
     feature: 'On-Chain Analysis (Members)',
@@ -183,8 +185,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 6,  // ~10 members × ~0.6 calls/day (12h window)
     // (2500 × $3/M) + (900 × $15/M) = $0.0075 + $0.0135 = $0.021
     costPerCall: 0.021,
-    est7dCost: 1.78,
-    est30dCost: 7.66,
+    est7dCost: 3.64,
+    est30dCost: 15.66,
   },
   {
     feature: 'On-Chain Analysis (VIP)',
@@ -195,8 +197,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
     // (3000 × $3/M) + (1400 × $15/M) = $0.009 + $0.021 = $0.030
     costPerCall: 0.030,
-    est7dCost: 1.70,
-    est30dCost: 7.30,
+    est7dCost: 3.47,
+    est30dCost: 14.92,
   },
   {
     feature: 'Macro Analysis (General)',
@@ -208,8 +210,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     // grok-3-mini-fast: ~$0.10/M in, $0.40/M out
     // (2000 × $0.10/M) + (500 × $0.40/M) = $0.0002 + $0.0002 = $0.0004
     costPerCall: 0.0004,
-    est7dCost: 0.006,
-    est30dCost: 0.02,
+    est7dCost: 0.012,
+    est30dCost: 0.04,
   },
   {
     feature: 'Macro Analysis (Members)',
@@ -220,8 +222,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 2,  // 2 per 12h window (shared cache)
     // (3000 × $3/M) + (900 × $15/M) = $0.009 + $0.0135 = $0.023
     costPerCall: 0.023,
-    est7dCost: 0.65,
-    est30dCost: 2.80,
+    est7dCost: 1.33,
+    est30dCost: 5.72,
   },
   {
     feature: 'Macro Analysis (VIP)',
@@ -232,8 +234,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 4,  // ~4 VIP users × 1 call per 6h window
     // (3500 × $3/M) + (1400 × $15/M) = $0.0105 + $0.021 = $0.032
     costPerCall: 0.032,
-    est7dCost: 1.82,
-    est30dCost: 7.78,
+    est7dCost: 3.72,
+    est30dCost: 15.90,
   },
   {
     feature: 'Trading AI Engine',
@@ -244,8 +246,8 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     callsPerDay: 24,  // 24 cycles/day × 1 Grok call per cycle
     // (2000 × $0.20/M) + (1200 × $0.50/M) = $0.0004 + $0.0006 = $0.001
     costPerCall: 0.001,
-    est7dCost: 0.34,
-    est30dCost: 1.46,
+    est7dCost: 0.69,
+    est30dCost: 2.98,
   },
 ];
 

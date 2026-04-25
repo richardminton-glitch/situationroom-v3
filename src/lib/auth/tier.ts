@@ -76,6 +76,7 @@ type Feature =
   | 'ai_annotations'
   | 'ai_analysis_view'         // AI Analysis layout preset
   | 'onchain_ai_analysis'      // Grok-3 on-chain analysis (cron-generated for members)
+  | 'macro_cycle_room'         // Macro Cycle room (ISM PMI tracker, dominoes framework)
   // ── VIP ──
   | 'edit_layout'
   | 'share_dashboard'           // share one custom dashboard read-only with up to 5 invitees
@@ -111,6 +112,7 @@ const FEATURE_REQUIREMENTS: Record<Feature, Tier> = {
   ai_annotations:         'members',
   ai_analysis_view:       'members',
   onchain_ai_analysis:    'members',
+  macro_cycle_room:       'members',
   // VIP
   edit_layout:            'vip',
   share_dashboard:        'vip',
