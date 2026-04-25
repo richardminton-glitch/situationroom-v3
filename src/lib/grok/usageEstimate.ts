@@ -249,6 +249,18 @@ export const AI_USAGE_DATA: AiUsageRow[] = [
     est7dCost: 0.69,
     est30dCost: 2.98,
   },
+  {
+    feature: 'ISM PMI Auto-Update',
+    model: 'grok-4.20',
+    trigger: 'Monthly cron (1st-3rd of month)',
+    inputTokens: 400,
+    outputTokens: 100,
+    callsPerDay: 0.07,  // ~2 calls/month (retries) ≈ 2/30
+    // (400 × $3/M) + (100 × $15/M) + ~2 web searches × $0.005 = $0.013
+    costPerCall: 0.013,
+    est7dCost: 0.01,
+    est30dCost: 0.03,
+  },
 ];
 
 // ── Computed totals ──────────────────────────────────────────────────────────
