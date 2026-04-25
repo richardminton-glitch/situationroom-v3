@@ -48,7 +48,10 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pinnedToBottomRef = useRef(true);
+  const didInitialScrollRef = useRef(false);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -65,15 +68,34 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Reset on close so the next open scrolls to newest again
+      didInitialScrollRef.current = false;
+      pinnedToBottomRef.current = true;
+      return;
+    }
     fetchMessages();
     pollRef.current = setInterval(fetchMessages, 5000); // poll every 5s
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [open, fetchMessages]);
 
+  // Scroll to newest on open; afterwards, only auto-scroll if user is pinned to the bottom
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!open) return;
+    if (!didInitialScrollRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      didInitialScrollRef.current = true;
+    } else if (pinnedToBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, open]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    pinnedToBottomRef.current = distanceFromBottom < 24;
+  }, []);
 
   const send = async () => {
     const content = input.trim();
@@ -144,7 +166,7 @@ export function OpsRoom({ open, onClose }: OpsRoomProps) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+      <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
         {messages.length === 0 && (
           <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
             No messages yet.
