@@ -8,7 +8,7 @@
  * badge (free users see them but can't navigate).
  */
 
-import { Atom, ChartLine, Gauge, HardHat, MapTrifold, Stack, TreeStructure, Waveform } from '@phosphor-icons/react';
+import { Atom, ChartLine, Drop, Gauge, HardHat, MapTrifold, Stack, TreeStructure, Waveform } from '@phosphor-icons/react';
 import { SectionRailFrame } from './SectionRailFrame';
 import { RailLink } from './RailLink';
 
@@ -60,6 +60,12 @@ export function ToolsRail() {
           href="/tools/macro-cycle"
           label="Macro Cycle"
           icon={<Waveform size={ICON_SIZE} />}
+          requiredTier="members"
+        />
+        <RailLink
+          href="/tools/global-liquidity"
+          label="Global Liquidity"
+          icon={<Drop size={ICON_SIZE} />}
           requiredTier="members"
         />
       </div>
