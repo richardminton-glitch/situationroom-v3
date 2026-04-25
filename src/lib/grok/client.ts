@@ -10,7 +10,11 @@
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
 const PRIMARY_MODEL = 'grok-4.20-multi-agent-0309';
-const FALLBACK_MODEL = 'grok-3';
+// grok-3 was deprecated for server-side tools (web_search) in late Apr 2026
+// — only the grok-4 family is supported. fast-non-reasoning is the cheapest
+// grok-4 variant that still keeps web_search available, so it makes a clean
+// fallback when the primary multi-agent model times out.
+const FALLBACK_MODEL = 'grok-4-1-fast-non-reasoning';
 const MAX_OUTPUT_TOKENS = 1200;
 const RETRY_DELAY = 5000;
 

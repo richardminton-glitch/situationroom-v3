@@ -7,8 +7,7 @@
  * Composite is built server-side from FRED (US M2 absolute, EU/UK/JP M3
  * MoM growth compounded), equal-weighted and indexed to 100 at the
  * window start. China is omitted — no free-tier source for absolute or
- * growth-rate M2 data we can rely on. The 21-country FinFluential Pine
- * indicator is the visual reference; this is the major-four version.
+ * growth-rate M2 data we can rely on.
  *
  * BTC daily series joins from our local CSV+DB history. Chart shifts
  * the liquidity composite forward by 84 days so its turning points
@@ -170,24 +169,24 @@ export function GlobalLiquidityRoom() {
             ))}
           </div>
           <p style={{ ...paraStyle, fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>
-            Excluded: China, India, the smaller Asian and EM economies in
-            the FinFluential 21-country indicator. Free-tier APIs do not
-            cover them with data we&apos;d trust enough to ship. The
-            major four still capture the bulk of dollar-equivalent global
-            broad money and most of the policy-cycle signal.
+            Excluded: China, India, and the smaller Asian and EM economies.
+            Free-tier APIs do not cover them with data we&apos;d trust
+            enough to ship. The major four still capture the bulk of
+            dollar-equivalent global broad money and most of the
+            policy-cycle signal.
           </p>
         </Section>
 
         <Section title="Counter-view">
           <p style={paraStyle}>
             Critics will point out three things. First: any composite
-            that omits China loses a chunk of the FinFluential
-            indicator&apos;s shape — China&apos;s M2 is enormous and
-            cycles on its own credit policy. Second: the 84-day lead is
-            curve-fitted; a different historical window picks a different
-            optimum. Third: when policy regimes shift hard (QT, war,
-            capital controls), the lag stretches or breaks until the new
-            normal beds in.
+            that omits China loses a meaningful chunk of global broad
+            money — China&apos;s M2 is enormous and cycles on its own
+            credit policy. Second: the 84-day lead is curve-fitted; a
+            different historical window picks a different optimum.
+            Third: when policy regimes shift hard (QT, war, capital
+            controls), the lag stretches or breaks until the new normal
+            beds in.
           </p>
           <p style={paraStyle}>
             None of which makes the chart useless — it just means use it
