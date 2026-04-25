@@ -138,8 +138,8 @@ export function GlobalLiquidityRoom() {
 
         <Section title="What goes into the composite">
           <p style={paraStyle}>
-            Four monetary aggregates, all sourced from FRED — free, no
-            paid feed, refreshes daily. US M2 is taken absolute; the
+            Four monetary aggregates, all sourced from FRED, refreshes
+            daily. US M2 is taken absolute; the
             other three use FRED&apos;s month-on-month broad-money growth
             rates compounded from a base of 100. All four are indexed
             and equal-weighted, so the composite measures relative

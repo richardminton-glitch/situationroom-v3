@@ -33,6 +33,8 @@ import { URPDPanel } from './URPDPanel';
 import { HSeparatorPanel } from './HSeparatorPanel';
 import { VSeparatorPanel } from './VSeparatorPanel';
 import { M2ChartPanel } from './M2ChartPanel';
+import { GlobalLiquidityPanel } from './GlobalLiquidityPanel';
+import { PMIPanel } from './PMIPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
 import { NetworkSignalsPanel } from './NetworkSignalsPanel';
@@ -84,6 +86,8 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'h-separator':     HSeparatorPanel,
   'v-separator':     VSeparatorPanel,
   'm2-chart':          M2ChartPanel,
+  'global-liquidity':  GlobalLiquidityPanel,
+  'pmi-cycle':         PMIPanel,
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,
   'network-signals':   NetworkSignalsPanel,

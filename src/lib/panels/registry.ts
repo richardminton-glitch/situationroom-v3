@@ -461,6 +461,28 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: 'G4 M2 money supply indexed to 100 — USA, EU, UK, Japan',
     icon: 'chart',
   },
+  {
+    id: 'global-liquidity',
+    name: 'Global Liquidity · 84d Lead',
+    category: 'macro',
+    defaultW: 720, defaultH: 440, minW: 480, minH: 320,
+    resizable: true,
+    refreshInterval: 86400, // 1 day — composite is monthly source data
+    dataSources: ['fred', 'btcHistory'],
+    description: '4-region M2 composite (US/EU/UK/JP) shifted +84 days vs BTC log price — leading-liquidity tell',
+    icon: 'chart',
+  },
+  {
+    id: 'pmi-cycle',
+    name: 'ISM Manufacturing PMI',
+    category: 'macro',
+    defaultW: 348, defaultH: 220, minW: 280, minH: 176,
+    resizable: true,
+    refreshInterval: 86400, // 1 day — monthly print, no harm checking daily
+    dataSources: ['ismCycle'],
+    description: 'Latest ISM PMI reading with regime label and 12-month sparkline — coincident cycle tell',
+    icon: 'chart',
+  },
 
   // ── Mining Intel ──
   // All mining panels share /api/mining-intel via useMiningIntel; refresh once daily.
