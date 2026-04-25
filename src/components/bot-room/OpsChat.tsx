@@ -63,6 +63,8 @@ export function OpsChat() {
   const [loading, setLoading]   = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const pinnedToBottomRef = useRef(true);
+  const didInitialScrollRef = useRef(false);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -86,13 +88,29 @@ export function OpsChat() {
     return () => clearInterval(id);
   }, [fetchMessages]);
 
-  // Auto-scroll when new messages arrive
+  // Scroll to newest on initial mount/open; afterwards, only auto-scroll if the
+  // user is still pinned to the bottom (i.e. they haven't scrolled up to read history).
   useEffect(() => {
-    if (messages.length > prevCountRef.current && listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    const el = listRef.current;
+    if (!el) return;
+
+    if (messages.length > prevCountRef.current) {
+      if (!didInitialScrollRef.current) {
+        el.scrollTop = el.scrollHeight;
+        didInitialScrollRef.current = true;
+      } else if (pinnedToBottomRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
     }
     prevCountRef.current = messages.length;
   }, [messages.length]);
+
+  const handleScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    pinnedToBottomRef.current = distanceFromBottom < 24;
+  }, []);
 
   return (
     <div style={{
@@ -114,7 +132,7 @@ export function OpsChat() {
       </div>
 
       {/* Messages */}
-      <div ref={listRef} className="br-scroll" style={{
+      <div ref={listRef} onScroll={handleScroll} className="br-scroll" style={{
         flex: 1, overflowY: 'auto', padding: '8px',
         display: 'flex', flexDirection: 'column', gap: '6px',
       }}>
