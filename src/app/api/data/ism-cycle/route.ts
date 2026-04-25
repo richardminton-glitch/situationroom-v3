@@ -2,7 +2,7 @@
  * GET /api/data/ism-cycle
  *
  * Returns the manually-curated ISM Manufacturing PMI dataset that powers
- * the Macro Cycle room (/rooms/macro-cycle). The dataset is admin-edited
+ * the Macro Cycle tool (/tools/macro-cycle). The dataset is admin-edited
  * via POST /api/admin/update-ism — there is no upstream API for free ISM
  * data because ISM revoked FRED redistribution in 2016.
  *

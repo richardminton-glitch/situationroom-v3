@@ -69,7 +69,7 @@ export default function SupportPage() {
             'On-Chain Deep Dive dashboard',
             'AI Analysis dashboard — 8 specialist agents',
             'On-chain AI analysis (Grok-powered)',
-            'Macro Cycle room — ISM PMI tracker & macro dominoes framework',
+            'Macro Cycle tool — ISM PMI tracker & macro dominoes framework',
           ], cta: 'SUBSCRIBE' },
           { tier: 'VIP', price: pricing ? `${formatSats(pricing.tierPricesSats.vip)} sats (lifetime)` : '...', color: '#7c5cbf', subtitle: 'One-off payment · Lifetime access', features: [
             'Everything in Members',

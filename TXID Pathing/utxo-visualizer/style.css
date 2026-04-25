@@ -1,0 +1,682 @@
+/* ═══════════════════════════════════════════════════════════════════
+   UTXO PATH VISUALIZER
+   STRICT BLUEPRINT — TWO COLOURS ONLY: #001F3F + #FFFFFF
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+
+/* ─── Reset ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Blueprint base: 40px grid + diagonal crosshatch ───────────── */
+body {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  color: #ffffff;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  background-color: #001F3F;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(  0deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px),
+    repeating-linear-gradient( 90deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px);
+  background-size: 80px 80px, 80px 80px, 40px 40px, 40px 40px;
+}
+
+/* Vignette: paper-edge darkening */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 48%, rgba(0,4,18,0.7) 100%);
+  pointer-events: none;
+  z-index: 200;
+}
+
+/* Outer frame: single white ruled border */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 5px;
+  border: 1px solid rgba(255,255,255,0.14);
+  pointer-events: none;
+  z-index: 199;
+}
+
+/* ─── SIDEBAR — Specifications Panel ────────────────────────────── */
+/* Shares the exact same background as body — seamless blueprint sheet */
+#sidebar {
+  position: fixed;
+  left: 0; top: 0;
+  width: 300px;
+  height: 100vh;
+  background-color: #001F3F;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(  0deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px),
+    repeating-linear-gradient( 90deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px);
+  background-size: 80px 80px, 80px 80px, 40px 40px, 40px 40px;
+  border-right: 2px solid #ffffff;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+/* Panel header bar */
+#sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55em 0.85em;
+  border-bottom: 2px solid #ffffff;
+}
+
+.sidebar-title {
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+
+/* Section headers */
+#sidebar h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffffff;
+  padding: 0.5em 0.85em;
+  border-bottom: 1px solid rgba(255,255,255,0.22);
+}
+
+/* Inverted badge: the only place colours swap (still just the two) */
+.section-num {
+  background: #ffffff;
+  color: #001F3F;
+  font-size: 0.85em;
+  font-weight: 700;
+  padding: 1px 5px;
+  letter-spacing: 0.05em;
+}
+
+#tx-info, #network-info, #oracle-info { border-bottom: 1px solid rgba(255,255,255,0.18); }
+
+#sidebar ul { list-style: none; }
+
+#sidebar ul li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.28em 0.85em;
+  font-size: 0.72em;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+#sidebar ul li .label {
+  color: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+#sidebar ul li.full-row { flex-direction: column; gap: 0.2em; padding-bottom: 0.5em; }
+#sidebar ul li.full-row .mono {
+  font-family: inherit;
+  font-size: 0.88em;
+  word-break: break-all;
+  color: #ffffff;
+}
+
+.placeholder {
+  font-size: 0.7em;
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6em 0.85em;
+}
+
+#refresh-btn {
+  display: block;
+  width: calc(100% - 1.7em);
+  margin: 0.8em 0.85em;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+}
+#refresh-btn:hover { background: #ffffff; color: #001F3F; }
+
+/* ─── Oracle / procedural field notes ───────────────────────────── */
+#oracle-info { padding-bottom: 1em; }
+
+.oracle-note {
+  margin: 0.75em 0.85em 0;
+  padding: 0.55em 0.7em;
+  border-left: 2px solid rgba(255,255,255,0.25);
+  position: relative;
+}
+.oracle-note + .oracle-note { margin-top: 0.6em; }
+
+.oracle-label {
+  display: block;
+  font-size: 0.6em;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.38);
+  margin-bottom: 0.3em;
+}
+
+.oracle-note p {
+  margin: 0;
+  font-size: 0.68em;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.62);
+  font-style: italic;
+}
+
+.oracle-note p em {
+  font-style: normal;
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+}
+
+/* ─── MAIN area ──────────────────────────────────────────────────── */
+#main {
+  margin-left: 300px;
+  width: calc(100vw - 300px);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── HEADER — Blueprint Title Block ────────────────────────────── */
+#header {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  background-color: #001F3F;
+  background-image:
+    repeating-linear-gradient( 45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 80px),
+    repeating-linear-gradient(  0deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px),
+    repeating-linear-gradient( 90deg, transparent, transparent 39px, rgba(255,255,255,0.08) 40px);
+  background-size: 80px 80px, 80px 80px, 40px 40px, 40px 40px;
+  border-bottom: 2px solid #ffffff;
+  min-height: 64px;
+}
+
+/* LEFT: project identity */
+#title-block {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.6em 1.2em;
+  border-right: 2px solid #ffffff;
+}
+
+#title-logo {
+  font-size: 2em;
+  color: #ffffff;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+#title-text { display: flex; flex-direction: column; gap: 0.08em; }
+
+#title-main {
+  font-size: 0.88em;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+#title-sub {
+  font-size: 0.6em;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.42);
+  white-space: nowrap;
+}
+
+/* CENTER: TXID input */
+#header-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2em;
+  padding: 0.5em 1.2em;
+}
+
+.field-label {
+  font-size: 0.6em;
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.42);
+  text-transform: uppercase;
+}
+
+#input-row { display: flex; gap: 0.5em; align-items: center; }
+
+#txid-input {
+  flex: 1;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  padding: 0.42em 0.7em;
+  font-family: inherit;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  outline: none;
+  caret-color: #ffffff;
+  border-radius: 0;
+  transition: box-shadow 0.15s;
+}
+#txid-input:focus {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.5), inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+#txid-input::placeholder {
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.08em;
+}
+
+#visualize-btn {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  padding: 0.42em 1.2em;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+}
+#visualize-btn:hover:not(:disabled) { background: #ffffff; color: #001F3F; }
+#visualize-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+#status-msg {
+  font-size: 0.65em;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.48);
+  text-transform: uppercase;
+  min-height: 1em;
+}
+/* Error is still white — the word "ERROR" carries the meaning */
+#status-msg.error { color: #ffffff; opacity: 1; }
+
+/* RIGHT: drawing metadata */
+#drawing-meta {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid #ffffff;
+}
+
+.meta-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.2em 0.85em;
+  border-bottom: 1px solid rgba(255,255,255,0.22);
+  min-width: 100px;
+}
+.meta-cell:last-child { border-bottom: none; }
+.meta-cell .field-label { font-size: 0.58em; }
+.meta-cell > span:last-child {
+  font-size: 0.72em;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.06em;
+}
+
+#drawing-no {
+  color: #ffffff !important;
+  font-size: 0.68em !important;
+  word-break: break-all;
+}
+
+/* ─── Visualisation canvas ───────────────────────────────────────── */
+#viz {
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  position: relative;
+}
+#viz:active { cursor: grabbing; }
+
+/* ─── D3 LINKS — chunky blueprint ribbons ────────────────────────── */
+
+/* Primary chain — thick solid white ribbon with glow pulse */
+.link {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: ribbon-pulse 3.2s ease-in-out infinite;
+}
+
+/* Secondary inputs — medium semi-transparent ribbon */
+.link.ghost {
+  stroke: rgba(255,255,255,0.22);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: ribbon-pulse-dim 4.8s ease-in-out infinite;
+}
+
+/* Output satellite — slim ribbon */
+.link.output {
+  stroke: rgba(255,255,255,0.35);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  animation: ribbon-pulse-dim 3.8s ease-in-out infinite;
+}
+
+/* Primary ribbon: glow expands and contracts subtly */
+@keyframes ribbon-pulse {
+  0%, 100% {
+    stroke-opacity: 0.78;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.30));
+  }
+  50% {
+    stroke-opacity: 1.0;
+    filter: drop-shadow(0 0 9px rgba(255,255,255,0.72));
+  }
+}
+
+/* Dimmer ribbon: opacity only, no harsh glow */
+@keyframes ribbon-pulse-dim {
+  0%, 100% { stroke-opacity: 0.55; }
+  50%       { stroke-opacity: 0.90; }
+}
+
+/* ─── D3 NODES ───────────────────────────────────────────────────── */
+.node { cursor: pointer; }
+
+/* Inner scale group — hover = 1.05× */
+.node-inner {
+  transform-origin: 0 0;
+  transform-box: fill-box;
+  transition: transform 0.12s ease;
+}
+.node:hover .node-inner { transform: scale(1.05); }
+
+/* Background fill rect — no stroke; slightly expanded so the border
+   frame's inner edge lands exactly on the content boundary (rx2, ry2) */
+.node-bg { fill: #001F3F; stroke: none; }
+.node.ghost .node-bg { fill: none; }
+
+/* Border frame rect — stroke only; inner edge = content boundary */
+.node-border { fill: none; stroke: #ffffff; stroke-width: 4.5; }
+.node.coinbase .node-border { stroke-width: 5.5; }
+.node.depth-limit .node-border { stroke-width: 2; stroke-dasharray: 5 2; }
+.node.ghost .node-border {
+  stroke: rgba(255,255,255,0.25);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+
+/* Output UTXO satellite nodes — solid, lighter border */
+.node.output .node-border {
+  stroke: rgba(255,255,255,0.45);
+  stroke-width: 1.5;
+}
+
+/* Clipboard copy flash — styled + animated entirely via D3 transition */
+.copy-flash { pointer-events: none; }
+
+/* Inner double-rule frame (engineering drafting detail) */
+.node-inner-border {
+  fill: none;
+  stroke: rgba(255,255,255,0.25);
+  stroke-width: 0.8;
+}
+
+/* Horizontal divider inside nodes */
+.node-divider {
+  stroke: rgba(255,255,255,0.22);
+  stroke-width: 0.8;
+}
+
+/* Glow on hover: pure white only */
+.node.hovered .node-border { filter: url(#glow-white); }
+
+/* ─── Node text ──────────────────────────────────────────────────── */
+.node text {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  pointer-events: none;
+  user-select: none;
+  fill: #ffffff;
+}
+
+/* TXID label — bold, inked look via dark backing stroke */
+.node-txid {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: #ffffff;
+  paint-order: stroke fill;
+  stroke: rgba(0,31,63,0.65);
+  stroke-width: 2px;
+}
+
+.node-amount {
+  font-size: 9.5px;
+  font-weight: 500;
+  fill: rgba(255,255,255,0.76);
+  letter-spacing: 0.02em;
+}
+
+.node-height {
+  font-size: 8px;
+  fill: rgba(255,255,255,0.38);
+  letter-spacing: 0.03em;
+}
+
+/* Ghost + depth-limit text: dim white */
+.node.ghost text       { fill: rgba(255,255,255,0.3); font-size: 9px; }
+.node.depth-limit text { fill: rgba(255,255,255,0.7); font-size: 10px; }
+.node-depth-hint       { fill: rgba(255,255,255,0.42) !important; font-size: 8px !important; font-style: italic; letter-spacing: 0.04em; }
+.node.depth-limit:hover .node-border { stroke: rgba(255,255,255,0.9); filter: url(#glow-white); }
+.node.depth-limit:hover .node-depth-hint { fill: rgba(255,255,255,0.85) !important; }
+
+/* ─── Tooltip — Engineering annotation callout ───────────────────── */
+.tooltip {
+  position: fixed;
+  display: none;
+  background: #001F3F;
+  border: 2px solid #ffffff;
+  /* Double-ruled inner frame via inset box-shadow */
+  box-shadow: inset 0 0 0 4px #001F3F, inset 0 0 0 5px rgba(255,255,255,0.28);
+  padding: 0.6em 0.8em;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.72em;
+  color: #ffffff;
+  pointer-events: none;
+  max-width: 300px;
+  z-index: 100;
+  line-height: 1.65;
+}
+
+.tooltip .tip-txid {
+  font-size: 0.87em;
+  word-break: break-all;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255,255,255,0.28);
+  letter-spacing: 0.02em;
+}
+
+.tooltip table { border-collapse: collapse; width: 100%; }
+.tooltip td { padding: 1px 5px 1px 0; vertical-align: top; }
+.tooltip td:first-child {
+  color: rgba(255,255,255,0.48);
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  padding-right: 0.9em;
+}
+
+/* ─── Mobile panel close button (hidden on desktop) ─────────────── */
+#panel-close { display: none; }
+
+/* ─── Mobile FAB (hidden on desktop) ────────────────────────────── */
+#panel-fab {
+  display: none;
+  position: fixed;
+  bottom: calc(1.2rem + env(safe-area-inset-bottom));
+  right: 1.2rem;
+  z-index: 50;
+  background: #001F3F;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  font-family: inherit;
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 0.55em 1em;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(255,255,255,0.18);
+  transition: background 0.15s, color 0.15s;
+}
+#panel-fab:hover,
+#panel-fab:active { background: #ffffff; color: #001F3F; }
+
+/* ─── Panel backdrop (mobile only) ──────────────────────────────── */
+#panel-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 10, 25, 0.6);
+  z-index: 18;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ─── Mobile layout ──────────────────────────────────────────────── */
+@media (max-width: 700px) {
+
+  /* Sidebar → slide-up bottom sheet */
+  #sidebar {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 68vh;
+    max-height: calc(100vh - 56px);
+    border-right: none;
+    border-top: 2px solid #ffffff;
+    transform: translateY(110%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 19;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Drag handle above sidebar content */
+  #sidebar::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 3px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    margin: 10px auto 4px;
+  }
+
+  #sidebar.panel-open { transform: translateY(0); }
+
+  /* Show panel-close button inside sidebar header */
+  #panel-close {
+    display: block;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #ffffff;
+    font-size: 0.75em;
+    cursor: pointer;
+    padding: 2px 7px;
+    line-height: 1.4;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+  }
+  #panel-close:hover { background: #ffffff; color: #001F3F; }
+
+  /* Show FAB + backdrop */
+  #panel-fab      { display: block; }
+  #panel-backdrop { display: block; opacity: 0; pointer-events: none;
+                    transition: opacity 0.32s ease; }
+  #panel-backdrop.visible { opacity: 1; pointer-events: all; }
+
+  /* Main: full width */
+  #main {
+    margin-left: 0;
+    width: 100vw;
+  }
+
+  /* Header: single-column, compact */
+  #header {
+    grid-template-columns: 1fr;
+    min-height: 56px;
+  }
+  #title-block, #drawing-meta { display: none; }
+
+  #header-center {
+    padding: 0.45em 0.75em;
+    border-left: none;
+    border-right: none;
+  }
+
+  .field-label { display: none; }
+
+  #input-row {
+    gap: 0.4em;
+  }
+
+  #txid-input {
+    font-size: 0.68em;
+    padding: 0.55em 0.6em;
+    min-width: 0;
+  }
+
+  #visualize-btn {
+    font-size: 0.68em;
+    padding: 0.55em 0.8em;
+    flex-shrink: 0;
+  }
+
+  #status-msg { font-size: 0.65em; }
+
+  /* Viz: fill all remaining space */
+  #viz { flex: 1; min-height: 0; }
+
+  /* Tooltip disabled on touch — hover doesn't work reliably */
+  .tooltip { display: none !important; }
+
+  /* Give sidebar sections a bit more room on small screens */
+  #sidebar-content { padding-bottom: 1em; }
+}
+
+/* ─── Very small screens (≤ 380px) ──────────────────────────────── */
+@media (max-width: 380px) {
+  #txid-input { font-size: 0.6em; }
+  #visualize-btn { font-size: 0.62em; letter-spacing: 0.1em; }
+  #sidebar { height: 75vh; }
+}

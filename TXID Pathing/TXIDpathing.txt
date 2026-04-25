@@ -1,0 +1,76 @@
+# TXID Path Visualizer
+
+## Project Overview
+Build a single-page web application that allows users to input a Bitcoin transaction ID (TXID) and visualizes the backward UTXO path from that transaction to its origins (e.g., coinbase mining transactions). The visualization should be a zoomable, interactive graph resembling a blueprint (blue background, white lines/text). The starting transaction appears on the right side of the screen, with previous transactions flowing leftward. Include a sidebar with transaction details and generic Bitcoin on-chain data. This is a proof-of-concept, so keep it simple: no user accounts, no persistent storage, client-side only.
+
+The app should be hostable on static hosting like Hostinger (e.g., via FTP upload of HTML/CSS/JS files).
+
+## Key Requirements
+- **User Input**: A text input field for a full TXID (64-character hex string). Validate it (basic hex check) and handle errors (e.g., invalid format, not found).
+- **Data Fetching**: Use the mempool.space REST API (base URL: `https://mempool.space/api`) for all data. Fetch recursively backward:
+  - Start with `/tx/:txid` to get transaction details (including `vin` inputs).
+  - For each input, fetch the previous transaction via `/tx/:prev_txid` and extract the matching output.
+  - Recurse until reaching coinbase transactions (identified by `vin[0].coinbase` presence and no `txid` in inputs).
+  - Limit recursion depth to 10 levels to avoid performance issues; if deeper, show a warning node.
+  - Also fetch generic data: recommended fees (`/v1/fees/recommended`), current block height (`/blocks/tip/height`), mempool status (`/mempool`), hash rate (`/v1/mining/hashrate/1d`), difficulty adjustment (`/v1/difficulty-adjustment`).
+- **Visualization**:
+  - Use D3.js for a zoomable, pannable graph (force-directed or tree layout, oriented right-to-left).
+  - Nodes: Represent transactions (circle or rect shapes); label with shortened TXID (first 8 + '...' + last 8 chars), amount (sum of outputs), and block height if confirmed.
+  - Edges: White lines connecting inputs (from prev tx output to current tx input), with arrows pointing left-to-right (but flow visually right-to-left).
+  - Style: Background color #001f3f (navy blue, blueprint-like), white (#ffffff) for text/lines. Make it responsive and fill the main area.
+  - Interactivity: Zoom/pan with mouse wheel/drag. Hover tooltips showing full TXID, fee, size, and status.
+- **Sidebar**: Left-side panel (fixed width ~300px, collapsible on mobile). Display:
+  - TX details: From `/tx/:txid` and `/tx/:txid/status` – e.g., fee, size, weight, confirmations, block height/time if confirmed, input/output counts.
+  - Generic data: Current fees (fastest, economy), block height, mempool tx count/total fee, hash rate (current), difficulty change.
+  - Refresh button to re-fetch generic data.
+- **Error Handling**: Show user-friendly messages for API errors, invalid TXID, or unconfirmed txs. No loading spinners needed for POC, but use async/await for fetches.
+- **Performance**: Cache fetched tx data in a JS object to avoid re-fetching during recursion. Handle large graphs by using D3's simulation for layout.
+- **Accessibility**: Basic alt text for viz (e.g., "UTXO path graph"), keyboard-navigable input.
+
+## Tech Stack
+- HTML5 for structure.
+- CSS for styling (no frameworks like Bootstrap; keep vanilla).
+- JavaScript (ES6+) for logic and API calls.
+- D3.js (v7) for visualization – include via CDN: `<script src="https://d3js.org/d3.v7.min.js"></script>`.
+- No backend; all client-side.
+
+## Files to Create
+Create the following files in a root directory (e.g., `utxo-visualizer/`):
+
+1. **index.html**  
+   - Basic HTML structure: `<head>` with title "UTXO Path Visualizer", meta viewport for responsiveness.
+   - Body: Header with input field and "Visualize" button.
+   - Main section: `<div id="viz"></div>` for D3 graph (full width/height minus sidebar).
+   - Sidebar: `<div id="sidebar"></div>` with sections for tx info and generic data.
+   - Include script.js and style.css.
+   - Include D3 CDN script.
+
+2. **style.css**  
+   - Body: background #001f3f; color #ffffff; font-family sans-serif.
+   - #viz: width 100vw - 300px; height 100vh; overflow hidden.
+   - #sidebar: position fixed; left 0; width 300px; height 100vh; background #000033; padding 1em; overflow-y auto.
+   - Input/button: White on blue, simple styles.
+   - Graph elements: .node { fill: #ffffff; stroke: #000; }, .link { stroke: #ffffff; }.
+   - Media query for mobile: Sidebar collapsible (e.g., toggle button).
+
+3. **script.js**  
+   - Event listener on button: Get TXID from input, validate (hex regex: /^[0-9a-f]{64}$/i), then fetch and build graph.
+   - Function `fetchTx(txid)`: Async fetch `/tx/${txid}`, return data or error.
+   - Function `buildGraph(txid, depth = 0)`: Recursive; if depth > 10, return stub node. Get tx data, add node, then for each vin (if not coinbase), recurse on prev_txid and add link (source: prev_txid, target: txid).
+   - Graph data: { nodes: [{id: txid, label: shortTxid, amount, height}], links: [{source, target}] }.
+   - D3 setup: SVG in #viz, forceSimulation for layout (forceX to bias right-to-left), zoom() behavior.
+   - Update sidebar: After viz, fetch and populate tx details + generic data (separate async calls).
+   - Helper: Shorten TXID, format sats to BTC, timestamp to date.
+
+## Implementation Steps for Claude
+1. Set up basic HTML skeleton with input, button, #viz, #sidebar.
+2. Add CSS for blueprint theme and layout.
+3. In JS: Implement fetchTx and buildGraph recursively to construct nodes/links.
+4. Use D3 to render: Append SVG, add zoom, run simulation, draw links/nodes with labels/tooltips.
+5. Populate sidebar with structured HTML (e.g., <h3>Transaction Info</h3><ul>...</ul>).
+6. Test with a sample TXID like "15e10745f15593a899cef391191bdd3d7c12412cc4696b7bcb669d0feadc8521" (ensure it traces back).
+7. Handle errors gracefully (alert or DOM message).
+
+This should result in a functional POC. Total code: ~300-500 lines JS, minimal HTML/CSS. If issues with API CORS, note it—we can add a proxy later.
+
+---

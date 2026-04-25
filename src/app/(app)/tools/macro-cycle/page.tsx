@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * /rooms/macro-cycle — Macro Cycle Room (Members + VIP)
+ * /tools/macro-cycle — Macro Cycle (Members + VIP)
  *
- * Single-pane room tracking ISM Manufacturing PMI as a coincident tell
+ * Single-pane tool tracking ISM Manufacturing PMI as a coincident tell
  * for risk-asset cycle phase (the "dominoes" framework).
  */
 
@@ -67,7 +67,7 @@ export default function MacroCyclePage() {
   if (!canAccess('members')) {
     return (
       <div style={{ ...fullScreenStyle, padding: '40px 20px' }}>
-        <UpgradePrompt requiredTier="members" featureName="Macro Cycle Room" variant="overlay" />
+        <UpgradePrompt requiredTier="members" featureName="Macro Cycle" variant="overlay" />
       </div>
     );
   }

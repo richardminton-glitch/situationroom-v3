@@ -207,7 +207,7 @@ export async function GET(req: NextRequest) {
       `Sources Grok cited:`,
       sources,
       ``,
-      `View: ${SITE_URL}/rooms/macro-cycle`,
+      `View: ${SITE_URL}/tools/macro-cycle`,
     ].join('\n'),
   );
 

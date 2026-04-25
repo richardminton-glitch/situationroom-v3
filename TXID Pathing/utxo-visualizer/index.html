@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>UTXO Path Visualizer</title>
+
+  <!-- PWA meta -->
+  <meta name="theme-color" content="#001F3F">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="UTXO Viz">
+  <meta name="description" content="Bitcoin transaction chain analysis — trace UTXO lineage across the blockchain.">
+
+  <!-- PWA icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+
+  <!-- Blueprint monospace font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR — Specifications Panel ═══ -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span class="sidebar-title">SPECIFICATIONS</span>
+      <!-- Close button visible on mobile only -->
+      <button id="panel-close" aria-label="Close panel">&#10005;</button>
+    </div>
+
+    <div id="sidebar-content">
+
+      <div id="tx-info">
+        <h3><span class="section-num">01</span>TRANSACTION</h3>
+        <p class="placeholder">AWAITING INPUT</p>
+      </div>
+
+      <div id="network-info">
+        <h3><span class="section-num">02</span>NETWORK STATUS</h3>
+        <div id="network-data"><p class="placeholder">LOADING&hellip;</p></div>
+        <button id="refresh-btn">&#8635;&nbsp;REFRESH DATA</button>
+      </div>
+
+      <div id="oracle-info">
+        <h3><span class="section-num">03</span>ORACLE</h3>
+        <div id="oracle-notes"><p class="placeholder">AWAITING TXID&hellip;</p></div>
+      </div>
+
+    </div>
+  </div><!-- /sidebar -->
+
+  <!-- Backdrop for mobile panel (tap to close) -->
+  <div id="panel-backdrop"></div>
+
+  <!-- ═══ MAIN — Title Block Header + Canvas ═══ -->
+  <div id="main">
+
+    <!-- Blueprint title block header -->
+    <div id="header">
+
+      <div id="title-block">
+        <div id="title-logo">&#x20BF;</div>
+        <div id="title-text">
+          <div id="title-main">UTXO PATH VISUALIZER</div>
+          <div id="title-sub">BITCOIN TRANSACTION CHAIN ANALYSIS</div>
+        </div>
+      </div>
+
+      <div id="header-center">
+        <label class="field-label" for="txid-input">TRANSACTION ID</label>
+        <div id="input-row">
+          <input
+            type="text"
+            id="txid-input"
+            placeholder="64-CHARACTER HEX STRING"
+            maxlength="64"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="none"
+            inputmode="text"
+            aria-label="Bitcoin Transaction ID"
+          >
+          <button id="visualize-btn">TRACE</button>
+        </div>
+        <span id="status-msg"></span>
+      </div>
+
+      <div id="drawing-meta">
+        <div class="meta-cell">
+          <span class="field-label">DWG&nbsp;NO.</span>
+          <span id="drawing-no">&mdash;</span>
+        </div>
+        <div class="meta-cell">
+          <span class="field-label">DEPTH</span>
+          <span>10 LVL</span>
+        </div>
+        <div class="meta-cell">
+          <span class="field-label">REV</span>
+          <span>A</span>
+        </div>
+      </div>
+
+    </div><!-- /header -->
+
+    <div id="viz" aria-label="UTXO path graph" role="img"></div>
+
+  </div><!-- /main -->
+
+  <!-- Floating action button — opens specs panel on mobile -->
+  <button id="panel-fab" aria-label="Open specifications panel">SPECS</button>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
