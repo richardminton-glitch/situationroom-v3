@@ -116,18 +116,34 @@ async function getAlertsForMember(since: Date): Promise<string[]> {
     const messages = await (prisma as any).chatMessage.findMany({
       where: {
         isBot: true,
-        eventType: { notIn: ['new_briefing'] },
+        // Skip "trade_hold" — those are the bot's hourly heartbeat status
+        // logs ("HOLDING LONG 3x @ $74,997…"), which were stacking eight
+        // near-identical entries into the digest's alerts block. Members
+        // can still see them in the live Ops Room. The digest filters to
+        // actual signal events: entries, exits, regime/conviction shifts.
+        eventType: { notIn: ['new_briefing', 'trade_hold'] },
         createdAt: { gt: since },
       },
       orderBy: { createdAt: 'asc' },
-      take: 8,
+      take: 30,
       select: { content: true, createdAt: true },
     });
-    return messages.map((m: { content: string; createdAt: Date }) => {
+
+    // Final-fence dedupe: collapse any consecutive entries whose first
+    // 32 characters match (catches near-duplicate restatements that
+    // slipped through the eventType filter). Cap visible alerts at 5.
+    const out: string[] = [];
+    let lastKey = '';
+    for (const m of messages as { content: string; createdAt: Date }[]) {
+      const key = m.content.slice(0, 32);
+      if (key === lastKey) continue;
+      lastKey = key;
       const time = m.createdAt.toISOString().slice(11, 16) + ' UTC';
       const text = m.content.length > 100 ? m.content.slice(0, 97) + '…' : m.content;
-      return `[${time}] ${text}`;
-    });
+      out.push(`[${time}] ${text}`);
+      if (out.length >= 5) break;
+    }
+    return out;
   } catch {
     return [];
   }
@@ -231,8 +247,6 @@ export async function GET(request: NextRequest) {
     let emailHtml: string;
     let subject: string;
 
-    console.log(`[newsletter-digest] dispatch: user=${user.id} email=${user.email} tier=${user.tier}`);
-
     if (user.tier === 'free') {
       // ── Free: outlook-only digest with upgrade CTA ─────────────────────
       emailHtml = await render(
@@ -285,6 +299,7 @@ export async function GET(request: NextRequest) {
             topicNames: vipTopics,
             poolStatus: includePool ? poolStatus! : undefined,
             alerts: includeAlerts ? memberAlerts : undefined,
+            subtitle: 'VIP WEEKLY DIGEST',
           })
         );
         subject = vipBriefingSubject(dateFormatted, normaliseThreatState(briefing.threatLevel), vipTopics);
@@ -309,6 +324,7 @@ export async function GET(request: NextRequest) {
             viewInBrowserUrl,
             poolStatus: includePool ? poolStatus! : undefined,
             alerts: includeAlerts ? memberAlerts : undefined,
+            subtitle: 'VIP WEEKLY DIGEST',
           })
         );
         subject = generalBriefingSubject(dateFormatted, normaliseThreatState(briefing.threatLevel), briefing.headline);
@@ -336,6 +352,7 @@ export async function GET(request: NextRequest) {
           viewInBrowserUrl,
           poolStatus: includePool ? poolStatus! : undefined,
           alerts: includeAlerts ? memberAlerts : undefined,
+          subtitle: 'WEEKLY DIGEST',
         })
       );
       subject = generalBriefingSubject(dateFormatted, normaliseThreatState(briefing.threatLevel), briefing.headline);

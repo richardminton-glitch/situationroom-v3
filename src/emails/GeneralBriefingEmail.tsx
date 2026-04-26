@@ -53,6 +53,10 @@ export interface GeneralBriefingEmailProps {
   };
   // Optional bot alerts since last send (Members only)
   alerts?: string[];
+  /** Override the header subtitle. Defaults to "DAILY BRIEFING".
+   *  The Sunday digest passes "WEEKLY DIGEST" so the email reads as
+   *  the weekly recap, not a misnamed daily. */
+  subtitle?: string;
 }
 
 // Parchment palette — inline hex only
@@ -104,6 +108,7 @@ export function GeneralBriefingEmail({
   sections, btcPrice, btcChange24h, fearGreed, hashrate, mvrv,
   blockHeight, sp500, vix, gold, dxy, us10y, oil,
   briefingUrl, unsubscribeUrl, viewInBrowserUrl, siteUrl, poolStatus, alerts,
+  subtitle = 'DAILY BRIEFING',
 }: GeneralBriefingEmailProps) {
   return (
     <Html lang="en">
@@ -119,7 +124,7 @@ export function GeneralBriefingEmail({
           </Section>
 
           {/* Header */}
-          <EmailHeader siteUrl={siteUrl} subtitle="DAILY BRIEFING">
+          <EmailHeader siteUrl={siteUrl} subtitle={subtitle}>
             <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.muted, margin: '0 0 6px' }}>
               {date}{'  ·  '}CONVICTION {convictionScore}/100{'  ·  '}{sourcesCount} SOURCES
             </Text>

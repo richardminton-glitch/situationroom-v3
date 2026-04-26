@@ -53,6 +53,10 @@ export interface VipBriefingEmailProps {
     winRatePct: number;
   };
   alerts?: string[];
+  /** Override the header subtitle. Defaults to "VIP BRIEFING".
+   *  Sunday digest passes "VIP WEEKLY" so the email reads as the
+   *  weekly recap, not a misnamed daily. */
+  subtitle?: string;
 }
 
 // Parchment palette — inline hex only
@@ -103,6 +107,7 @@ export function VipBriefingEmail({
   blockHeight, sp500, vix, gold, dxy, us10y, oil,
   briefingUrl, unsubscribeUrl, viewInBrowserUrl, siteUrl,
   topicNames, poolStatus, alerts,
+  subtitle = 'VIP BRIEFING',
 }: VipBriefingEmailProps) {
   return (
     <Html lang="en">
@@ -118,7 +123,7 @@ export function VipBriefingEmail({
           </Section>
 
           {/* Header */}
-          <EmailHeader siteUrl={siteUrl} subtitle="VIP BRIEFING">
+          <EmailHeader siteUrl={siteUrl} subtitle={subtitle}>
             <Text style={{ fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.08em', color: C.muted, margin: '0 0 6px' }}>
               {date}{'  ·  '}CONVICTION {convictionScore}/100{'  ·  '}{sourcesCount} SOURCES
             </Text>
