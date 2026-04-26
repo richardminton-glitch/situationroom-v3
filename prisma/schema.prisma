@@ -634,6 +634,140 @@ model DcaSignalSubscriber {
   @@map("dca_signal_subscribers")
 }
 
+// ── Fiscal Event Horizon ─────────────────────────────────────────────────────
+// Six modules of sovereign fiscal stress data, refreshed by staggered Grok
+// extraction crons. Schema mirrors the seed types in src/lib/feh/*-seed.ts so
+// components can be switched from seed → DB without changing the data shape.
+//
+// Run: npx prisma migrate dev --name add_feh_tables
+
+model FehSovereignMetric {
+  iso3                  String   @id
+  countryName           String   @map("country_name")
+  isoNumeric            Int      @unique @map("iso_numeric")
+  region                String
+  debtGdp               Float    @map("debt_gdp")
+  interestPctRevenue    Float    @map("interest_pct_revenue")
+  primaryBalance        Float    @map("primary_balance")
+  realGdpGrowth         Float    @map("real_gdp_growth")
+  effectiveRate         Float    @map("effective_rate")
+  avgMaturity           Float    @map("avg_maturity")
+  fxDebtShare           Float    @map("fx_debt_share")
+  externalDebtShare     Float    @map("external_debt_share")
+  reserveAdequacyScore  Float    @map("reserve_adequacy_score")
+  sourceUrl             String?  @map("source_url")
+  updatedAt             DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_sovereign_metrics")
+}
+
+model FehRcdiPoint {
+  date            String   @id  // YYYY-MM
+  composite       Float
+  goldUsdScore    Float    @map("gold_usd_score")
+  cipsSwiftScore  Float    @map("cips_swift_score")
+  yuanOilScore    Float    @map("yuan_oil_score")
+  bricsSwapScore  Float    @map("brics_swap_score")
+  sourceUrl       String?  @map("source_url")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_rcdi_points")
+}
+
+model FehCbRate {
+  iso3                 String   @id
+  countryName          String   @map("country_name")
+  bank                 String
+  rate                 Float
+  lastMoveBps          Float    @map("last_move_bps")
+  lastMoveDate         String   @map("last_move_date")  // DDMMMYY (military)
+  stance               String                            // 'easing' | 'holding' | 'tightening'
+  marketImpliedBps12m  Float    @map("market_implied_bps_12m")
+  gdpUsdT              Float    @map("gdp_usd_t")
+  sourceUrl            String?  @map("source_url")
+  updatedAt            DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_cb_rates")
+}
+
+model FehMalinvestmentSector {
+  id             String   @id
+  short          String
+  label          String
+  stress         Float
+  headline       String   @db.Text
+  yoyDelta       Float    @map("yoy_delta")
+  halfLifeMonths Int      @map("half_life_months")
+  sourceUrl      String?  @map("source_url")
+  updatedAt      DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_malinvestment_sectors")
+}
+
+model FehWartimeCountry {
+  iso3                 String   @id
+  name                 String
+  flag                 String
+  stage                Int
+  defenceSpendPctGdp   Float    @map("defence_spend_pct_gdp")
+  defenceCagr3y        Float    @map("defence_cagr_3y")
+  m2Growth3y           Float    @map("m2_growth_3y")
+  cpiYoY               Float    @map("cpi_yoy")
+  evidenceJson         String   @map("evidence_json") @db.Text  // JSON array of strings
+  sourceUrl            String?  @map("source_url")
+  updatedAt            DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_wartime_countries")
+}
+
+model FehPetroDollarPoint {
+  date        String   @id  // YYYY-MM
+  dxy         Float
+  yuanOil     Float    @map("yuan_oil")
+  goldRepat   Float    @map("gold_repat")
+  bricsSwaps  Float    @map("brics_swaps")
+  sourceUrl   String?  @map("source_url")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  @@map("feh_petro_dollar_points")
+}
+
+model FehFiscalEvent {
+  id          Int      @id @default(autoincrement())
+  module      String   // 'rcdi' | 'petro-dollar' | etc
+  date        String   // YYYY-MM
+  label       String
+  description String   @db.Text
+  sourceUrl   String?  @map("source_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([module])
+  @@map("feh_fiscal_events")
+}
+
+// FEH Extraction Audit Log — one row per Grok extraction attempt regardless
+// of outcome. Captures the raw response, parsed value, sanity-bound result,
+// and source URL so every published FEH number has verifiable provenance.
+
+model FehExtractionLog {
+  id             String   @id @default(cuid())
+  module         String                                    // 'sovereign' | 'rcdi' | 'cb-rates' | etc.
+  metric         String                                    // e.g. 'USA.debtGdp'
+  oldValue       Float?   @map("old_value")
+  newValue       Float?   @map("new_value")
+  outcome        String                                    // 'published' | 'sanity_failed' | 'parse_failed' | 'grok_failed'
+  sanityLow      Float?   @map("sanity_low")
+  sanityHigh     Float?   @map("sanity_high")
+  grokModel      String?  @map("grok_model")
+  grokRawExcerpt String?  @map("grok_raw_excerpt") @db.Text
+  sourceUrl      String?  @map("source_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([module])
+  @@index([createdAt])
+  @@map("feh_extraction_log")
+}
+
 // ── Country Data (Global Situation Map) ──────────────────────────────────────
 
 model CountryData {
