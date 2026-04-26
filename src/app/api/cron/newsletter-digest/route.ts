@@ -8,7 +8,13 @@
  * Eligibility:
  *   - newsletterEnabled = true
  *   - any tier (free → vip)
- *   - newsletterLastSent < 6 days ago (or null) — guards against re-runs
+ *   - newsletterLastSent < 12 hours ago (or null) — guards against same-day
+ *     re-runs only. The previous 6-day cutoff was too tight: it excluded
+ *     anyone whose last send had drifted by even half a day (e.g. a backfill
+ *     done Monday afternoon would block the next Sunday morning), and it
+ *     permanently excluded daily-opt-in users since their Saturday daily
+ *     left a fresh timestamp in the field. 12h covers cron jitter while
+ *     still preventing duplicate-fire double sends.
  *
  * Template:
  *   - All tiers currently receive the FreeDigestEmail template. It summarises
@@ -86,14 +92,17 @@ export async function GET(request: NextRequest) {
   const ds = briefing.dataSnapshotJson;
 
   // ── Eligible users — every enabled subscriber, any tier ──────────────────
-  const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+  // 12-hour cutoff: only blocks users who already received the digest in this
+  // same Sunday window. Anything older than 12h gets sent (covers daily-opt-in
+  // users whose Saturday daily left a ~24h-old timestamp).
+  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000);
 
   const users = await prisma.user.findMany({
     where: {
       newsletterEnabled: true,
       OR: [
         { newsletterLastSent: null },
-        { newsletterLastSent: { lt: sixDaysAgo } },
+        { newsletterLastSent: { lt: cutoff } },
       ],
     },
     select: { id: true, email: true, tier: true },
