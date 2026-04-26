@@ -129,22 +129,30 @@ export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: Sovereign
     const svg = svgRef.current;
     if (!svg) return;
 
+    // We deliberately do NOT call setPointerCapture here — capturing the
+    // pointer on the SVG redirects subsequent pointer events away from
+    // child <path> elements, which suppresses the synthetic click event
+    // on the country the user actually pressed. Window-level
+    // pointermove + pointerup listeners give us the same drag behaviour
+    // without breaking clicks.
     const onDown = (e: PointerEvent) => {
-      draggingRef.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
-      svg.setPointerCapture(e.pointerId);
     };
     const onMove = (e: PointerEvent) => {
-      if (!draggingRef.current || !lastPointer.current) return;
+      if (!lastPointer.current) return;
       const dx = e.clientX - lastPointer.current.x;
       const dy = e.clientY - lastPointer.current.y;
+      // Promote to drag only once cumulative movement exceeds a small
+      // threshold — keeps a click-with-tiny-jitter from rotating the
+      // globe and from being misclassified as a drag.
+      if (!draggingRef.current && Math.hypot(dx, dy) < 4) return;
+      draggingRef.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
       setRotation(([lon, lat]) => [lon + dx * 0.4, clamp(lat - dy * 0.4, LAT_MIN, LAT_MAX), 0]);
     };
-    const onUp = (e: PointerEvent) => {
+    const onUp = () => {
       draggingRef.current = false;
       lastPointer.current = null;
-      try { svg.releasePointerCapture(e.pointerId); } catch { /* noop */ }
     };
 
     svg.addEventListener('pointerdown', onDown);

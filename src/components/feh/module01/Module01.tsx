@@ -90,16 +90,20 @@ export function Module01() {
         </div>
       </div>
 
-      {/* Two-column layout */}
+      {/* Two-column layout — globe sticky on the left, dossier + leaderboard
+          stack on the right. Globe stays in view as the user scrolls through
+          the leaderboard, so they can click rows and immediately see the
+          country light up on the globe. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="flex flex-col gap-4">
+        <div className="lg:col-span-1">
           <div
-            className="border flex items-center justify-center"
+            className="border flex items-center justify-center lg:sticky"
             style={{
               borderColor: 'var(--border-primary)',
               backgroundColor: 'var(--bg-card)',
               aspectRatio: '1 / 1',
-              maxHeight: 540,
+              maxHeight: 720,
+              top: 16,
             }}
           >
             <SovereignGlobe
@@ -108,17 +112,19 @@ export function Module01() {
               onSelect={setSelectedIso3}
             />
           </div>
+        </div>
+        <div className="flex flex-col gap-4">
+          <SovereignDossier
+            sovereign={selected}
+            computedAt={COMPUTED_AT}
+            stressed={stressed}
+          />
           <Leaderboard
             sovereigns={projected}
             selectedIso3={selected.iso3}
             onSelect={setSelectedIso3}
           />
         </div>
-        <SovereignDossier
-          sovereign={selected}
-          computedAt={COMPUTED_AT}
-          stressed={stressed}
-        />
       </div>
     </div>
   );
