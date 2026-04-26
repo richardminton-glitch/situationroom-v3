@@ -19,7 +19,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { SOVEREIGNS_SEED } from '@/lib/feh/sovereigns-seed';
+import { useFehData } from '@/components/feh/FehDataProvider';
 import { computeRunway } from '@/lib/feh/runway';
 import { sovereigntyScore } from '@/lib/feh/sovereigntyScore';
 import type { SovereignProjected } from '@/lib/feh/types';
@@ -31,16 +31,17 @@ import { Leaderboard } from './Leaderboard';
 const COMPUTED_AT = Date.UTC(2026, 3, 26, 14, 30, 0); // 26 Apr 2026 14:30 UTC
 
 export function Module01() {
+  const { sovereigns } = useFehData();
   const [selectedIso3, setSelectedIso3] = useState('USA');
   const [stressed, setStressed] = useState(false);
 
   const projected: SovereignProjected[] = useMemo(() => {
-    return SOVEREIGNS_SEED.map((s) => ({
+    return sovereigns.map((s) => ({
       ...s,
       runway: computeRunway(s, stressed),
       sovereigntyScore: sovereigntyScore(s),
     }));
-  }, [stressed]);
+  }, [sovereigns, stressed]);
 
   const selected =
     projected.find((s) => s.iso3 === selectedIso3) ?? projected[0];

@@ -9,11 +9,8 @@
  */
 
 import { useState } from 'react';
-import {
-  WARTIME_COUNTRIES,
-  countriesAtStage3Plus,
-  medianG20Stage,
-} from '@/lib/feh/wartime-seed';
+import { useFehData } from '@/components/feh/FehDataProvider';
+import { countriesAtStage3Plus, medianG20Stage } from '@/lib/feh/wartime-seed';
 import { WartimeStats } from './WartimeStats';
 import { WartimePipeline } from './WartimePipeline';
 import { EvidencePanel } from './EvidencePanel';
@@ -25,11 +22,12 @@ const COUNTRIES_AT_STAGE_3_PLUS_YOY_DELTA = 3;
 const MEDIAN_STAGE_YOY_DELTA = 0.2;
 
 export function Module05() {
+  const { wartimeCountries } = useFehData();
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
 
-  const stage3Plus = countriesAtStage3Plus(WARTIME_COUNTRIES);
-  const median = medianG20Stage(WARTIME_COUNTRIES);
-  const selected = WARTIME_COUNTRIES.find((c) => c.iso3 === selectedIso3) ?? null;
+  const stage3Plus = countriesAtStage3Plus(wartimeCountries);
+  const median = medianG20Stage(wartimeCountries);
+  const selected = wartimeCountries.find((c) => c.iso3 === selectedIso3) ?? null;
 
   return (
     <div className="space-y-5">
@@ -50,7 +48,7 @@ export function Module05() {
         }}
       >
         <WartimePipeline
-          countries={WARTIME_COUNTRIES}
+          countries={wartimeCountries}
           selectedIso3={selectedIso3}
           onSelectIso3={setSelectedIso3}
         />

@@ -9,7 +9,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { CB_RATES, divergenceIndex, type CBRate } from '@/lib/feh/cb-rates-seed';
+import { useFehData } from '@/components/feh/FehDataProvider';
+import { divergenceIndex, type CBRate } from '@/lib/feh/cb-rates-seed';
 import { CBCard } from './CBCard';
 
 type SortMode = 'alpha' | 'stance' | 'divergence';
@@ -17,24 +18,25 @@ type SortMode = 'alpha' | 'stance' | 'divergence';
 const STANCE_ORDER: Record<CBRate['stance'], number> = { tightening: 0, holding: 1, easing: 2 };
 
 export function Module03() {
+  const { cbRates } = useFehData();
   const [sortMode, setSortMode] = useState<SortMode>('stance');
 
   const sorted = useMemo(() => {
-    const r = [...CB_RATES];
+    const r = [...cbRates];
     if (sortMode === 'alpha') {
       r.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortMode === 'stance') {
       r.sort((a, b) => STANCE_ORDER[a.stance] - STANCE_ORDER[b.stance] || b.gdpUsdT - a.gdpUsdT);
     } else {
       // by divergence — highest absolute rate first (proxy for distance from G20 mean)
-      const meanRate = CB_RATES.reduce((s, x) => s + x.rate * x.gdpUsdT, 0) /
-                       CB_RATES.reduce((s, x) => s + x.gdpUsdT, 0);
+      const totalGdp = cbRates.reduce((s, x) => s + x.gdpUsdT, 0) || 1;
+      const meanRate = cbRates.reduce((s, x) => s + x.rate * x.gdpUsdT, 0) / totalGdp;
       r.sort((a, b) => Math.abs(b.rate - meanRate) - Math.abs(a.rate - meanRate));
     }
     return r;
-  }, [sortMode]);
+  }, [cbRates, sortMode]);
 
-  const div = divergenceIndex(CB_RATES);
+  const div = divergenceIndex(cbRates);
   const divLabel = div > 0.55 ? 'HIGH' : div > 0.35 ? 'MODERATE' : 'LOW';
   const divColor =
     div > 0.55 ? 'var(--feh-critical)' :

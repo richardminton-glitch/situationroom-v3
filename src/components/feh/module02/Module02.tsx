@@ -15,20 +15,30 @@
  * carry the breakdown.
  */
 
-import {
-  RCDI_COMPONENTS,
-  RCDI_HISTORY,
-  RCDI_ANNOTATIONS,
-  RCDI_COMPOSITE,
-  RCDI_YOY,
-  RCDI_5Y,
-} from '@/lib/feh/rcdi-seed';
+import { useMemo } from 'react';
+import { useFehData } from '@/components/feh/FehDataProvider';
 import { RCDISparkline } from './RCDISparkline';
 import { ComponentGauge } from './ComponentGauge';
 
 export function Module02() {
-  const trendArrow = RCDI_YOY >= 0 ? '↗' : '↘';
-  const trendColor = RCDI_YOY >= 0 ? 'var(--feh-warning)' : 'var(--feh-stable)';
+  const { rcdiHistory, rcdiComponents, rcdiAnnotations } = useFehData();
+
+  const { composite, yoy, fiveY } = useMemo(() => {
+    if (rcdiHistory.length === 0) return { composite: 0, yoy: 0, fiveY: 0 };
+    const latest = rcdiHistory[rcdiHistory.length - 1].value;
+    const yearAgoIdx = Math.max(0, rcdiHistory.length - 13);
+    const fiveYAgoIdx = 0;
+    const yearAgo = rcdiHistory[yearAgoIdx].value;
+    const fiveYAgo = rcdiHistory[fiveYAgoIdx].value;
+    return {
+      composite: latest,
+      yoy: yearAgo === 0 ? 0 : Math.round(((latest - yearAgo) / yearAgo) * 1000) / 10,
+      fiveY: fiveYAgo === 0 ? 0 : Math.round(((latest - fiveYAgo) / fiveYAgo) * 1000) / 10,
+    };
+  }, [rcdiHistory]);
+
+  const trendArrow = yoy >= 0 ? '↗' : '↘';
+  const trendColor = yoy >= 0 ? 'var(--feh-warning)' : 'var(--feh-stable)';
 
   return (
     <div
@@ -54,7 +64,7 @@ export function Module02() {
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {RCDI_COMPOSITE.toFixed(1)}
+          {composite.toFixed(1)}
         </div>
         <div
           className="mt-3"
@@ -78,9 +88,9 @@ export function Module02() {
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          <span>{trendArrow} {RCDI_YOY >= 0 ? '+' : ''}{RCDI_YOY}% YoY</span>
+          <span>{trendArrow} {yoy >= 0 ? '+' : ''}{yoy}% YoY</span>
           <span style={{ color: 'var(--text-muted)' }}>·</span>
-          <span>{trendArrow} {RCDI_5Y >= 0 ? '+' : ''}{RCDI_5Y}% 5Y</span>
+          <span>{trendArrow} {fiveY >= 0 ? '+' : ''}{fiveY}% 5Y</span>
         </div>
       </div>
 
@@ -89,7 +99,7 @@ export function Module02() {
         className="lg:col-span-5 px-3 py-3 lg:border-r border-t lg:border-t-0"
         style={{ borderColor: 'var(--border-subtle)' }}
       >
-        <RCDISparkline data={RCDI_HISTORY} annotations={RCDI_ANNOTATIONS} />
+        <RCDISparkline data={rcdiHistory} annotations={rcdiAnnotations} />
       </div>
 
       {/* Right third — four component gauges, 2×2 */}
@@ -97,7 +107,7 @@ export function Module02() {
         className="lg:col-span-4 grid grid-cols-2 grid-rows-2 border-t lg:border-t-0"
         style={{ borderColor: 'var(--border-subtle)' }}
       >
-        {RCDI_COMPONENTS.map((c, i) => (
+        {rcdiComponents.map((c, i) => (
           <div
             key={c.id}
             style={{

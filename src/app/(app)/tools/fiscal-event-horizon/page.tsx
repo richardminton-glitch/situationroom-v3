@@ -23,6 +23,7 @@ import { Module04 } from '@/components/feh/module04/Module04';
 import { Module05 } from '@/components/feh/module05/Module05';
 import { Module06 } from '@/components/feh/module06/Module06';
 import { MethodologyDrawer } from '@/components/feh/MethodologyDrawer';
+import { FehDataProvider } from '@/components/feh/FehDataProvider';
 
 export const metadata: Metadata = {
   title: 'Fiscal Event Horizon — The Situation Room',
@@ -34,6 +35,14 @@ const ABSTRACT =
   'The Austrian-flavoured Article IV. Six modules tracking the slow-motion solvency crisis of the fiat sovereign system, displayed as a single-page intelligence product. None of these are predictions. All of them are kindling.';
 
 export default function FiscalEventHorizonPage() {
+  return (
+    <FehDataProvider>
+      <FiscalEventHorizonContent />
+    </FehDataProvider>
+  );
+}
+
+function FiscalEventHorizonContent() {
   return (
     <div
       className="min-h-full"

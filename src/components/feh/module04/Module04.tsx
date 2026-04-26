@@ -10,14 +10,16 @@
  */
 
 import { useState } from 'react';
-import { MALINVESTMENT_SECTORS, bustProbability } from '@/lib/feh/malinvestment-seed';
+import { useFehData } from '@/components/feh/FehDataProvider';
+import { bustProbability } from '@/lib/feh/malinvestment-seed';
 import { MalinvestmentRadar } from './MalinvestmentRadar';
 import { SectorDossierCard } from './SectorDossierCard';
 
 export function Module04() {
+  const { malinvestmentSectors } = useFehData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const bp = bustProbability(MALINVESTMENT_SECTORS);
+  const bp = bustProbability(malinvestmentSectors);
   const bpLabel = bp >= 75 ? 'CRITICAL' : bp >= 60 ? 'ELEVATED' : bp >= 40 ? 'NOMINAL' : 'STABLE';
   const bpColor =
     bp >= 75 ? 'var(--feh-critical)' :
@@ -104,7 +106,7 @@ export function Module04() {
             }}
           >
             <MalinvestmentRadar
-              sectors={MALINVESTMENT_SECTORS}
+              sectors={malinvestmentSectors}
               selectedId={selectedId}
               onSelectId={setSelectedId}
             />
@@ -131,7 +133,7 @@ export function Module04() {
             <span>SECTOR DOSSIERS</span>
             <span style={{ color: 'var(--feh-warning)' }}>9 SECTORS · KINDLING MAP</span>
           </div>
-          {MALINVESTMENT_SECTORS.map((s) => (
+          {malinvestmentSectors.map((s) => (
             <div key={s.id} style={{ borderColor: 'var(--border-subtle)' }}>
               <SectorDossierCard
                 sector={s}

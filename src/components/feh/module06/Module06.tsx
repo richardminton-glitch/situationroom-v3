@@ -11,19 +11,20 @@
  */
 
 import { useState } from 'react';
-import { PETRO_HISTORY, PETRO_ANNOTATIONS } from '@/lib/feh/petro-dollar-seed';
+import { useFehData } from '@/components/feh/FehDataProvider';
 import { PetroDollarChart } from './PetroDollarChart';
 
 export function Module06() {
+  const { petroHistory, petroAnnotations } = useFehData();
   const [showStack, setShowStack] = useState(true);
 
-  const latest = PETRO_HISTORY[PETRO_HISTORY.length - 1];
-  const first = PETRO_HISTORY[0];
+  const latest = petroHistory[petroHistory.length - 1];
+  const first = petroHistory[0];
 
-  const dxy10y = ((latest.dxy - first.dxy) / first.dxy) * 100;
-  const yuanOil10y = ((latest.yuanOil - first.yuanOil) / first.yuanOil) * 100;
-  const gold10y = ((latest.goldRepat - first.goldRepat) / first.goldRepat) * 100;
-  const brics10y = ((latest.bricsSwaps - first.bricsSwaps) / first.bricsSwaps) * 100;
+  const dxy10y = first.dxy === 0 ? 0 : ((latest.dxy - first.dxy) / first.dxy) * 100;
+  const yuanOil10y = first.yuanOil === 0 ? 0 : ((latest.yuanOil - first.yuanOil) / first.yuanOil) * 100;
+  const gold10y = first.goldRepat === 0 ? 0 : ((latest.goldRepat - first.goldRepat) / first.goldRepat) * 100;
+  const brics10y = first.bricsSwaps === 0 ? 0 : ((latest.bricsSwaps - first.bricsSwaps) / first.bricsSwaps) * 100;
 
   return (
     <div className="space-y-3">
@@ -75,7 +76,7 @@ export function Module06() {
         </div>
       </div>
 
-      <PetroDollarChart data={PETRO_HISTORY} annotations={PETRO_ANNOTATIONS} showStack={showStack} />
+      <PetroDollarChart data={petroHistory} annotations={petroAnnotations} showStack={showStack} />
 
       {/* Sub-readouts: 10Y deltas */}
       <div
