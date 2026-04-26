@@ -330,7 +330,12 @@ export function DCAOutSection({ data, baseAmount, frequency, weeklyEquiv }: Prop
   if (tierLoading) return null;
 
   return (
-    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-subtle)', fontFamily: FONT }}>
+    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-subtle)', fontFamily: FONT, position: 'relative' }}>
+      <div style={{
+        filter:        isVip ? 'none' : 'blur(5px)',
+        userSelect:    isVip ? 'auto' : 'none',
+        pointerEvents: isVip ? 'auto' : 'none',
+      }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -446,12 +451,6 @@ export function DCAOutSection({ data, baseAmount, frequency, weeklyEquiv }: Prop
       </div>
 
       {/* ── VIP GATED: calculator + chart ──────────────────────────────────── */}
-      <div style={{ position: 'relative' }}>
-        <div style={{
-          filter:        isVip ? 'none' : 'blur(5px)',
-          userSelect:    isVip ? 'auto' : 'none',
-          pointerEvents: isVip ? 'auto' : 'none',
-        }}>
 
           {/* This week recommendation */}
           <div style={{
@@ -747,7 +746,6 @@ export function DCAOutSection({ data, baseAmount, frequency, weeklyEquiv }: Prop
             <UpgradePrompt requiredTier="vip" featureName="DCA Exit Strategy" variant="overlay" />
           </div>
         )}
-      </div>
     </div>
   );
 }

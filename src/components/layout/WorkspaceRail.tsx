@@ -23,6 +23,7 @@ const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
   'default':           null,
   'full-data':         null,
   'macro-focus':       'general',
+  'mining-focus':      'general',
   'onchain-deep-dive': 'members',
   'ai':                'members',
 };
