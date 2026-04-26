@@ -19,6 +19,7 @@ import { StubModule } from '@/components/feh/StubModule';
 import { Module01 } from '@/components/feh/module01/Module01';
 import { Module02 } from '@/components/feh/module02/Module02';
 import { Module03 } from '@/components/feh/module03/Module03';
+import { Module04 } from '@/components/feh/module04/Module04';
 import { Module06 } from '@/components/feh/module06/Module06';
 
 export const metadata: Metadata = {
@@ -110,10 +111,7 @@ export default function FiscalEventHorizonPage() {
         lastComputed="26APR26"
         nextRefresh="26MAY26"
       >
-        <StubModule
-          description="// MODULE 04 — UNDER CONSTRUCTION //  9-axis radar of sector stress (CRE, zombie corporates, VC, SPACs, private credit, crypto leverage, subprime auto, student debt, buyback-funded equity) + sector dossier cards. Composite BUST PROBABILITY gauge: this measures kindling, not timing."
-          height={460}
-        />
+        <Module04 />
       </ModuleShell>
 
       <SectionDivider />
