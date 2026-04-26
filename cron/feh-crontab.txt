@@ -1,0 +1,26 @@
+# Fiscal Event Horizon — production cron schedule
+#
+# Append to existing VPS crontab via:
+#   crontab -l | cat - cron/feh-crontab.txt | crontab -
+#
+# Cadence per locked spec — staggered across the day so they don't all hit
+# Grok at the same minute. Times are UTC. Routes accept x-cron-secret;
+# both $SITE and $CRON_SECRET are defined at the top of the existing crontab.
+
+# Sovereign metrics — quarterly, 1st of Jan/Apr/Jul/Oct, 18:00 UTC
+0 18 1 1,4,7,10 *  curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-sovereign-metrics >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# RCDI — monthly, 5th, 19:00 UTC (after IMF COFER updates)
+0 19 5 * *         curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-rcdi >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Wartime stages — monthly, 5th, 20:00 UTC (after RCDI so Grok isn't double-called)
+0 20 5 * *         curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-wartime-stages >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Malinvestment — weekly, Mondays 21:00 UTC (after weekend FRED + Coinglass settle)
+0 21 * * 1         curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-malinvestment >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# CB rates — daily, 22:00 UTC (after most CB statements settle)
+0 22 * * *         curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-cb-rates >> /opt/situationroom-v3/logs/cron.log 2>&1
+
+# Petro-dollar — daily, 23:00 UTC
+0 23 * * *         curl -s -H "x-cron-secret: $CRON_SECRET" $SITE/api/cron/refresh-petro-dollar >> /opt/situationroom-v3/logs/cron.log 2>&1
