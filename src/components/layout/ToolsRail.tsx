@@ -40,44 +40,8 @@ export function ToolsRail() {
   return (
     <SectionRailFrame sectionKey="tools" title="Tools">
       <div className="space-y-0.5">
-        <RailLink
-          href="/tools/dca-signal"
-          label="DCA Signal"
-          icon={<ChartLine size={ICON_SIZE} />}
-          requiredTier="general"
-        />
-        <RailLink
-          href="/tools/cycle-gauge"
-          label="Cycle Gauge"
-          icon={<Gauge size={ICON_SIZE} />}
-        />
-        <RailLink
-          href="/tools/mining"
-          label="Mining Intel"
-          icon={<HardHat size={ICON_SIZE} />}
-          requiredTier="general"
-        />
-        <RailLink
-          href="/tools/map"
-          label="Situation Map"
-          icon={<MapTrifold size={ICON_SIZE} />}
-        />
-        <RailLink
-          href="/tools/utxo-cosmography"
-          label="UTXO Cosmography"
-          icon={<Atom size={ICON_SIZE} />}
-        />
-        <RailLink
-          href="/tools/txid-pathing"
-          label="TXID Pathing"
-          icon={<TreeStructure size={ICON_SIZE} />}
-        />
-        <RailLink
-          href="/tools/blockchain"
-          label="Blockchain"
-          icon={<Stack size={ICON_SIZE} />}
-          requiredTier="general"
-        />
+        {/* ─── Macro ─── */}
+        <RailGroupLabel label="Macro" />
         <RailLink
           href="/tools/macro-cycle"
           label="Macro Cycle"
@@ -90,9 +54,50 @@ export function ToolsRail() {
           icon={<Drop size={ICON_SIZE} />}
           requiredTier="members"
         />
+        <RailLink
+          href="/tools/map"
+          label="Situation Map"
+          icon={<MapTrifold size={ICON_SIZE} />}
+        />
 
+        {/* ─── Bitcoin ─── */}
+        <RailGroupLabel label="Bitcoin" />
+        <RailLink
+          href="/tools/cycle-gauge"
+          label="Cycle Gauge"
+          icon={<Gauge size={ICON_SIZE} />}
+        />
+        <RailLink
+          href="/tools/dca-signal"
+          label="DCA Signal"
+          icon={<ChartLine size={ICON_SIZE} />}
+          requiredTier="general"
+        />
+        <RailLink
+          href="/tools/blockchain"
+          label="Blockchain"
+          icon={<Stack size={ICON_SIZE} />}
+          requiredTier="general"
+        />
+        <RailLink
+          href="/tools/mining"
+          label="Mining Intel"
+          icon={<HardHat size={ICON_SIZE} />}
+          requiredTier="general"
+        />
+        <RailLink
+          href="/tools/utxo-cosmography"
+          label="UTXO Cosmography"
+          icon={<Atom size={ICON_SIZE} />}
+        />
+        <RailLink
+          href="/tools/txid-pathing"
+          label="TXID Pathing"
+          icon={<TreeStructure size={ICON_SIZE} />}
+        />
+
+        {/* ─── Intelligence ─── */}
         <RailGroupLabel label="Intelligence" />
-
         <RailLink
           href="/tools/fiscal-event-horizon"
           label="Fiscal Event Horizon"
