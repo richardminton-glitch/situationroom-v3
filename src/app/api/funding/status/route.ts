@@ -25,6 +25,11 @@ const DOMAINS_GBP = 2.25;    // £26.99 / 12
 // Only charged if over free tier — we're on the paid plan at $35/mo flat.
 const API_NINJAS_USD = 35;
 
+// ── Resend (transactional + newsletter delivery) ─────────────────────────────
+// Pro plan: $20/mo flat (50K emails). Daily briefings + weekly digest +
+// transactional account mail run ~10,500/mo, well above the 3K free tier.
+const RESEND_USD = 20;
+
 // ── xAI / Grok cost ──────────────────────────────────────────────────────────
 // Sourced from @/lib/grok/usageEstimate — the same table the admin page
 // renders. Editing rows there automatically moves the figure shown in the
@@ -38,6 +43,7 @@ function computeCosts(usdToGbp: number) {
   const aiUsd = getMonthlyAiCostUsd();
   const aiGbp = Math.round(aiUsd * usdToGbp);
   const apiNinjasGbp = Math.round(API_NINJAS_USD * usdToGbp);
+  const emailGbp = Math.round(RESEND_USD * usdToGbp);
   const hostingRounded = Math.round(HOSTING_GBP);
   const domainsRounded = Math.round(DOMAINS_GBP);
 
@@ -45,8 +51,9 @@ function computeCosts(usdToGbp: number) {
     hosting: hostingRounded,
     domains: domainsRounded,
     apiNinjas: apiNinjasGbp,
+    email: emailGbp,
     ai: aiGbp,
-    total: hostingRounded + domainsRounded + apiNinjasGbp + aiGbp,
+    total: hostingRounded + domainsRounded + apiNinjasGbp + emailGbp + aiGbp,
   };
 }
 

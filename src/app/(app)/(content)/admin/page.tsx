@@ -258,25 +258,35 @@ const API_USAGE_DATA: ApiUsageRow[] = [
   },
   {
     service: 'Grok (xAI)',
-    endpoints: '12 (briefing, classification, analysis routes, trading AI)',
-    refresh: 'Daily cron + on-demand + hourly trading + RSS classifier',
-    // Daily briefing 1, VIP briefings ~30, RSS classifier ~10,
-    // macro/onchain analysis ~12, trading bot 24, on-demand chat ~5
-    // ≈ 80/day = 2,400/month
-    est7d: 560,
-    est30d: 2_400,
+    endpoints: '18 features (briefing pipeline, RSS classifier, on-demand member/VIP analysis, trading AI, ISM auto-update)',
+    refresh: 'Daily cron + on-demand (cached) + hourly trading + per-headline classifier',
+    // Sum of callsPerDay across AI_USAGE_DATA (single source of truth):
+    //   Daily briefing pipeline (5 agents):         6/day
+    //   VIP briefings:                             10/day
+    //   RSS classifier:                            75/day
+    //   Threat analysis:                           15/day
+    //   Trading AI (hourly cron):                  24/day
+    //   On-demand Members+/VIP analysis (~9 features, cached): ~46/day
+    //   ≈ 176/day → ~5,300/month at current subscriber traffic.
+    // grok-4.20 multi-agent (daily briefing) now dominates the dollar
+    // cost — the on-chain + macro analyses migrated off grok-3 on
+    // 2026-04-25 for ~95% reduction on those rows.
+    est7d: 1_232,
+    est30d: 5_280,
     monthlyLimit: null,
     envVar: 'GROK_API_KEY',
   },
   {
     service: 'Resend',
-    endpoints: '1 (email delivery)',
+    endpoints: '1 (email delivery — Pro plan, $20/mo flat)',
     refresh: 'Daily newsletter + weekly digest + transactional',
     // Daily newsletter to ~320 paid users + weekly digest ~180 free + ~5/day txn
-    // ≈ 320 + 25 + 5 = 350/day = ~10,500/month (subscriber-dependent)
+    // ≈ 320 + 25 + 5 = 350/day = ~10,500/month (subscriber-dependent).
+    // Pro plan ceiling: 50K/mo. Free tier (3K) is well below our volume,
+    // so we're paying $20/mo flat regardless of exact send count.
     est7d: 2_450,
     est30d: 10_500,
-    monthlyLimit: null,
+    monthlyLimit: 50_000,
     envVar: 'RESEND_API_KEY',
   },
   {
@@ -701,7 +711,7 @@ export default function AdminPage() {
           <div style={{ ...cardStyle, flex: 1, minWidth: 200 }}>
             <div style={labelStyle}>Model Breakdown (30d)</div>
             <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
-              {(['grok-4.20', 'grok-3', 'grok-4-1-fast'] as const).map((m) => {
+              {(['grok-4.20', 'grok-4-1-fast', 'grok-3-mini-fast'] as const).map((m) => {
                 const mCost = AI_USAGE_DATA.filter((r) => r.model === m).reduce((s, r) => s + r.est30dCost, 0);
                 return (
                   <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -718,7 +728,7 @@ export default function AdminPage() {
         {/* Cost breakdown bar */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
-            {(['grok-4.20', 'grok-3', 'grok-4-1-fast'] as const).map((m) => {
+            {(['grok-4.20', 'grok-4-1-fast', 'grok-3-mini-fast'] as const).map((m) => {
               const mCost = AI_USAGE_DATA.filter((r) => r.model === m).reduce((s, r) => s + r.est30dCost, 0);
               const pct = AI_TOTAL_30D > 0 ? (mCost / AI_TOTAL_30D) * 100 : 0;
               return <div key={m} style={{ width: `${pct}%`, background: MODEL_COLORS[m], minWidth: pct > 0 ? 2 : 0 }} />;
@@ -804,11 +814,15 @@ export default function AdminPage() {
         </div>
 
         <p style={{ fontFamily: MONO, fontSize: '9px', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
-          Pricing: grok-4.20 (Responses API) $3.00/$15.00 per M tokens + $5/1K web searches •
-          grok-4-1-fast $0.20/$0.50 per M tokens.
-          On-demand estimates assume moderate subscriber traffic with aggressive caching.
-          VIP briefings scale linearly with VIP user count (~$0.001/user/day).
-          RSS classifier volume depends on feed velocity and keyword confidence thresholds (120 calls/hr hard cap).
+          Pricing: grok-4.20 multi-agent (Responses API) $3.00/$15.00 per M tokens + $5/1K web searches •
+          grok-4-1-fast-non-reasoning $0.20/$0.50 per M tokens •
+          grok-3-mini-fast ~$0.10/$0.40 per M tokens.
+          xAI deprecated grok-3 for the Responses API in late Apr 2026; on-chain &amp; macro analyses
+          (Members + VIP) and the briefing fallback path migrated to grok-4-1-fast-non-reasoning
+          on 2026-04-25 for ~95% cost reduction on those rows. On-demand estimates assume moderate
+          subscriber traffic with aggressive caching. VIP briefings scale linearly with VIP user
+          count (~$0.001/user/day). RSS classifier volume depends on feed velocity and keyword
+          confidence thresholds (120 calls/hr hard cap).
         </p>
       </div>
 
