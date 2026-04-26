@@ -16,6 +16,7 @@ import { PageTitle } from '@/components/feh/PageTitle';
 import { SectionDivider } from '@/components/feh/SectionDivider';
 import { ModuleShell } from '@/components/feh/ModuleShell';
 import { StubModule } from '@/components/feh/StubModule';
+import { Module01 } from '@/components/feh/module01/Module01';
 
 export const metadata: Metadata = {
   title: 'Fiscal Event Horizon — The Situation Room',
@@ -49,10 +50,7 @@ export default function FiscalEventHorizonPage() {
         lastComputed="26APR26"
         nextRefresh="26JUL26"
       >
-        <StubModule
-          description="// MODULE 01 — UNDER CONSTRUCTION //  D3 orthographic globe with 30 sovereigns coloured by runway score, ticking countdown clock as hero, dossier panel with sovereignty-score breakdown, Top 10 distressed leaderboard. Stressed-rates toggle. Click country → sovereign drilldown (members)."
-          height={520}
-        />
+        <Module01 />
       </ModuleShell>
 
       <SectionDivider />
