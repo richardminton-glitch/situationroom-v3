@@ -469,7 +469,7 @@ function CommentaryBlock({ heading, bodyAnchor }: { heading: string; bodyAnchor:
         }}
       >
         <Redacted mode="block" height={62} width="100%">
-          <p style={{ margin: 0 }}>{bodyAnchor} Quarterly Grok-templated analysis follows the locked editorial schema (3 sections × 60-100 words, each anchored to an on-page metric).</p>
+          <p style={{ margin: 0 }}>{bodyAnchor}</p>
         </Redacted>
       </div>
     </div>
