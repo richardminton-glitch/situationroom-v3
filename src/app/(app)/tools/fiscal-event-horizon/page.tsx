@@ -18,6 +18,8 @@ import { ModuleShell } from '@/components/feh/ModuleShell';
 import { StubModule } from '@/components/feh/StubModule';
 import { Module01 } from '@/components/feh/module01/Module01';
 import { Module02 } from '@/components/feh/module02/Module02';
+import { Module03 } from '@/components/feh/module03/Module03';
+import { Module06 } from '@/components/feh/module06/Module06';
 
 export const metadata: Metadata = {
   title: 'Fiscal Event Horizon — The Situation Room',
@@ -69,19 +71,34 @@ export default function FiscalEventHorizonPage() {
 
       <SectionDivider />
 
-      <ModuleShell
-        index="03"
-        title="CENTRAL BANK DIVERGENCE MATRIX"
-        subtitle="When the cluster breaks, capital moves. Watch the breaks before they happen."
-        severity="SECRET"
-        lastComputed="26APR26"
-        nextRefresh="03MAY26"
-      >
-        <StubModule
-          description="// MODULE 03 — UNDER CONSTRUCTION //  G20 + ECB + SNB grid (~24 cells). Each cell = stance arrow, current rate, last move, market-implied 12mo path, divergence vs G20 mean. Big stat above grid: DIVERGENCE INDEX."
-          height={400}
-        />
-      </ModuleShell>
+      {/* Section 03 + Section 06 — side-by-side row per spec */}
+      <div className="mx-auto w-full max-w-[1320px] px-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ModuleShell
+            compact
+            index="03"
+            title="CB DIVERGENCE MATRIX"
+            subtitle="When the cluster breaks, capital moves. Watch the breaks before they happen."
+            severity="SECRET"
+            lastComputed="26APR26"
+            nextRefresh="03MAY26"
+          >
+            <Module03 />
+          </ModuleShell>
+
+          <ModuleShell
+            compact
+            index="06"
+            title="PETRO-DOLLAR EROSION"
+            subtitle="The counter-narrative to 'the dollar is fine.'"
+            severity="SECRET"
+            lastComputed="26APR26"
+            nextRefresh="03MAY26"
+          >
+            <Module06 />
+          </ModuleShell>
+        </div>
+      </div>
 
       <SectionDivider />
 
@@ -112,22 +129,6 @@ export default function FiscalEventHorizonPage() {
         <StubModule
           description="// MODULE 05 — UNDER CONSTRUCTION //  Vertical 5-stage escalation pipeline (Defence Spend ↑ → War Bonds → Capital Controls → Price Decrees → Monetary Debasement) with countries placed at current stage. Three header stats. Click country → evidence drilldown."
           height={520}
-        />
-      </ModuleShell>
-
-      <SectionDivider />
-
-      <ModuleShell
-        index="06"
-        title="PETRO-DOLLAR EROSION TRACKER"
-        subtitle="The counter-narrative to 'the dollar is fine.'"
-        severity="SECRET"
-        lastComputed="26APR26"
-        nextRefresh="03MAY26"
-      >
-        <StubModule
-          description="// MODULE 06 — UNDER CONSTRUCTION //  Layered area chart, 10y. DXY base, then yuan oil settlement %, gold repatriation index, BRICS bilateral swap volume painted over. Annotated with key inflection events. DXY-alone vs full-stack toggle."
-          height={420}
         />
       </ModuleShell>
 

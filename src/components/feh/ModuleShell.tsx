@@ -18,6 +18,10 @@ interface ModuleShellProps {
   severity?: Severity;
   lastComputed?: string;
   nextRefresh?: string;
+  /** When true, drops the max-width + horizontal padding wrapper so the
+   *  shell can sit inside a parent grid cell (used by the Section 03 + 06
+   *  side-by-side row). */
+  compact?: boolean;
   children: ReactNode;
 }
 
@@ -34,6 +38,7 @@ export function ModuleShell({
   severity = 'SECRET',
   lastComputed,
   nextRefresh,
+  compact = false,
   children,
 }: ModuleShellProps) {
   const cadence =
@@ -44,7 +49,13 @@ export function ModuleShell({
       : null;
 
   return (
-    <section className="relative mx-auto w-full max-w-[1320px] px-4">
+    <section
+      className={
+        compact
+          ? 'relative w-full'
+          : 'relative mx-auto w-full max-w-[1320px] px-4'
+      }
+    >
       <div
         className="flex items-center justify-between gap-4 py-3 border-b"
         style={{ borderColor: 'var(--border-primary)' }}
