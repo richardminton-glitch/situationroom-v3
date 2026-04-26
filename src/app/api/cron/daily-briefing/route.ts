@@ -4,7 +4,11 @@ import { handleNewBriefing } from '@/lib/chat/bot';
 import { normaliseThreatState } from '@/lib/room/threatEngine';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+// Briefing pipeline runs ~170–200s end-to-end (5 Grok agents + post-processing
+// + DB upsert). Old 120s ceiling was tripping the wrapper before the inner
+// /api/briefing/generate could return, so handleNewBriefing() never fired and
+// the Ops Room chat went silent for 4 consecutive days (2026-04-23 → -26).
+export const maxDuration = 300;
 
 /**
  * Calls the briefing generate endpoint via Node's native http module.
@@ -25,7 +29,11 @@ function httpPost(url: string, headers: Record<string, string>): Promise<{ statu
       },
     );
     req.on('error', reject);
-    req.setTimeout(110_000, () => { req.destroy(new Error('timeout')); });
+    // Generation routinely takes 170–200s; give the loopback request 290s
+    // to stay just under the 300s maxDuration ceiling so we get a clean
+    // upstream response (and the chat-bot post that follows it) instead
+    // of a timeout error that swallows handleNewBriefing.
+    req.setTimeout(290_000, () => { req.destroy(new Error('timeout')); });
     req.end();
   });
 }
