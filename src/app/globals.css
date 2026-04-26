@@ -69,6 +69,21 @@
   --zone-btc:         #c47615;  /* darker BTC orange — readable on parchment */
   --zone-fx:          #9b3232;  /* deep red */
   --zone-commodities: #b8860b;  /* dark gold */
+
+  /* Fiscal Event Horizon — declassified-document parchment treatment.
+     Crimson-on-cream stamps, dark stencil ink, faded paper grain.
+     Headings use Georgia per the v3 parchment-fonts rule (not IM Fell). */
+  --feh-critical:        #A01818;
+  --feh-warning:         #B8761C;
+  --feh-stable:          #2C7588;
+  --feh-pullquote:       #1A1A1A;
+  --feh-classified-bg:   #A01818;
+  --feh-classified-fg:   #F8F1E3;
+  --feh-stencil-ink:     #3e2c1a;
+  --feh-redact:          #1a1a1a;
+  --feh-paper:           #F0E4CE;
+  --feh-font-display:    'Georgia', 'Times New Roman', serif;
+  --feh-font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
 }
 
 /* ============================================
@@ -131,6 +146,21 @@
   --zone-btc:         #f7931a;  /* BTC orange */
   --zone-fx:          #ff6b4a;  /* coral */
   --zone-commodities: #ffd700;  /* bright gold */
+
+  /* Fiscal Event Horizon — live-classified intelligence treatment.
+     Bright-red stamps, teal-tinted ink, near-black redaction.
+     Display font swaps to mono — CRT/terminal feel. */
+  --feh-critical:        #FF3B3B;
+  --feh-warning:         #FFB23B;
+  --feh-stable:          #4FC3D7;
+  --feh-pullquote:       #F5E6C8;
+  --feh-classified-bg:   #FF3B3B;
+  --feh-classified-fg:   #0a0f14;
+  --feh-stencil-ink:     #c8e6e3;
+  --feh-redact:          #050709;
+  --feh-paper:           #0a0f14;
+  --feh-font-display:    'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+  --feh-font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
 }
 
 @theme inline {
@@ -294,6 +324,38 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--border-primary);
   border-radius: 4px;
 }
+
+/* ============================================
+   FISCAL EVENT HORIZON — declassified-document chrome
+   Title redaction reveal: a black bar covers the title on first paint
+   and retracts right-to-left to reveal it. One-time, on load.
+   ============================================ */
+.feh-title {
+  position: relative;
+  display: inline-block;
+}
+.feh-title::after {
+  content: '';
+  position: absolute;
+  inset: -2% -4%;
+  background-color: var(--feh-redact);
+  transform-origin: right center;
+  animation: feh-redact-retract 1.4s cubic-bezier(.7,0,.3,1) 0.25s forwards;
+}
+@keyframes feh-redact-retract {
+  0%   { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feh-title::after { animation: none; transform: scaleX(0); }
+}
+
+/* Ticking-countdown distress pulse for runway < 5y values */
+@keyframes feh-distress-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.62; }
+}
+.feh-distress { animation: feh-distress-pulse 1.5s ease-in-out infinite; }
 
 /* ============================================
    MOBILE RESPONSIVE BASELINE
