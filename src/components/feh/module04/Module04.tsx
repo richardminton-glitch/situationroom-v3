@@ -89,20 +89,26 @@ export function Module04() {
         </div>
       </div>
 
-      {/* Radar + dossier list */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <div
-          className="lg:col-span-5 border flex items-center justify-center p-3"
-          style={{
-            borderColor: 'var(--border-primary)',
-            backgroundColor: 'var(--bg-card)',
-          }}
-        >
-          <MalinvestmentRadar
-            sectors={MALINVESTMENT_SECTORS}
-            selectedId={selectedId}
-            onSelectId={setSelectedId}
-          />
+      {/* Radar + dossier list — radar is sticky on lg+ so it stays in view
+          while the user scrolls through the 9 sector dossiers on the right.
+          (No `items-start` on the grid — both columns must stretch to the
+          row height for the sticky child to have room to scroll within.) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-5">
+          <div
+            className="border flex items-center justify-center p-3 lg:sticky"
+            style={{
+              borderColor: 'var(--border-primary)',
+              backgroundColor: 'var(--bg-card)',
+              top: 16,
+            }}
+          >
+            <MalinvestmentRadar
+              sectors={MALINVESTMENT_SECTORS}
+              selectedId={selectedId}
+              onSelectId={setSelectedId}
+            />
+          </div>
         </div>
 
         <div
