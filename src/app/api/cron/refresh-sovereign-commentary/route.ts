@@ -27,8 +27,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { SOVEREIGNS_SEED } from '@/lib/feh/sovereigns-seed';
 import type { Sovereign } from '@/lib/feh/types';
+import { callGrokGeneration } from '@/lib/grok/client';
 import {
-  runGrokExtraction,
+  tryParseJson,
   logExtraction,
   emailFehAdmin,
   formatRejections,
@@ -139,25 +140,32 @@ export async function GET(req: NextRequest) {
 
   for (const seed of SOVEREIGNS_SEED) {
     const m = metricsForSovereign(seed, metricsByIso3.get(seed.iso3));
-    const result = await runGrokExtraction<ExtractedCommentary>(buildPrompt(m));
+    const grok = await callGrokGeneration(buildPrompt(m), {
+      maxTokens: 1500,
+      timeoutMs: 60_000,
+      jsonMode: true,
+    });
+    const rawExcerpt = grok.content.slice(0, 800);
+    const parsed = grok.failed ? null : (tryParseJson(grok.content) as ExtractedCommentary | null);
 
-    if (result.failed || !result.parsed) {
-      callFailures.push({ iso3: seed.iso3, reason: result.reason ?? 'unknown', raw: result.rawExcerpt });
+    if (!parsed) {
+      const reason = grok.failed ? 'grok_failed' : 'parse_failed';
+      callFailures.push({ iso3: seed.iso3, reason, raw: rawExcerpt });
       await logExtraction({
         module: 'sovereign-commentary',
         metric: `${seed.iso3}.${quarter}`,
         oldValue: null,
         newValue: null,
-        outcome: result.reason === 'parse_failed' ? 'parse_failed' : 'grok_failed',
-        grokModel: result.model,
-        grokRawExcerpt: result.rawExcerpt,
-        sourceUrl: result.sourceUrl,
+        outcome: reason,
+        grokModel: grok.model,
+        grokRawExcerpt: rawExcerpt,
+        sourceUrl: null,
       });
       skippedCount += 1;
       continue;
     }
 
-    const { fiscalTrajectory, keyRisks, comparablePeers } = result.parsed;
+    const { fiscalTrajectory, keyRisks, comparablePeers } = parsed;
     const sections: Array<{ key: keyof ExtractedCommentary; text: string }> = [
       { key: 'fiscalTrajectory', text: fiscalTrajectory ?? '' },
       { key: 'keyRisks',         text: keyRisks         ?? '' },
@@ -183,9 +191,9 @@ export async function GET(req: NextRequest) {
           outcome: 'sanity_failed',
           sanityLow: MIN_WORDS,
           sanityHigh: MAX_WORDS,
-          grokModel: result.model,
+          grokModel: grok.model,
           grokRawExcerpt: s.text.slice(0, 400),
-          sourceUrl: result.sourceUrl,
+          sourceUrl: null,
         });
       } else {
         await logExtraction({
@@ -196,8 +204,8 @@ export async function GET(req: NextRequest) {
           outcome: 'published',
           sanityLow: MIN_WORDS,
           sanityHigh: MAX_WORDS,
-          grokModel: result.model,
-          sourceUrl: result.sourceUrl,
+          grokModel: grok.model,
+          sourceUrl: null,
         });
       }
     }
@@ -216,8 +224,8 @@ export async function GET(req: NextRequest) {
         fiscalTrajectory,
         keyRisks,
         comparablePeers,
-        grokModel: result.model,
-        sourceUrl: result.sourceUrl,
+        grokModel: grok.model,
+        sourceUrl: null,
         generatedAt: new Date(),
       },
       create: {
@@ -226,8 +234,8 @@ export async function GET(req: NextRequest) {
         fiscalTrajectory,
         keyRisks,
         comparablePeers,
-        grokModel: result.model,
-        sourceUrl: result.sourceUrl,
+        grokModel: grok.model,
+        sourceUrl: null,
       },
     });
 

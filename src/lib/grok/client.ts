@@ -150,3 +150,60 @@ export async function callGrokClassifier(prompt: string): Promise<string | null>
     return null;
   }
 }
+
+// ── callGrokGeneration ────────────────────────────────────────────────────────
+
+/**
+ * Chat-completions Grok call sized for analytical text generation
+ * (longer outputs, no web search). Uses the same cheap fast-non-reasoning
+ * model as the classifier but with generous max_tokens and timeout so it
+ * can produce 3-section commentary, briefing fallbacks, etc.
+ *
+ * Returns { content, model, failed }. Content is the raw assistant message
+ * — caller is responsible for parsing JSON if response_format was set.
+ */
+export async function callGrokGeneration(
+  prompt: string,
+  opts: { maxTokens?: number; timeoutMs?: number; jsonMode?: boolean } = {},
+): Promise<{ content: string; model: string; failed: boolean }> {
+  const apiKey = process.env.GROK_API_KEY;
+  const model = CLASSIFIER_MODEL;
+  if (!apiKey) {
+    console.error('[GrokGeneration] GROK_API_KEY not set');
+    return { content: '', model, failed: true };
+  }
+
+  const maxTokens = opts.maxTokens ?? 1500;
+  const timeoutMs = opts.timeoutMs ?? 60_000;
+  const jsonMode  = opts.jsonMode ?? false;
+
+  try {
+    const res = await fetch(CLASSIFIER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages:        [{ role: 'user', content: prompt }],
+        max_tokens:      maxTokens,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[GrokGeneration] HTTP ${res.status}: ${body.substring(0, 200)}`);
+      return { content: '', model, failed: true };
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content ?? '';
+    return { content, model, failed: !content };
+  } catch (err) {
+    console.error('[GrokGeneration] Request failed:', err);
+    return { content: '', model, failed: true };
+  }
+}
