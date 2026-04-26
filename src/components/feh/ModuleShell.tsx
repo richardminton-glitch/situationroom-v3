@@ -22,6 +22,9 @@ interface ModuleShellProps {
    *  shell can sit inside a parent grid cell (used by the Section 03 + 06
    *  side-by-side row). */
   compact?: boolean;
+  /** When set, renders a "METHODOLOGY ↗" link in the header that opens the
+   *  matching drawer. Slug must match an entry in methodology-content.ts. */
+  methodologySlug?: string;
   children: ReactNode;
 }
 
@@ -39,6 +42,7 @@ export function ModuleShell({
   lastComputed,
   nextRefresh,
   compact = false,
+  methodologySlug,
   children,
 }: ModuleShellProps) {
   const cadence =
@@ -99,6 +103,24 @@ export function ModuleShell({
             >
               {cadence}
             </span>
+          )}
+          {methodologySlug && (
+            <a
+              href={`#methodology-${methodologySlug}`}
+              className="hidden lg:inline"
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 9,
+                letterSpacing: '0.18em',
+                color: 'var(--text-muted)',
+                textDecoration: 'none',
+                fontWeight: 700,
+                padding: '2px 6px',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              METHODOLOGY ↗
+            </a>
           )}
           <span
             className="px-2 py-0.5 border"

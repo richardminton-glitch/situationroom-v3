@@ -22,6 +22,7 @@ import { Module03 } from '@/components/feh/module03/Module03';
 import { Module04 } from '@/components/feh/module04/Module04';
 import { Module05 } from '@/components/feh/module05/Module05';
 import { Module06 } from '@/components/feh/module06/Module06';
+import { MethodologyDrawer } from '@/components/feh/MethodologyDrawer';
 
 export const metadata: Metadata = {
   title: 'Fiscal Event Horizon — The Situation Room',
@@ -54,6 +55,7 @@ export default function FiscalEventHorizonPage() {
         severity="TOP SECRET"
         lastComputed="26APR26"
         nextRefresh="26JUL26"
+        methodologySlug="01"
       >
         <Module01 />
       </ModuleShell>
@@ -67,6 +69,7 @@ export default function FiscalEventHorizonPage() {
         severity="SECRET"
         lastComputed="26APR26"
         nextRefresh="26JUL26"
+        methodologySlug="02"
       >
         <Module02 />
       </ModuleShell>
@@ -84,6 +87,7 @@ export default function FiscalEventHorizonPage() {
             severity="SECRET"
             lastComputed="26APR26"
             nextRefresh="03MAY26"
+            methodologySlug="03"
           >
             <Module03 />
           </ModuleShell>
@@ -96,6 +100,7 @@ export default function FiscalEventHorizonPage() {
             severity="SECRET"
             lastComputed="26APR26"
             nextRefresh="03MAY26"
+            methodologySlug="06"
           >
             <Module06 />
           </ModuleShell>
@@ -111,6 +116,7 @@ export default function FiscalEventHorizonPage() {
         severity="SECRET"
         lastComputed="26APR26"
         nextRefresh="26MAY26"
+        methodologySlug="04"
       >
         <Module04 />
       </ModuleShell>
@@ -124,6 +130,7 @@ export default function FiscalEventHorizonPage() {
         severity="TOP SECRET"
         lastComputed="26APR26"
         nextRefresh="26MAY26"
+        methodologySlug="05"
       >
         <Module05 />
       </ModuleShell>
@@ -140,7 +147,14 @@ export default function FiscalEventHorizonPage() {
           lineHeight: 2,
         }}
       >
-        METHODOLOGY · SOURCES · LAST COMPUTED 1430Z 26APR26
+        <a
+          href="/tools/fiscal-event-horizon/methodology"
+          style={{ color: 'var(--feh-critical)', textDecoration: 'none', fontWeight: 700 }}
+        >
+          [ FULL METHODOLOGY DOCUMENT ↗ ]
+        </a>
+        <br />
+        SOURCES · LAST COMPUTED 1430Z 26APR26
         <br />
         <span style={{ opacity: 0.6 }}>
           COMPILED FROM PUBLIC DATA AND EDITORIAL JUDGEMENT — SITUATION ROOM INTELLIGENCE
@@ -148,6 +162,8 @@ export default function FiscalEventHorizonPage() {
       </footer>
 
       <ClassificationBar />
+
+      <MethodologyDrawer />
     </div>
   );
 }
