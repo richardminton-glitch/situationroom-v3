@@ -17,6 +17,7 @@ import { SectionDivider } from '@/components/feh/SectionDivider';
 import { ModuleShell } from '@/components/feh/ModuleShell';
 import { StubModule } from '@/components/feh/StubModule';
 import { Module01 } from '@/components/feh/module01/Module01';
+import { Module02 } from '@/components/feh/module02/Module02';
 
 export const metadata: Metadata = {
   title: 'Fiscal Event Horizon — The Situation Room',
@@ -63,10 +64,7 @@ export default function FiscalEventHorizonPage() {
         lastComputed="26APR26"
         nextRefresh="26JUL26"
       >
-        <StubModule
-          description="// MODULE 02 — UNDER CONSTRUCTION //  Composite RCDI number (oversized monospace), 5-year sparkline with single annotated inflection, four component gauges: CB GOLD vs USD ALLOC SHIFT, CIPS / SWIFT VOL RATIO, YUAN OIL SETTLEMENT %, BRICS BILATERAL SWAPS."
-          height={280}
-        />
+        <Module02 />
       </ModuleShell>
 
       <SectionDivider />
