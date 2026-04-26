@@ -745,6 +745,26 @@ model FehFiscalEvent {
   @@map("feh_fiscal_events")
 }
 
+// FEH Sovereign Commentary — quarterly Grok-generated narrative for the
+// "STATE OF [country]" dossier section. One row per (iso3, quarter); the
+// cron upserts each quarter so old rows remain queryable for archive views.
+
+model FehSovereignCommentary {
+  id                 String   @id @default(cuid())
+  iso3               String
+  quarter            String                                       // "2026Q2"
+  fiscalTrajectory   String   @map("fiscal_trajectory")   @db.Text
+  keyRisks           String   @map("key_risks")           @db.Text
+  comparablePeers    String   @map("comparable_peers")    @db.Text
+  grokModel          String?  @map("grok_model")
+  sourceUrl          String?  @map("source_url")
+  generatedAt        DateTime @default(now()) @map("generated_at")
+
+  @@unique([iso3, quarter])
+  @@index([iso3])
+  @@map("feh_sovereign_commentary")
+}
+
 // FEH Extraction Audit Log — one row per Grok extraction attempt regardless
 // of outcome. Captures the raw response, parsed value, sanity-bound result,
 // and source URL so every published FEH number has verifiable provenance.

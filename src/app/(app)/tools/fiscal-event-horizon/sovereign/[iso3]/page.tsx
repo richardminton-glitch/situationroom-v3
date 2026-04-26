@@ -23,9 +23,6 @@
  * itself is publicly routable; redaction is the paywall.
  */
 
-'use client';
-
-import { use, useMemo } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ClassificationBar } from '@/components/feh/ClassificationBar';
@@ -36,13 +33,45 @@ import { SOVEREIGNS_BY_ISO3 } from '@/lib/feh/sovereigns-seed';
 import { computeRunway, failureModeLabel } from '@/lib/feh/runway';
 import { sovereigntyScore } from '@/lib/feh/sovereigntyScore';
 import { colorForRunway } from '@/lib/feh/colors';
+import { prisma } from '@/lib/db';
 
-export default function SovereignDossierPage({ params }: { params: Promise<{ iso3: string }> }) {
-  const { iso3: rawIso3 } = use(params);
+function currentQuarterKey(date = new Date()): string {
+  const y = date.getUTCFullYear();
+  const q = Math.floor(date.getUTCMonth() / 3) + 1;
+  return `${y}Q${q}`;
+}
+
+async function loadCommentary(iso3: string): Promise<{
+  fiscalTrajectory: string;
+  keyRisks: string;
+  comparablePeers: string;
+} | null> {
+  try {
+    const row = await prisma.fehSovereignCommentary.findFirst({
+      where: { iso3 },
+      orderBy: { generatedAt: 'desc' },
+    });
+    if (!row) return null;
+    return {
+      fiscalTrajectory: row.fiscalTrajectory,
+      keyRisks:         row.keyRisks,
+      comparablePeers:  row.comparablePeers,
+    };
+  } catch {
+    // DB unavailable (dev) — page falls back to anchor-only commentary.
+    return null;
+  }
+}
+
+export default async function SovereignDossierPage({ params }: { params: Promise<{ iso3: string }> }) {
+  const { iso3: rawIso3 } = await params;
   const iso3 = rawIso3.toUpperCase();
   const sovereign = SOVEREIGNS_BY_ISO3[iso3];
 
   if (!sovereign) notFound();
+
+  const commentary = await loadCommentary(iso3);
+  const quarter = currentQuarterKey();
 
   const runway = computeRunway(sovereign);
   const score = sovereigntyScore(sovereign);
@@ -50,7 +79,7 @@ export default function SovereignDossierPage({ params }: { params: Promise<{ iso
   const runwayLabel = runway.years === 0 ? 'NOW' : runway.years >= 100 ? '100Y+' : `${runway.years}Y`;
 
   // Mock maturity wall (10y rolloff) — Phase 8c will swap this for DB data.
-  const maturityWall = useMemo(() => {
+  const maturityWall = (() => {
     const total = sovereign.debtGdp;
     const buckets: { year: number; pct: number }[] = [];
     let remaining = 100;
@@ -61,10 +90,10 @@ export default function SovereignDossierPage({ params }: { params: Promise<{ iso
       remaining -= share;
     }
     return { total, buckets };
-  }, [sovereign.debtGdp]);
+  })();
 
   // Mock foreign holders — top 5
-  const foreignHolders = useMemo(() => {
+  const foreignHolders = (() => {
     const fxShare = sovereign.fxDebtShare;
     return [
       { name: 'Federal Reserve System',  pct: fxShare * 0.05 },
@@ -73,7 +102,7 @@ export default function SovereignDossierPage({ params }: { params: Promise<{ iso
       { name: 'Domestic banks',          pct: (100 - sovereign.externalDebtShare) * 0.45 },
       { name: 'Domestic households / pension', pct: (100 - sovereign.externalDebtShare) * 0.30 },
     ].filter((h) => h.pct > 0).map((h) => ({ ...h, pct: Math.round(h.pct * 10) / 10 }));
-  }, [sovereign.fxDebtShare, sovereign.externalDebtShare]);
+  })();
 
   return (
     <div
@@ -338,19 +367,22 @@ export default function SovereignDossierPage({ params }: { params: Promise<{ iso
       </DossierSection>
 
       {/* Section: Editorial commentary — Grok-templated 3 sections */}
-      <DossierSection title={`STATE OF ${sovereign.name.toUpperCase()} · Q2 2026`} idx="04">
+      <DossierSection title={`STATE OF ${sovereign.name.toUpperCase()} · ${quarter}`} idx="04">
         <div className="space-y-4">
           <CommentaryBlock
             heading="FISCAL TRAJECTORY"
             bodyAnchor={`Debt/GDP at ${sovereign.debtGdp.toFixed(0)}%, primary balance at ${sovereign.primaryBalance.toFixed(1)}%.`}
+            body={commentary?.fiscalTrajectory}
           />
           <CommentaryBlock
             heading="KEY RISKS"
             bodyAnchor={`Interest at ${sovereign.interestPctRevenue.toFixed(0)}% of revenue means ${sovereign.interestPctRevenue >= 25 ? 'crowding-out is already live' : 'debt service has runway before discretionary spending compresses'}.`}
+            body={commentary?.keyRisks}
           />
           <CommentaryBlock
             heading="COMPARABLE PEERS"
             bodyAnchor={`At an effective rate of ${sovereign.effectiveRate.toFixed(1)}% and average maturity ${sovereign.avgMaturity.toFixed(1)}y, the most-comparable trajectories are documented in peer overlays.`}
+            body={commentary?.comparablePeers}
           />
         </div>
       </DossierSection>
@@ -441,7 +473,15 @@ function MetricCard({ label, value, redactWidth, caption }: { label: string; val
   );
 }
 
-function CommentaryBlock({ heading, bodyAnchor }: { heading: string; bodyAnchor: string }) {
+function CommentaryBlock({
+  heading,
+  bodyAnchor,
+  body,
+}: {
+  heading: string;
+  bodyAnchor: string;
+  body?: string;
+}) {
   return (
     <div
       className="border-l-2 pl-4 py-2"
@@ -468,8 +508,8 @@ function CommentaryBlock({ heading, bodyAnchor }: { heading: string; bodyAnchor:
           color: 'var(--text-secondary)',
         }}
       >
-        <Redacted mode="block" height={62} width="100%">
-          <p style={{ margin: 0 }}>{bodyAnchor}</p>
+        <Redacted mode="block" height={body ? 96 : 62} width="100%">
+          <p style={{ margin: 0 }}>{body ?? bodyAnchor}</p>
         </Redacted>
       </div>
     </div>
