@@ -10,7 +10,7 @@
  * "consensus view" vs the "contrarian view".
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PetroAnnotation, PetroPoint } from '@/lib/feh/petro-dollar-seed';
 
 interface PetroDollarChartProps {
@@ -37,16 +37,24 @@ export function PetroDollarChart({ data, annotations, showStack, height = 360 }:
   const [width, setWidth] = useState(720);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  if (typeof window !== 'undefined' && !containerRef.current) {
-    setTimeout(() => {
-      if (!containerRef.current) return;
-      const ro = new ResizeObserver((entries) => {
-        const r = entries[0]?.contentRect;
-        if (r) setWidth(Math.max(320, r.width));
-      });
-      ro.observe(containerRef.current);
-    }, 0);
-  }
+  // Measure container width synchronously before first paint so the
+  // viewBox matches the rendered SVG box and the chart never letterboxes.
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const w = containerRef.current.clientWidth;
+    if (w > 0) setWidth(Math.max(320, w));
+  }, []);
+
+  // Track resize after mount.
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) setWidth(Math.max(320, r.width));
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   const visibleSeries = showStack ? SERIES : SERIES.filter((s) => s.baseLayer);
 
