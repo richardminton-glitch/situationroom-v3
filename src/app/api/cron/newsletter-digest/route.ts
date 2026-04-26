@@ -231,6 +231,8 @@ export async function GET(request: NextRequest) {
     let emailHtml: string;
     let subject: string;
 
+    console.log(`[newsletter-digest] dispatch: user=${user.id} email=${user.email} tier=${user.tier}`);
+
     if (user.tier === 'free') {
       // ── Free: outlook-only digest with upgrade CTA ─────────────────────
       emailHtml = await render(
