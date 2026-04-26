@@ -20,6 +20,7 @@ import { Module01 } from '@/components/feh/module01/Module01';
 import { Module02 } from '@/components/feh/module02/Module02';
 import { Module03 } from '@/components/feh/module03/Module03';
 import { Module04 } from '@/components/feh/module04/Module04';
+import { Module05 } from '@/components/feh/module05/Module05';
 import { Module06 } from '@/components/feh/module06/Module06';
 
 export const metadata: Metadata = {
@@ -124,10 +125,7 @@ export default function FiscalEventHorizonPage() {
         lastComputed="26APR26"
         nextRefresh="26MAY26"
       >
-        <StubModule
-          description="// MODULE 05 — UNDER CONSTRUCTION //  Vertical 5-stage escalation pipeline (Defence Spend ↑ → War Bonds → Capital Controls → Price Decrees → Monetary Debasement) with countries placed at current stage. Three header stats. Click country → evidence drilldown."
-          height={520}
-        />
+        <Module05 />
       </ModuleShell>
 
       <SectionDivider label="END OF DOCUMENT — TOP SECRET // FISCAL // NOFORN" />

@@ -147,9 +147,9 @@ export function MalinvestmentRadar({
               fontSize={9}
               fontFamily="var(--feh-font-mono)"
               fill={isSelected ? 'var(--feh-critical)' : 'var(--text-muted)'}
-              fontVariantNumeric="tabular-nums"
               letterSpacing="0.06em"
               dominantBaseline="middle"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {a.sector.stress}
             </text>
