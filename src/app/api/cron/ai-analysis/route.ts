@@ -2,9 +2,9 @@
  * GET /api/cron/ai-analysis
  *
  * Generates tier-specific AI analyses on a cron schedule:
- *   - macro-analysis-general   (General, grok-3-mini-fast, 24h cache, ~300 words)
- *   - macro-analysis-members   (Members, grok-3, 12h cache, ~500 words)
- *   - onchain-analysis-members (Members, grok-3, 12h cache, ~500 words)
+ *   - macro-analysis-general   (General, grok-3-mini-fast,         24h cache, ~300 words)
+ *   - macro-analysis-members   (Members, grok-4-1-fast-non-reasoning, 12h cache, ~500 words)
+ *   - onchain-analysis-members (Members, grok-4-1-fast-non-reasoning, 12h cache, ~500 words)
  *
  * VIP analyses remain on-demand via POST endpoints.
  * Called by system crontab at 00:05, 06:05, 12:05, 18:05 UTC.
@@ -486,7 +486,7 @@ IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not inve
   {
     panelId: 'macro-analysis-members',
     ttlHours: 12,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     maxTokens: 900,
     systemPrompt: MACRO_SYSTEM_MEMBERS,
     buildPrompt: (macroData) => {
@@ -518,7 +518,7 @@ IMPORTANT: Use ONLY the specific numbers provided in the data above. Do not inve
   {
     panelId: 'onchain-analysis-members',
     ttlHours: 12,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     maxTokens: 900,
     systemPrompt: ONCHAIN_SYSTEM_MEMBERS,
     buildPrompt: (_macroData, onchainData) => {

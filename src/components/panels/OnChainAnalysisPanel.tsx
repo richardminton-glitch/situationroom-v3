@@ -5,8 +5,8 @@
  *
  * Members and VIP both see an ANALYSE button.
  * Each tier gets different depth of analysis and cache window:
- *   Members: moderate depth, 12h refresh, grok-3
- *   VIP:     full deep-dive with historical cycle precedents, 6h refresh, grok-3
+ *   Members: moderate depth, 12h refresh, grok-4-1-fast-non-reasoning
+ *   VIP:     full deep-dive with historical cycle precedents, 6h refresh, grok-4-1-fast-non-reasoning
  */
 
 import { useState, useEffect } from 'react';

@@ -3,8 +3,8 @@
  * POST /api/ai/onchain-analysis — Generates fresh analysis at user's tier level
  *
  * Tiered access (members+):
- *   Members  → moderate depth, 12h cache, grok-3, ~500 words
- *   VIP      → full deep-dive with historical precedents, 6h cache, grok-3, ~700 words
+ *   Members  → moderate depth, 12h cache, grok-4-1-fast-non-reasoning, ~500 words
+ *   VIP      → full deep-dive with historical precedents, 6h cache, grok-4-1-fast-non-reasoning, ~700 words
  *
  * Each tier has its own panelId in signalAnnotation for separate caching.
  */
@@ -37,7 +37,7 @@ const TIER_CONFIG: Record<AnalysisTier, TierConfig> = {
     panelId: 'onchain-analysis-members',
     ttlHours: 12,
     maxTokens: 900,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     systemPrompt:
       'You are a senior Bitcoin on-chain analyst. You combine on-chain metrics, miner behaviour, and holder dynamics to assess Bitcoin\'s current state and provide directional guidance. Be direct, quantitative, and decisive. State the facts and give clear assessments backed by the data.',
     analysisInstructions: `Provide a detailed on-chain analysis covering:
@@ -59,7 +59,7 @@ Write 400-550 words. Use specific numbers from the data. Direct, intelligence-br
     panelId: 'onchain-analysis-vip',
     ttlHours: 6,
     maxTokens: 1400,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     systemPrompt:
       'You are an elite Bitcoin on-chain strategist and cycle analyst. You combine on-chain metrics, miner behaviour, holder dynamics, supply distribution, and historical cycle precedents to build a comprehensive thesis on Bitcoin\'s position within its market cycle. Be direct, quantitative, and decisive. Draw on historical parallels where relevant — reference specific cycle phases (2017 top distribution, 2018-2019 accumulation, 2020 halving rally, 2021 double-top distribution, 2022 capitulation, 2023-2024 recovery). Never hedge excessively — give clear directional assessments backed by data and precedent.',
     analysisInstructions: `Provide a comprehensive deep-dive analysis with historical cycle context:

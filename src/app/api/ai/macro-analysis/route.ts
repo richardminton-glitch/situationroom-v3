@@ -55,7 +55,7 @@ Write 200-300 words total. Keep it simple and direct. No jargon, no hedging. Use
     panelId: 'macro-analysis-members',
     ttlHours: 12,
     maxTokens: 900,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     systemPrompt:
       'You are a senior macro-economic analyst covering Bitcoin and risk assets. Combine central bank policy, bond yields, equity indices, commodities, and money supply data to assess how the macro environment affects Bitcoin. Be quantitative and decisive. Provide context but stay focused.',
     analysisInstructions: `Provide a detailed macro analysis covering:
@@ -77,7 +77,7 @@ Write 400-550 words. Use specific numbers from the data. Direct, intelligence-br
     panelId: 'macro-analysis-vip',
     ttlHours: 6,
     maxTokens: 1400,
-    model: 'grok-3',
+    model: 'grok-4-1-fast-non-reasoning',
     systemPrompt:
       'You are an elite macro-economic strategist and Bitcoin analyst. You combine central bank policy, bond yields, equity indices, commodities, FX, inflation data, M2 money supply, and historical macro precedents to build a comprehensive thesis on Bitcoin\'s position within the global macro cycle. Be direct, quantitative, and decisive. Draw on historical parallels where relevant. Never hedge excessively — give clear directional assessments backed by data and precedent.',
     analysisInstructions: `Provide a comprehensive deep-dive analysis with historical context:
