@@ -85,36 +85,31 @@ function FiscalEventHorizonContent() {
 
       <SectionDivider />
 
-      {/* Section 03 + Section 06 — side-by-side row per spec */}
-      <div className="mx-auto w-full max-w-[1320px] px-4">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <ModuleShell
-            compact
-            index="03"
-            title="CB DIVERGENCE MATRIX"
-            subtitle="When the cluster breaks, capital moves. Watch the breaks before they happen."
-            severity="SECRET"
-            lastComputed="26APR26"
-            nextRefresh="03MAY26"
-            methodologySlug="03"
-          >
-            <Module03 />
-          </ModuleShell>
+      <ModuleShell
+        index="03"
+        title="CENTRAL BANK DIVERGENCE MATRIX"
+        subtitle="When the cluster breaks, capital moves. Watch the breaks before they happen."
+        severity="SECRET"
+        lastComputed="26APR26"
+        nextRefresh="03MAY26"
+        methodologySlug="03"
+      >
+        <Module03 />
+      </ModuleShell>
 
-          <ModuleShell
-            compact
-            index="06"
-            title="PETRO-DOLLAR EROSION"
-            subtitle="The counter-narrative to 'the dollar is fine.'"
-            severity="SECRET"
-            lastComputed="26APR26"
-            nextRefresh="03MAY26"
-            methodologySlug="06"
-          >
-            <Module06 />
-          </ModuleShell>
-        </div>
-      </div>
+      <SectionDivider />
+
+      <ModuleShell
+        index="06"
+        title="PETRO-DOLLAR EROSION TRACKER"
+        subtitle="The counter-narrative to 'the dollar is fine.'"
+        severity="SECRET"
+        lastComputed="26APR26"
+        nextRefresh="03MAY26"
+        methodologySlug="06"
+      >
+        <Module06 />
+      </ModuleShell>
 
       <SectionDivider />
 
