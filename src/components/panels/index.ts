@@ -4,7 +4,9 @@
 import type { ComponentType } from 'react';
 
 import { BtcHeroPanel } from './BtcHeroPanel';
+import { BtcSatsHeroPanel } from './BtcSatsHeroPanel';
 import { BtcMarketPanel } from './BtcMarketPanel';
+import { BtcPricedInPanel } from './BtcPricedInPanel';
 import { BtcNetworkPanel } from './BtcNetworkPanel';
 import { BtcMiningPanel } from './BtcMiningPanel';
 import { LightningPanel } from './LightningPanel';
@@ -57,7 +59,9 @@ import {
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
+  'btc-sats-hero': BtcSatsHeroPanel,
   'btc-market': BtcMarketPanel,
+  'btc-priced-in': BtcPricedInPanel,
   'btc-network': BtcNetworkPanel,
   'btc-mining': BtcMiningPanel,
   'lightning': LightningPanel,

@@ -8,11 +8,13 @@ export interface SnapshotData {
     change24h: number;
     change7d: number;
     change30d: number;
+    change1y: number;
     marketCap: number;
     volume24h: number;
     circulatingSupply: number;
     ath: number;
     athChangePct: number;
+    athDate: string;
   } | null;
   btcNetwork: {
     blockHeight: number;

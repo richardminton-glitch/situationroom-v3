@@ -29,6 +29,9 @@ export function PanelPicker({ currentPanels, onAdd, onClose, excludeAdmin }: Pan
   // UI components (separators) can be added multiple times — always show them as available
   let available = PANEL_REGISTRY.filter((p) => p.uiComponent || !currentIds.has(p.id));
 
+  // Hide panels that source on-demand AI generation (Grok, etc.)
+  available = available.filter((p) => !p.hideFromPicker);
+
   // Filter out admin-only panels when requested
   if (excludeAdmin) {
     available = available.filter((p) => !p.adminOnly);

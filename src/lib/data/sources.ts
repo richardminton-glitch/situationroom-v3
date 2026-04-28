@@ -16,17 +16,21 @@ export interface BtcMarketData {
   change24h: number;
   change7d: number;
   change30d: number;
+  change1y: number;
   marketCap: number;
   volume24h: number;
   circulatingSupply: number;
   ath: number;
   athChangePct: number;
+  athDate: string;
 }
 
 export async function fetchBtcMarket(): Promise<BtcMarketData> {
   // CoinGecko free tier is rate-limited; 90s cache (≈40/h) is well within budget
   // and matches the natural update cadence of their underlying feed.
-  const raw = await fetchJSON<{ market_data: Record<string, Record<string, number>> }>(
+  const raw = await fetchJSON<{
+    market_data: Record<string, Record<string, number>> & { ath_date?: Record<string, string> };
+  }>(
     'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false',
     { cacheKey: 'btcMarket', cacheDuration: 90_000 }
   );
@@ -36,11 +40,13 @@ export async function fetchBtcMarket(): Promise<BtcMarketData> {
     change24h: md.price_change_percentage_24h as unknown as number,
     change7d: md.price_change_percentage_7d_in_currency?.usd ?? 0,
     change30d: md.price_change_percentage_30d_in_currency?.usd ?? 0,
+    change1y: md.price_change_percentage_1y_in_currency?.usd ?? 0,
     marketCap: md.market_cap.usd,
     volume24h: md.total_volume.usd,
     circulatingSupply: md.circulating_supply as unknown as number,
     ath: md.ath.usd,
     athChangePct: md.ath_change_percentage.usd,
+    athDate: md.ath_date?.usd ?? '',
   };
 }
 

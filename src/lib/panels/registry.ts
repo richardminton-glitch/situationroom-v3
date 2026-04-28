@@ -12,6 +12,7 @@ export interface PanelRegistryEntry {
   noHeader?: boolean;     // full-width bars don't need panel chrome
   uiComponent?: boolean;  // UI-only (separators) — noHeader but NOT stretched to full-width
   adminOnly?: boolean;    // hidden from non-admin panel pickers (future use)
+  hideFromPicker?: boolean; // hidden from the custom dashboard panel picker
   refreshInterval: number;
   dataSources: string[];
   description: string;
@@ -32,15 +33,37 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'bitcoin',
   },
   {
-    id: 'btc-market',
-    name: 'Bitcoin — Market',
+    id: 'btc-sats-hero',
+    name: 'Moscow Time',
     category: 'bitcoin',
-    defaultW: 260, defaultH: 260, minW: 200, minH: 200,
+    defaultW: 260, defaultH: 120, minW: 200, minH: 100,
     resizable: false,
     refreshInterval: 60,
     dataSources: ['btcMarket'],
-    description: '7d/30d change, market cap, volume, supply, ATH',
+    description: 'Sats-per-dollar with 24-hour change (inverse of BTC price)',
+    icon: 'bitcoin',
+  },
+  {
+    id: 'btc-market',
+    name: 'Bitcoin — Market',
+    category: 'bitcoin',
+    defaultW: 260, defaultH: 308, minW: 200, minH: 240,
+    resizable: false,
+    refreshInterval: 60,
+    dataSources: ['btcMarket'],
+    description: '7d/30d/1y change, market cap, volume, supply, ATH, days from ATH',
     icon: 'chart',
+  },
+  {
+    id: 'btc-priced-in',
+    name: 'Bitcoin Priced In',
+    category: 'bitcoin',
+    defaultW: 260, defaultH: 200, minW: 200, minH: 160,
+    resizable: false,
+    refreshInterval: 60,
+    dataSources: ['btcMarket', 'commodities'],
+    description: 'BTC value in gold, silver, oil, natural gas, copper',
+    icon: 'commodities',
   },
   {
     id: 'btc-network',
@@ -246,6 +269,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['briefing'],
     description: 'Grok multi-agent synthesis briefing',
     icon: 'ai',
+    hideFromPicker: true,
   },
   {
     id: 'fear-greed',
@@ -337,6 +361,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['brk', 'briefing'],
     description: 'VIP Grok-3 deep dive — market regime, miner health, holder behaviour, price outlook',
     icon: 'ai',
+    hideFromPicker: true,
   },
 
   // ── AI Analysis ──
@@ -350,6 +375,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['briefing'],
     description: 'AI synthesis of current signals — auto-detects live market, on-chain, and macro readings',
     icon: 'ai',
+    hideFromPicker: true,
   },
   {
     id: 'cohort-analysis',
@@ -361,6 +387,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['briefing'],
     description: 'Dominant Bitcoin cohort, implication, and confidence — LTH/STH/whale/retail breakdown',
     icon: 'ai',
+    hideFromPicker: true,
   },
   {
     id: 'bitcoin-argument',
@@ -372,6 +399,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['briefing'],
     description: 'AI-generated 3-point case for Bitcoin based on current macro and network data',
     icon: 'ai',
+    hideFromPicker: true,
   },
 
   // ── UI Components ──
@@ -449,6 +477,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     dataSources: ['briefing'],
     description: 'VIP Grok-3 deep dive — monetary policy, liquidity, risk appetite, dollar, inflation, Bitcoin outlook',
     icon: 'ai',
+    hideFromPicker: true,
   },
   {
     id: 'm2-chart',
