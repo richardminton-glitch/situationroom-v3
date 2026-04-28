@@ -34,7 +34,10 @@ const SERIES = [
 
 export function PetroDollarChart({ data, annotations, showStack, height = 360 }: PetroDollarChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(720);
+  // width starts null on SSR — we can't measure the DOM there. Rendering the
+  // SVG with a guessed width letterboxed the chart on initial paint until
+  // hydration caught up; hold the placeholder until we have a real number.
+  const [width, setWidth] = useState<number | null>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   // Measure container width synchronously before first paint so the
@@ -59,6 +62,9 @@ export function PetroDollarChart({ data, annotations, showStack, height = 360 }:
   const visibleSeries = showStack ? SERIES : SERIES.filter((s) => s.baseLayer);
 
   const { yMin, yMax, paths, points, annotationXs } = useMemo(() => {
+    if (width == null) {
+      return { yMin: 0, yMax: 0, paths: {} as Record<string, string>, points: [] as { x: number; d: PetroPoint; i: number }[], annotationXs: [] as { x: number; label: string; short: string; idx: number }[] };
+    }
     const allValues: number[] = [];
     for (const s of visibleSeries) {
       for (const d of data) allValues.push(d[s.key]);
@@ -103,8 +109,12 @@ export function PetroDollarChart({ data, annotations, showStack, height = 360 }:
   };
 
   const hoverPt = hoverIdx != null ? points[hoverIdx] : null;
-  const startLabel = data[0].date;
-  const endLabel = data[data.length - 1].date;
+
+  if (width == null) {
+    // SSR / pre-measure placeholder — same height as the chart so layout
+    // doesn't jump when the SVG appears.
+    return <div ref={containerRef} className="relative w-full" style={{ height: height + 24 }} />;
+  }
 
   // Year ticks every 2 years
   const yearTicks: { x: number; label: string }[] = [];

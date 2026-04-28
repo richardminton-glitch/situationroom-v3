@@ -8,7 +8,7 @@
  * reduced label budget, no axes. Hover any month → tooltip with date + value.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RCDIAnnotation, RCDIPoint } from '@/lib/feh/rcdi-seed';
 
 interface RCDISparklineProps {
@@ -25,21 +25,29 @@ const PAD_BOTTOM = 22;
 export function RCDISparkline({ data, annotations, height = 160 }: RCDISparklineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [width, setWidth] = useState(640);
+  // null until measured — see PetroDollarChart for the SSR-letterbox rationale.
+  const [width, setWidth] = useState<number | null>(null);
 
-  // Resize observer — one-time wiring
-  if (typeof window !== 'undefined' && !containerRef.current) {
-    setTimeout(() => {
-      if (!containerRef.current) return;
-      const ro = new ResizeObserver((entries) => {
-        const r = entries[0]?.contentRect;
-        if (r) setWidth(Math.max(280, r.width));
-      });
-      ro.observe(containerRef.current);
-    }, 0);
-  }
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const w = containerRef.current.clientWidth;
+    if (w > 0) setWidth(Math.max(280, w));
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) setWidth(Math.max(280, r.width));
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   const { minV, maxV, points, annotationXs } = useMemo(() => {
+    if (width == null) {
+      return { minV: 0, maxV: 0, points: [] as { x: number; y: number; d: RCDIPoint; i: number }[], annotationXs: [] as { x: number; label: string; idx: number }[] };
+    }
     const values = data.map((d) => d.value);
     const lo = Math.min(...values);
     const hi = Math.max(...values);
@@ -80,6 +88,11 @@ export function RCDISparkline({ data, annotations, height = 160 }: RCDISparkline
   };
 
   const hoverPt = hoverIdx != null ? points[hoverIdx] : null;
+
+  if (width == null) {
+    return <div ref={containerRef} className="relative w-full" style={{ height }} />;
+  }
+
   const startLabel = data[0].date.replace('-', '·');
   const endLabel = data[data.length - 1].date.replace('-', '·');
 
