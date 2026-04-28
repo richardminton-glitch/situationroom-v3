@@ -35,6 +35,12 @@ interface CountryFeature extends Feature<Geometry, { name?: string }> {
 const ROTATION_SPEED_DEG_PER_SEC = 0.3;
 const LAT_MIN = -60;
 const LAT_MAX = 60;
+// Autorotation re-renders project ~250 country paths via d3 each frame, which
+// is the dominant cost on this page. 0.3°/s is slow enough that throttling
+// React state writes to ~10fps is visually indistinguishable from 60fps but
+// frees ~80% of main-thread budget — the difference between navigating into
+// the page feeling instant vs. visibly stalling.
+const AUTOROTATE_INTERVAL_MS = 100;
 
 export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: SovereignGlobeProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -49,6 +55,8 @@ export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: Sovereign
   const draggingRef = useRef(false);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
   const animFlyRef = useRef<{ from: [number, number, number]; to: [number, number, number]; start: number; durMs: number } | null>(null);
+  const visibleRef = useRef(true);
+  const onScreenRef = useRef(true);
 
   // ── Lookup tables for fast colouring ──
   const sovByIsoNum = useMemo(() => {
@@ -97,14 +105,23 @@ export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: Sovereign
   }, []);
 
   // ── Idle autorotation + fly-to animation ──
+  // Each setRotation re-projects ~250 country paths through d3 — at 60fps that
+  // saturates the main thread and stalls page navigation. Strategy:
+  //   - autorotate: only setState every AUTOROTATE_INTERVAL_MS (~10fps)
+  //   - fly-to: keep at 60fps so the easing reads cleanly
+  //   - pause entirely when tab hidden or globe scrolled offscreen
   useEffect(() => {
     let raf = 0;
-    let lastTs = performance.now();
+    let lastAutorotateTs = performance.now();
     const tick = (ts: number) => {
-      const dt = (ts - lastTs) / 1000;
-      lastTs = ts;
+      // Hard pause when tab hidden or globe offscreen — saves ~80% CPU when
+      // the page is left open in a background tab.
+      if (!visibleRef.current || !onScreenRef.current) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
 
-      // Fly-to animation takes priority
+      // Fly-to animation takes priority and runs at 60fps for smoothness.
       if (animFlyRef.current) {
         const a = animFlyRef.current;
         const elapsed = ts - a.start;
@@ -114,8 +131,16 @@ export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: Sovereign
         const lat = a.from[1] + (a.to[1] - a.from[1]) * e;
         setRotation([lon, lat, 0]);
         if (t >= 1) animFlyRef.current = null;
+        lastAutorotateTs = ts;
       } else if (!draggingRef.current && !hoverIso3) {
-        setRotation((r) => [r[0] + ROTATION_SPEED_DEG_PER_SEC * dt, r[1], 0]);
+        const sinceLast = ts - lastAutorotateTs;
+        if (sinceLast >= AUTOROTATE_INTERVAL_MS) {
+          const advance = ROTATION_SPEED_DEG_PER_SEC * (sinceLast / 1000);
+          setRotation((r) => [r[0] + advance, r[1], 0]);
+          lastAutorotateTs = ts;
+        }
+      } else {
+        lastAutorotateTs = ts;
       }
 
       raf = requestAnimationFrame(tick);
@@ -123,6 +148,26 @@ export function SovereignGlobe({ sovereigns, selectedIso3, onSelect }: Sovereign
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [hoverIso3]);
+
+  // ── Page Visibility API — pause when tab hidden ──
+  useEffect(() => {
+    const onVis = () => { visibleRef.current = document.visibilityState !== 'hidden'; };
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // ── IntersectionObserver — pause when globe is scrolled out of view ──
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => { onScreenRef.current = entries[0]?.isIntersecting ?? true; },
+      { threshold: 0.05 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // ── Drag handlers ──
   useEffect(() => {
