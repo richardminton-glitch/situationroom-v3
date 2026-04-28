@@ -100,7 +100,7 @@ function FiscalEventHorizonContent() {
       <SectionDivider />
 
       <ModuleShell
-        index="06"
+        index="04"
         title="PETRO-DOLLAR EROSION TRACKER"
         subtitle="The counter-narrative to 'the dollar is fine.'"
         severity="SECRET"
@@ -114,7 +114,7 @@ function FiscalEventHorizonContent() {
       <SectionDivider />
 
       <ModuleShell
-        index="04"
+        index="05"
         title="MALINVESTMENT MAPPER"
         subtitle="A visual ledger of what cheap money built."
         severity="SECRET"
@@ -128,7 +128,7 @@ function FiscalEventHorizonContent() {
       <SectionDivider />
 
       <ModuleShell
-        index="05"
+        index="06"
         title="WARTIME FINANCE MONITOR"
         subtitle="The fiscal-to-financial-repression pipeline, in real time."
         severity="TOP SECRET"
