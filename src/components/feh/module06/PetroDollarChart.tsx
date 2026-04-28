@@ -62,7 +62,8 @@ export function PetroDollarChart({ data, annotations, showStack, height = 360 }:
   const visibleSeries = showStack ? SERIES : SERIES.filter((s) => s.baseLayer);
 
   const { yMin, yMax, paths, points, annotationXs } = useMemo(() => {
-    if (width == null) {
+    if (width == null || data.length < 2) {
+      // <2 points → can't build a line (and i/(length-1) would divide by zero).
       return { yMin: 0, yMax: 0, paths: {} as Record<string, string>, points: [] as { x: number; d: PetroPoint; i: number }[], annotationXs: [] as { x: number; label: string; short: string; idx: number }[] };
     }
     const allValues: number[] = [];
@@ -110,9 +111,10 @@ export function PetroDollarChart({ data, annotations, showStack, height = 360 }:
 
   const hoverPt = hoverIdx != null ? points[hoverIdx] : null;
 
-  if (width == null) {
+  if (width == null || data.length < 2) {
     // SSR / pre-measure placeholder — same height as the chart so layout
-    // doesn't jump when the SVG appears.
+    // doesn't jump when the SVG appears. Also covers the degenerate single-
+    // point case where dividing by (data.length - 1) would NaN every coord.
     return <div ref={containerRef} className="relative w-full" style={{ height: height + 24 }} />;
   }
 

@@ -136,13 +136,29 @@ export async function GET() {
     }
 
     if (petroDb.length > 0) {
-      petroHistory = petroDb.map((r) => ({
-        date: r.date,
-        dxy: r.dxy,
-        yuanOil: r.yuanOil,
-        goldRepat: r.goldRepat,
-        bricsSwaps: r.bricsSwaps,
-      }));
+      // The cron only ever appends the current month, so petroDb is typically
+      // a thin tail (often 1 row). Merge over seed by date — DB wins where it
+      // has a value, seed fills the historical gap. Without this the chart
+      // collapses to a single point and divides by zero.
+      const dbByDate = new Map(petroDb.map((r) => [r.date, r] as const));
+      petroHistory = PETRO_HISTORY.map((seed) => {
+        const r = dbByDate.get(seed.date);
+        return r
+          ? { date: r.date, dxy: r.dxy, yuanOil: r.yuanOil, goldRepat: r.goldRepat, bricsSwaps: r.bricsSwaps }
+          : seed;
+      });
+      // Append any DB dates that fall after the seed window (cron-extended
+      // future months once we live past Apr 2026).
+      const seedDates = new Set(PETRO_HISTORY.map((s) => s.date));
+      for (const r of petroDb) {
+        if (!seedDates.has(r.date)) {
+          petroHistory.push({
+            date: r.date, dxy: r.dxy, yuanOil: r.yuanOil,
+            goldRepat: r.goldRepat, bricsSwaps: r.bricsSwaps,
+          });
+        }
+      }
+      petroHistory.sort((a, b) => a.date.localeCompare(b.date));
       source = 'mixed';
     }
   } catch (err) {
