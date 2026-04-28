@@ -68,16 +68,32 @@ export async function GET() {
       source = 'mixed';
     }
 
-    // RCDI — use DB history if there's anything there. Components are derived
-    // from the latest history row's per-component scores when DB-backed.
+    // RCDI — merge DB rows over seed history by date so a thin DB tail (cron
+    // typically writes a single current-month row) doesn't collapse the chart.
+    // Components are derived from the latest row of the merged history.
     if (rcdiDb.length > 0) {
-      rcdiHistory = rcdiDb.map((r) => ({ date: r.date, value: r.composite }));
-      const latest = rcdiDb[rcdiDb.length - 1];
+      const dbByDate = new Map(rcdiDb.map((r) => [r.date, r] as const));
+      const merged: RCDIPoint[] = RCDI_HISTORY.map((seed) => {
+        const r = dbByDate.get(seed.date);
+        return r ? { date: r.date, value: r.composite } : seed;
+      });
+      const seedDates = new Set(RCDI_HISTORY.map((s) => s.date));
+      for (const r of rcdiDb) {
+        if (!seedDates.has(r.date)) {
+          merged.push({ date: r.date, value: r.composite });
+        }
+      }
+      merged.sort((a, b) => a.date.localeCompare(b.date));
+      rcdiHistory = merged;
+
+      // Use the chronologically latest DB row's components for the gauges
+      // (cron writes per-component scores; the seed has a single current set).
+      const latestDb = rcdiDb.reduce((acc, r) => (r.date > acc.date ? r : acc), rcdiDb[0]);
       rcdiComponents = [
-        { id: 'gold-usd',    label: 'CB GOLD vs USD ALLOC',  value: latest.goldUsdScore,    weight: 0.30 },
-        { id: 'cips-swift',  label: 'CIPS / SWIFT VOL',      value: latest.cipsSwiftScore,  weight: 0.25 },
-        { id: 'yuan-oil',    label: 'YUAN OIL SETTLEMENT',   value: latest.yuanOilScore,    weight: 0.25 },
-        { id: 'brics-swaps', label: 'BRICS BILATERAL SWAPS', value: latest.bricsSwapScore,  weight: 0.20 },
+        { id: 'gold-usd',    label: 'CB GOLD vs USD ALLOC',  value: latestDb.goldUsdScore,    weight: 0.30 },
+        { id: 'cips-swift',  label: 'CIPS / SWIFT VOL',      value: latestDb.cipsSwiftScore,  weight: 0.25 },
+        { id: 'yuan-oil',    label: 'YUAN OIL SETTLEMENT',   value: latestDb.yuanOilScore,    weight: 0.25 },
+        { id: 'brics-swaps', label: 'BRICS BILATERAL SWAPS', value: latestDb.bricsSwapScore,  weight: 0.20 },
       ];
       source = 'mixed';
     }
