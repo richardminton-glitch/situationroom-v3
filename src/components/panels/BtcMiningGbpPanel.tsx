@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * BtcMiningGbpPanel — UK-localised version of BtcMiningPanel. Same rows,
- * but daily issuance revenue is priced in GBP using the live GBP/USD
- * cross. Used by the UK Focus dashboard.
+ * BtcMiningGbpPanel — UK-localised version of BtcMiningPanel. Daily
+ * issuance revenue is computed from the native GBP BTC price (CoinGecko
+ * `current_price.gbp`), not via FX cross conversion.
  */
 
 import { useData } from '@/components/layout/DataProvider';
@@ -12,16 +12,13 @@ import { DataRow, formatLargeNumber, PanelLoading } from './shared';
 export function BtcMiningGbpPanel() {
   const { data, loading } = useData();
 
-  const gbpUsd = data?.fx?.gbp?.price;
-  if (loading || !data?.btcNetwork || !gbpUsd) return <PanelLoading />;
+  if (loading || !data?.btcNetwork || !data?.btcMarket?.priceGbp) return <PanelLoading />;
 
   const n = data.btcNetwork;
   const reward = 3.125;
   const blocksPerDay = 144;
   const dailyRevBTC = reward * blocksPerDay;
-  const btcPriceUsd = data.btcMarket?.price || 0;
-  const dailyRevUsd = dailyRevBTC * btcPriceUsd;
-  const dailyRevGbp = dailyRevUsd / gbpUsd;
+  const dailyRevGbp = dailyRevBTC * data.btcMarket.priceGbp;
   const avgBlockTime = 10;
 
   return (

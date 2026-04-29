@@ -23,6 +23,18 @@ export interface BtcMarketData {
   ath: number;
   athChangePct: number;
   athDate: string;
+  // GBP-native values from CoinGecko — sourced independently of the USD
+  // figures (not computed via FX), so the GBP ATH reflects the actual
+  // sterling-priced peak rather than today's USD ATH spot-converted.
+  priceGbp: number;
+  change7dGbp: number;
+  change30dGbp: number;
+  change1yGbp: number;
+  marketCapGbp: number;
+  volume24hGbp: number;
+  athGbp: number;
+  athChangePctGbp: number;
+  athDateGbp: string;
 }
 
 export async function fetchBtcMarket(): Promise<BtcMarketData> {
@@ -47,6 +59,15 @@ export async function fetchBtcMarket(): Promise<BtcMarketData> {
     ath: md.ath.usd,
     athChangePct: md.ath_change_percentage.usd,
     athDate: md.ath_date?.usd ?? '',
+    priceGbp:        md.current_price.gbp,
+    change7dGbp:     md.price_change_percentage_7d_in_currency?.gbp ?? 0,
+    change30dGbp:    md.price_change_percentage_30d_in_currency?.gbp ?? 0,
+    change1yGbp:     md.price_change_percentage_1y_in_currency?.gbp ?? 0,
+    marketCapGbp:    md.market_cap.gbp,
+    volume24hGbp:    md.total_volume.gbp,
+    athGbp:          md.ath.gbp,
+    athChangePctGbp: md.ath_change_percentage.gbp,
+    athDateGbp:      md.ath_date?.gbp ?? '',
   };
 }
 

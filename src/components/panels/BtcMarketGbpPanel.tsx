@@ -1,9 +1,11 @@
 'use client';
 
 /**
- * BtcMarketGbpPanel — UK-localised version of BtcMarketPanel. Same rows,
- * but market cap, 24h volume and ATH are priced in GBP using the live
- * GBP/USD cross. Used by the UK Focus dashboard.
+ * BtcMarketGbpPanel — UK-localised version of BtcMarketPanel. All GBP
+ * figures (market cap, volume, ATH, change %) come natively from
+ * CoinGecko's GBP price feed — no spot FX conversion. The GBP ATH is
+ * the real sterling-priced peak, not the USD ATH divided by today's
+ * GBP/USD rate.
  */
 
 import { useData } from '@/components/layout/DataProvider';
@@ -19,23 +21,21 @@ function daysSince(iso: string): number | null {
 export function BtcMarketGbpPanel() {
   const { data, loading } = useData();
 
-  const gbpUsd = data?.fx?.gbp?.price;
-  if (loading || !data?.btcMarket || !gbpUsd) return <PanelLoading />;
+  if (loading || !data?.btcMarket?.priceGbp) return <PanelLoading />;
 
   const m = data.btcMarket;
-  const daysFromAth = daysSince(m.athDate);
-  const fx = (usd: number) => usd / gbpUsd;
+  const daysFromAth = daysSince(m.athDateGbp);
 
   return (
     <div>
-      <DataRow label="7d Change" value={formatPct(m.change7d)} color={pctColor(m.change7d)} />
-      <DataRow label="30d Change" value={formatPct(m.change30d)} color={pctColor(m.change30d)} />
-      <DataRow label="1y Change" value={formatPct(m.change1y)} color={pctColor(m.change1y)} />
-      <DataRow label="Market Cap" value={`\u00a3${formatLargeNumber(fx(m.marketCap))}`} />
-      <DataRow label="24h Volume" value={`\u00a3${formatLargeNumber(fx(m.volume24h))}`} />
-      <DataRow label="Supply" value={`${formatLargeNumber(m.circulatingSupply)}`} suffix="BTC" />
-      <DataRow label="ATH" value={`\u00a3${formatPrice(fx(m.ath), 0)}`} />
-      <DataRow label="From ATH" value={formatPct(m.athChangePct)} color={pctColor(m.athChangePct)} />
+      <DataRow label="7d Change"     value={formatPct(m.change7dGbp)}     color={pctColor(m.change7dGbp)} />
+      <DataRow label="30d Change"    value={formatPct(m.change30dGbp)}    color={pctColor(m.change30dGbp)} />
+      <DataRow label="1y Change"     value={formatPct(m.change1yGbp)}     color={pctColor(m.change1yGbp)} />
+      <DataRow label="Market Cap"    value={`\u00a3${formatLargeNumber(m.marketCapGbp)}`} />
+      <DataRow label="24h Volume"    value={`\u00a3${formatLargeNumber(m.volume24hGbp)}`} />
+      <DataRow label="Supply"        value={`${formatLargeNumber(m.circulatingSupply)}`} suffix="BTC" />
+      <DataRow label="ATH"           value={`\u00a3${formatPrice(m.athGbp, 0)}`} />
+      <DataRow label="From ATH"      value={formatPct(m.athChangePctGbp)} color={pctColor(m.athChangePctGbp)} />
       <DataRow
         label="Days from ATH"
         value={daysFromAth != null ? daysFromAth.toLocaleString('en-GB') : '\u2014'}

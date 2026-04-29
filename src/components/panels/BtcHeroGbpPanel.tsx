@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * BtcHeroGbpPanel — BTC price in GBP using the live GBP/USD cross.
- * Mirrors BtcHeroPanel but converts USD → GBP via data.fx.gbp.price.
- * Used by the UK Focus dashboard layout.
+ * BtcHeroGbpPanel — BTC price in GBP using CoinGecko's native GBP price.
+ * No FX conversion — CoinGecko sources GBP directly from sterling-quoted
+ * exchanges, so the figure reflects the real sterling market not a
+ * dollar number divided by a cross.
  */
 
 import { useData } from '@/components/layout/DataProvider';
@@ -12,11 +13,9 @@ import { formatPrice, formatPct, pctColor, PanelLoading } from './shared';
 export function BtcHeroGbpPanel() {
   const { data, loading } = useData();
 
-  const gbpUsd = data?.fx?.gbp?.price;
-  if (loading || !data?.btcMarket || !gbpUsd) return <PanelLoading />;
+  if (loading || !data?.btcMarket?.priceGbp) return <PanelLoading />;
 
-  const { price, change24h } = data.btcMarket;
-  const priceGbp = price / gbpUsd;
+  const { priceGbp, change24h } = data.btcMarket;
 
   return (
     <div className="flex items-baseline justify-center gap-3 py-1">
