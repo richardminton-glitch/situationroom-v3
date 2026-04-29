@@ -130,6 +130,94 @@ const MINING_FOCUS_PRESET: DashboardLayout = {
   ],
 };
 
+// US Focus — same canvas size as Full Overview (1452×792). Members tier.
+// US-only signals: yield-curve spread (T10Y3M), ISM Manufacturing PMI;
+// US-leaning right column: commodities (DXY/US10Y/US2Y/oil/gold) + CNN
+// Fear & Greed + US whale flows + conviction.
+const US_FOCUS_PANELS = [
+  // Column A — Bitcoin core
+  { panelId: 'btc-hero',     x:    0, y:   0, w: 264, h:  88, collapsed: false, resizable: false },
+  { panelId: 'btc-market',   x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-network',  x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-mining',   x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
+  // Mid section — intel + AI on top, US-only macro charts on row 2
+  { panelId: 'intel-feed',   x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true  },
+  { panelId: 'ai-briefing',  x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true  },
+  { panelId: 'yield-spread', x:  264, y: 352, w: 528, h: 352, collapsed: false, resizable: true  },
+  { panelId: 'pmi-cycle',    x:  792, y: 352, w: 396, h: 352, collapsed: false, resizable: true  },
+  // Column D — US-leaning sidebar
+  { panelId: 'commodities',  x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'fear-greed',   x: 1188, y: 220, w: 264, h: 132, collapsed: false, resizable: false },
+  { panelId: 'whale-txs',    x: 1188, y: 352, w: 264, h: 220, collapsed: false, resizable: true  },
+  { panelId: 'conviction',   x: 1188, y: 572, w: 264, h: 132, collapsed: false, resizable: true  },
+  // Bottom bars
+  { panelId: 'tikr',         x:    0, y: 704, w: 1452, h: 44, collapsed: false, resizable: true  },
+  { panelId: 'wire',         x:    0, y: 748, w: 1452, h: 44, collapsed: false, resizable: true  },
+] satisfies LayoutPanelItem[];
+
+const US_FOCUS_PARCHMENT: DashboardLayout = {
+  id: 'us-focus',
+  name: 'US Focus',
+  description: 'US-led intelligence — yield-curve spread, ISM PMI, dollar/gold/oil, CNN Fear & Greed, whale flows',
+  panels: [
+    ...US_FOCUS_PANELS,
+    { panelId: 'v-separator-1777800000001', x:  242, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1777800000002', x: 1166, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
+    { panelId: 'h-separator-1777800000003', x:  264, y: 330, w: 924, h:  44, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1777800000004', x:  770, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
+  ],
+};
+
+const US_FOCUS_DARK: DashboardLayout = {
+  id: 'us-focus',
+  name: 'US Focus',
+  description: 'US-led intelligence — yield-curve spread, ISM PMI, dollar/gold/oil, CNN Fear & Greed, whale flows',
+  panels: US_FOCUS_PANELS,
+};
+
+// UK Focus — same canvas size as Full Overview (1452×792). Members tier.
+// UK-localised: BTC priced in GBP, FTSE-led indices, GBP/USD FX, BOE in
+// the central-bank watch, multi-CB rates chart with BOE, UK CPI track.
+const UK_FOCUS_PANELS = [
+  // Column A — Bitcoin core (BTC priced in GBP at the top)
+  { panelId: 'btc-hero-gbp', x:    0, y:   0, w: 264, h:  88, collapsed: false, resizable: false },
+  { panelId: 'btc-market',   x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-network',  x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-mining',   x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
+  // Mid section — intel + AI on top, multi-CB rates chart full mid width
+  { panelId: 'intel-feed',     x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
+  { panelId: 'ai-briefing',    x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
+  { panelId: 'cb-rates-chart', x:  264, y: 352, w: 924, h: 352, collapsed: false, resizable: true },
+  // Column D — UK-leaning sidebar (FTSE, GBP/USD, BOE)
+  { panelId: 'market-indices', x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'fx-macro',       x: 1188, y: 220, w: 264, h: 176, collapsed: false, resizable: false },
+  { panelId: 'central-bank',   x: 1188, y: 396, w: 264, h: 176, collapsed: false, resizable: false },
+  { panelId: 'conviction',     x: 1188, y: 572, w: 264, h: 132, collapsed: false, resizable: true  },
+  // Bottom bars
+  { panelId: 'tikr',           x:    0, y: 704, w: 1452, h: 44, collapsed: false, resizable: true },
+  { panelId: 'wire',           x:    0, y: 748, w: 1452, h: 44, collapsed: false, resizable: true },
+] satisfies LayoutPanelItem[];
+
+const UK_FOCUS_PARCHMENT: DashboardLayout = {
+  id: 'uk-focus',
+  name: 'UK Focus',
+  description: 'UK-led intelligence — BTC in GBP, FTSE & GBP/USD, BOE policy rate history, sterling-side macro',
+  panels: [
+    ...UK_FOCUS_PANELS,
+    { panelId: 'v-separator-1777800000005', x:  242, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1777800000006', x: 1166, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
+    { panelId: 'h-separator-1777800000007', x:  264, y: 330, w: 924, h:  44, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1777800000008', x:  770, y:   0, w:  44, h: 352, collapsed: false, resizable: true },
+  ],
+};
+
+const UK_FOCUS_DARK: DashboardLayout = {
+  id: 'uk-focus',
+  name: 'UK Focus',
+  description: 'UK-led intelligence — BTC in GBP, FTSE & GBP/USD, BOE policy rate history, sterling-side macro',
+  panels: UK_FOCUS_PANELS,
+};
+
 const AI_PRESET: DashboardLayout = {
   id: 'ai',
   name: 'AI Analysis',
@@ -180,6 +268,8 @@ export const PARCHMENT_PRESETS: DashboardLayout[] = [
   FULL_DATA_PARCHMENT,
   MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
   MINING_FOCUS_PRESET, // General tier — public miner balance sheets
+  US_FOCUS_PARCHMENT,  // Members tier
+  UK_FOCUS_PARCHMENT,  // Members tier
   AI_PRESET,           // Members tier
   ONCHAIN_PRESET,      // Members tier
 ];
@@ -218,6 +308,8 @@ export const DARK_PRESETS: DashboardLayout[] = [
   FULL_DATA_DARK,
   MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
   MINING_FOCUS_PRESET, // General tier — public miner balance sheets
+  US_FOCUS_DARK,       // Members tier
+  UK_FOCUS_DARK,       // Members tier
   AI_PRESET,           // Members tier
   ONCHAIN_PRESET,      // Members tier
 ];

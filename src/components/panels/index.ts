@@ -4,6 +4,7 @@
 import type { ComponentType } from 'react';
 
 import { BtcHeroPanel } from './BtcHeroPanel';
+import { BtcHeroGbpPanel } from './BtcHeroGbpPanel';
 import { BtcSatsHeroPanel } from './BtcSatsHeroPanel';
 import { BtcMarketPanel } from './BtcMarketPanel';
 import { BtcPricedInPanel } from './BtcPricedInPanel';
@@ -37,6 +38,7 @@ import { VSeparatorPanel } from './VSeparatorPanel';
 import { M2ChartPanel } from './M2ChartPanel';
 import { GlobalLiquidityPanel } from './GlobalLiquidityPanel';
 import { PMIPanel } from './PMIPanel';
+import { YieldSpreadPanel } from './YieldSpreadPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
 import { NetworkSignalsPanel } from './NetworkSignalsPanel';
@@ -59,6 +61,7 @@ import {
 
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
+  'btc-hero-gbp': BtcHeroGbpPanel,
   'btc-sats-hero': BtcSatsHeroPanel,
   'btc-market': BtcMarketPanel,
   'btc-priced-in': BtcPricedInPanel,
@@ -92,6 +95,7 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'm2-chart':          M2ChartPanel,
   'global-liquidity':  GlobalLiquidityPanel,
   'pmi-cycle':         PMIPanel,
+  'yield-spread':      YieldSpreadPanel,
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,
   'network-signals':   NetworkSignalsPanel,

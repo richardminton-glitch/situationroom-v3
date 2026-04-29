@@ -33,6 +33,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'bitcoin',
   },
   {
+    id: 'btc-hero-gbp',
+    name: 'Bitcoin — 24hr (GBP)',
+    category: 'bitcoin',
+    defaultW: 264, defaultH: 88, minW: 200, minH: 88,
+    resizable: false,
+    refreshInterval: 60,
+    dataSources: ['btcMarket', 'fx'],
+    description: 'BTC price in GBP using the live GBP/USD cross — UK-localised hero',
+    icon: 'bitcoin',
+  },
+  {
     id: 'btc-sats-hero',
     name: 'Moscow Time',
     category: 'bitcoin',
@@ -499,6 +510,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     refreshInterval: 86400, // 1 day — composite is monthly source data
     dataSources: ['fred', 'btcHistory'],
     description: '4-region M2 composite (US/EU/UK/JP) shifted +84 days vs BTC log price — leading-liquidity tell',
+    icon: 'chart',
+  },
+  {
+    id: 'yield-spread',
+    name: 'Yield Curve · 10y-3m',
+    category: 'macro',
+    defaultW: 348, defaultH: 220, minW: 280, minH: 176,
+    resizable: true,
+    refreshInterval: 86400, // 1 day — FRED updates once per business day
+    dataSources: ['fred'],
+    description: 'US 10y minus 3m Treasury spread (FRED T10Y3M) — 12-month line with inversion shading; the NY Fed recession-probability series',
     icon: 'chart',
   },
   {

@@ -21,7 +21,7 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess }: SubscriptionModalProps) {
-  const { refresh } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const pricing = usePricing();
   const [step, setStep] = useState<Step>('select');
   const [selectedTier, setSelectedTier] = useState<Exclude<Tier, 'free'>>(initialTier);
@@ -171,6 +171,53 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
 
         <div style={{ padding: '20px' }}>
 
+          {/* ── Registration gate — unauthenticated users must sign up first ── */}
+          {!authLoading && !user ? (
+            <div style={{ textAlign: 'center', padding: '12px 4px 8px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px', color: 'var(--accent-primary)' }}>
+                &#128274;
+              </div>
+              <div style={{
+                fontSize: '13px', color: 'var(--text-primary)',
+                letterSpacing: '0.08em', marginBottom: '10px', fontWeight: 'bold',
+              }}>
+                REGISTER FIRST
+              </div>
+              <div style={{
+                fontSize: '11px', color: 'var(--text-muted)',
+                lineHeight: 1.7, marginBottom: '20px', maxWidth: '320px',
+                marginLeft: 'auto', marginRight: 'auto',
+              }}>
+                You need a free account before subscribing — it&rsquo;s how we
+                attach the payment to your tier. Takes 30 seconds with just an email.
+              </div>
+              <a
+                href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/support')}`}
+                style={{
+                  display: 'inline-block', textDecoration: 'none',
+                  padding: '10px 28px',
+                  background: 'var(--accent-primary)', color: 'var(--bg-primary)',
+                  fontFamily: 'var(--font-mono)', fontSize: '12px',
+                  letterSpacing: '0.1em', fontWeight: 'bold',
+                }}
+              >
+                SIGN UP &rarr;
+              </a>
+              <div style={{
+                fontSize: '10px', color: 'var(--text-muted)',
+                marginTop: '14px', letterSpacing: '0.06em',
+              }}>
+                Already have an account?{' '}
+                <a
+                  href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/support')}`}
+                  style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
+                >
+                  Sign in
+                </a>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* ── Step 1: Tier selection ───────────────────────────────────── */}
           {step === 'select' && (
             <>
@@ -470,6 +517,8 @@ export function SubscriptionModal({ initialTier = 'general', onClose, onSuccess 
                 CONTINUE
               </button>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>
