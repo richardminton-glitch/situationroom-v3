@@ -177,23 +177,23 @@ const US_FOCUS_DARK: DashboardLayout = {
 
 // UK Focus — same canvas size as Full Overview (1452×792). Members tier.
 // UK-localised: BTC priced in GBP, FTSE-led indices, GBP/USD FX, BOE in
-// the central-bank watch, multi-CB rates chart with BOE, UK CPI track.
+// the central-bank watch, gilt curve + UK CPI on row 2.
 const UK_FOCUS_PANELS = [
-  // Column A — Bitcoin core (BTC priced in GBP at the top)
-  { panelId: 'btc-hero-gbp', x:    0, y:   0, w: 264, h:  88, collapsed: false, resizable: false },
-  { panelId: 'btc-market',   x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
-  { panelId: 'btc-network',  x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
-  { panelId: 'btc-mining',   x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
+  // Column A — Bitcoin core (USD figures swapped for GBP variants)
+  { panelId: 'btc-hero-gbp',   x:    0, y:   0, w: 264, h:  88, collapsed: false, resizable: false },
+  { panelId: 'btc-market-gbp', x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-network',    x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'btc-mining-gbp', x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
   // Mid section — intel + AI on top, UK gilt curve + UK CPI on row 2
   { panelId: 'intel-feed',  x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
   { panelId: 'ai-briefing', x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
   { panelId: 'gilt-spread', x:  264, y: 352, w: 528, h: 352, collapsed: false, resizable: true },
   { panelId: 'uk-cpi',      x:  792, y: 352, w: 396, h: 352, collapsed: false, resizable: true },
-  // Column D — UK-leaning sidebar (FTSE, GBP/USD, BOE)
-  { panelId: 'market-indices', x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
-  { panelId: 'fx-macro',       x: 1188, y: 220, w: 264, h: 176, collapsed: false, resizable: false },
-  { panelId: 'central-bank',   x: 1188, y: 396, w: 264, h: 176, collapsed: false, resizable: false },
-  { panelId: 'conviction',     x: 1188, y: 572, w: 264, h: 132, collapsed: false, resizable: true  },
+  // Column D — UK-leaning sidebar (FTSE-first indices, GBP/USD, BOE-first rates)
+  { panelId: 'market-indices-uk', x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
+  { panelId: 'fx-macro',          x: 1188, y: 220, w: 264, h: 176, collapsed: false, resizable: false },
+  { panelId: 'central-bank-uk',   x: 1188, y: 396, w: 264, h: 176, collapsed: false, resizable: false },
+  { panelId: 'conviction',        x: 1188, y: 572, w: 264, h: 132, collapsed: false, resizable: true  },
   // Bottom bars
   { panelId: 'tikr',           x:    0, y: 704, w: 1452, h: 44, collapsed: false, resizable: true },
   { panelId: 'wire',           x:    0, y: 748, w: 1452, h: 44, collapsed: false, resizable: true },

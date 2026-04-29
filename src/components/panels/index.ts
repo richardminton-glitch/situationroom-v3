@@ -5,6 +5,10 @@ import type { ComponentType } from 'react';
 
 import { BtcHeroPanel } from './BtcHeroPanel';
 import { BtcHeroGbpPanel } from './BtcHeroGbpPanel';
+import { BtcMarketGbpPanel } from './BtcMarketGbpPanel';
+import { BtcMiningGbpPanel } from './BtcMiningGbpPanel';
+import { IndicesUkPanel } from './IndicesUkPanel';
+import { CentralBankUkPanel } from './CentralBankUkPanel';
 import { BtcSatsHeroPanel } from './BtcSatsHeroPanel';
 import { BtcMarketPanel } from './BtcMarketPanel';
 import { BtcPricedInPanel } from './BtcPricedInPanel';
@@ -64,6 +68,10 @@ import {
 export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'btc-hero': BtcHeroPanel,
   'btc-hero-gbp': BtcHeroGbpPanel,
+  'btc-market-gbp': BtcMarketGbpPanel,
+  'btc-mining-gbp': BtcMiningGbpPanel,
+  'market-indices-uk': IndicesUkPanel,
+  'central-bank-uk':   CentralBankUkPanel,
   'btc-sats-hero': BtcSatsHeroPanel,
   'btc-market': BtcMarketPanel,
   'btc-priced-in': BtcPricedInPanel,
