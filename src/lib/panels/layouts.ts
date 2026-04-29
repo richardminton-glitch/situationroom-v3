@@ -184,10 +184,11 @@ const UK_FOCUS_PANELS = [
   { panelId: 'btc-market',   x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
   { panelId: 'btc-network',  x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
   { panelId: 'btc-mining',   x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
-  // Mid section — intel + AI on top, multi-CB rates chart full mid width
-  { panelId: 'intel-feed',     x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
-  { panelId: 'ai-briefing',    x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
-  { panelId: 'cb-rates-chart', x:  264, y: 352, w: 924, h: 352, collapsed: false, resizable: true },
+  // Mid section — intel + AI on top, UK gilt curve + UK CPI on row 2
+  { panelId: 'intel-feed',  x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
+  { panelId: 'ai-briefing', x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
+  { panelId: 'gilt-spread', x:  264, y: 352, w: 528, h: 352, collapsed: false, resizable: true },
+  { panelId: 'uk-cpi',      x:  792, y: 352, w: 396, h: 352, collapsed: false, resizable: true },
   // Column D — UK-leaning sidebar (FTSE, GBP/USD, BOE)
   { panelId: 'market-indices', x: 1188, y:   0, w: 264, h: 220, collapsed: false, resizable: false },
   { panelId: 'fx-macro',       x: 1188, y: 220, w: 264, h: 176, collapsed: false, resizable: false },
@@ -207,7 +208,7 @@ const UK_FOCUS_PARCHMENT: DashboardLayout = {
     { panelId: 'v-separator-1777800000005', x:  242, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
     { panelId: 'v-separator-1777800000006', x: 1166, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
     { panelId: 'h-separator-1777800000007', x:  264, y: 330, w: 924, h:  44, collapsed: false, resizable: true },
-    { panelId: 'v-separator-1777800000008', x:  770, y:   0, w:  44, h: 352, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1777800000008', x:  770, y:   0, w:  44, h: 704, collapsed: false, resizable: true },
   ],
 };
 

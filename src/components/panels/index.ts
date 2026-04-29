@@ -39,6 +39,8 @@ import { M2ChartPanel } from './M2ChartPanel';
 import { GlobalLiquidityPanel } from './GlobalLiquidityPanel';
 import { PMIPanel } from './PMIPanel';
 import { YieldSpreadPanel } from './YieldSpreadPanel';
+import { GiltSpreadPanel } from './GiltSpreadPanel';
+import { UkCpiPanel } from './UkCpiPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
 import { NetworkSignalsPanel } from './NetworkSignalsPanel';
@@ -96,6 +98,8 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'global-liquidity':  GlobalLiquidityPanel,
   'pmi-cycle':         PMIPanel,
   'yield-spread':      YieldSpreadPanel,
+  'gilt-spread':       GiltSpreadPanel,
+  'uk-cpi':            UkCpiPanel,
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,
   'network-signals':   NetworkSignalsPanel,
