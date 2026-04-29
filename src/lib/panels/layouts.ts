@@ -184,9 +184,9 @@ const UK_FOCUS_PANELS = [
   { panelId: 'btc-market-gbp', x:    0, y:  88, w: 264, h: 220, collapsed: false, resizable: false },
   { panelId: 'btc-network',    x:    0, y: 308, w: 264, h: 220, collapsed: false, resizable: false },
   { panelId: 'btc-mining-gbp', x:    0, y: 528, w: 264, h: 220, collapsed: false, resizable: false },
-  // Mid section — intel + AI on top, UK gilt curve + UK CPI on row 2
-  { panelId: 'intel-feed',  x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
-  { panelId: 'ai-briefing', x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
+  // Mid section — intel + globe on top, UK gilt curve + UK CPI on row 2
+  { panelId: 'intel-feed', x:  264, y:   0, w: 528, h: 352, collapsed: false, resizable: true },
+  { panelId: 'globe',      x:  792, y:   0, w: 396, h: 352, collapsed: false, resizable: true },
   { panelId: 'gilt-spread', x:  264, y: 352, w: 528, h: 352, collapsed: false, resizable: true },
   { panelId: 'uk-cpi',      x:  792, y: 352, w: 396, h: 352, collapsed: false, resizable: true },
   // Column D — UK-leaning sidebar (FTSE-first indices, GBP/USD, BOE-first rates)
