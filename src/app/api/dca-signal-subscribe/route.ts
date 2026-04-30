@@ -21,6 +21,11 @@ import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
+// Admin shadow copy. MUST be sent as `bcc` (NOT `cc`) on transactional
+// emails — `cc` exposes the admin address to the recipient (incident
+// 2026-04-30: a DCA subscriber saw richardminton@gmail.com on the To/Cc
+// line of their own confirmation email). Use `cc` only for genuine
+// broadcasts where every recipient is already an admin.
 const ADMIN_CC = 'richardminton@gmail.com';
 
 function randomToken(): string {
@@ -113,7 +118,7 @@ export async function POST(request: NextRequest) {
       await getResend().emails.send({
         from:    FROM_ADDRESS,
         to:      email,
-        cc:      ADMIN_CC,
+        bcc:     ADMIN_CC,
         subject: 'Confirm your VIP DCA In/Out Signal subscription — Situation Room',
         html,
       });
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
     await getResend().emails.send({
       from:    FROM_ADDRESS,
       to:      email,
-      cc:      ADMIN_CC,
+      bcc:     ADMIN_CC,
       subject: 'Confirm your DCA Signal subscription — Situation Room',
       html,
     });
