@@ -18,6 +18,11 @@
  *      any reasonable API outage.
  *   4. The user's browser now actively checks LNM in the /status/
  *      [paymentId] poll endpoint too, so cron is the BACKUP path.
+ *   5. GET is accepted as an alias for POST. Twice now (2026-04-07,
+ *      2026-04-30) the live crontab line lost its `-X POST` flag and
+ *      curl defaulted to GET → 405 → silent backlog of pending payments
+ *      until someone noticed days later. Accepting both methods makes
+ *      the bug structurally impossible to recur.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -30,7 +35,7 @@ export const dynamic = 'force-dynamic';
 
 const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours (was 2 hours — too aggressive)
 
-export async function POST(request: NextRequest) {
+async function runConfirm(request: NextRequest) {
   const secret = request.headers.get('x-cron-secret');
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
@@ -161,3 +166,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Both methods accepted — see file header note 5. The handler is idempotent
+// (writes only on confirmed-but-not-yet-activated deposits, gated by status
+// transitions in Prisma) so allowing GET doesn't introduce CSRF surface, and
+// the CRON_SECRET header is still required either way.
+export async function POST(request: NextRequest) { return runConfirm(request); }
+export async function GET(request: NextRequest)  { return runConfirm(request); }
