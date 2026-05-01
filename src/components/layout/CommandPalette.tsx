@@ -58,6 +58,7 @@ const ROUTE_ICONS: Record<string, React.ReactNode> = {
   '/briefings':         <Newspaper   size={14} />,
   '/tools/dca-signal':  <ChartLine   size={14} />,
   '/tools/cycle-gauge': <Gauge       size={14} />,
+  '/tools/power-law':   <ChartLineUp size={14} />,
   '/tools/real-yields': <Percent     size={14} />,
   '/tools/mining':      <HardHat     size={14} />,
   '/tools/map':              <MapTrifold size={14} />,

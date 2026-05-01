@@ -46,6 +46,7 @@ import { PMIPanel } from './PMIPanel';
 import { YieldSpreadPanel } from './YieldSpreadPanel';
 import { GiltSpreadPanel } from './GiltSpreadPanel';
 import { RealYieldsPanel } from './RealYieldsPanel';
+import { PowerLawPanel } from './PowerLawPanel';
 import { UkCpiPanel } from './UkCpiPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
@@ -111,6 +112,7 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'yield-spread':      YieldSpreadPanel,
   'gilt-spread':       GiltSpreadPanel,
   'real-yields':       RealYieldsPanel,
+  'power-law':         PowerLawPanel,
   'uk-cpi':            UkCpiPanel,
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,

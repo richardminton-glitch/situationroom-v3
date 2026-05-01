@@ -622,6 +622,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: '10-year US TIPS yield (FRED DFII10) — 12-month sparkline with negative-yield band shaded; the regime in which BTC has earned its return',
     icon: 'chart',
   },
+  {
+    id: 'power-law',
+    name: 'Power Law · Channel',
+    category: 'bitcoin',
+    defaultW: 348, defaultH: 264, minW: 280, minH: 220,
+    resizable: true,
+    refreshInterval: 86400, // 1 day — model is stable day-to-day
+    dataSources: ['btcHistory'],
+    description: 'Bitcoin Power Law channel position (Santostasi log-log model) — 12-month sparkline with cheap/expensive bands shaded',
+    icon: 'chart',
+  },
 
   // ── Mining Intel ──
   // All mining panels share /api/mining-intel via useMiningIntel; refresh once daily.

@@ -68,6 +68,14 @@ export const NAV_ROUTES: NavRoute[] = [
     description: 'Cycle position gauge',
   },
   {
+    href: '/tools/power-law',
+    label: 'Power Law',
+    section: 'Tools',
+    requiredTier: 'general',
+    keywords: ['power', 'law', 'santostasi', 'log-log', 'model', 'channel', 'fair value', 'trendline'],
+    description: 'Bitcoin Power Law — Santostasi log-log channel model',
+  },
+  {
     href: '/tools/real-yields',
     label: 'Real Yields',
     section: 'Tools',
