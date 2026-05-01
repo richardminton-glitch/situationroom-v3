@@ -56,6 +56,10 @@ import { SignalInterpreterPanel } from './SignalInterpreterPanel';
 import { CohortAnalysisPanel } from './CohortAnalysisPanel';
 import { OnChainAnalysisPanel } from './OnChainAnalysisPanel';
 import { MacroAnalysisPanel } from './MacroAnalysisPanel';
+import { SovereignDebtClockPanel } from './SovereignDebtClockPanel';
+import { DebtToGDPPanel } from './DebtToGDPPanel';
+import { TreasuryHoldersPanel } from './TreasuryHoldersPanel';
+import { DebtServicePanel } from './DebtServicePanel';
 import {
   MinerProfitPanel,
   HashPricePanel,
@@ -122,6 +126,10 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'cohort-analysis':    CohortAnalysisPanel,
   'onchain-analysis':   OnChainAnalysisPanel,
   'macro-analysis':     MacroAnalysisPanel,
+  'sovereign-debt-clock':  SovereignDebtClockPanel,
+  'debt-to-gdp':           DebtToGDPPanel,
+  'treasury-holders':      TreasuryHoldersPanel,
+  'debt-service':          DebtServicePanel,
   // Mining Intel — sourced from /api/mining-intel via useMiningIntel
   'mining-profit':         MinerProfitPanel,
   'mining-hash-price':     HashPricePanel,

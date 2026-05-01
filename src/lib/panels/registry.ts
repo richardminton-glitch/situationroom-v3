@@ -634,6 +634,52 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'chart',
   },
 
+  // ── Sovereign Debt ──
+  {
+    id: 'sovereign-debt-clock',
+    name: 'Sovereign Debt Countdown',
+    category: 'macro',
+    defaultW: 1452, defaultH: 264, minW: 880, minH: 220,
+    resizable: true,
+    refreshInterval: 0,
+    dataSources: [],
+    description: 'Live debt clocks for USD, EUR, GBP, JPY, CNY — ticking up at calibrated nominal expansion rates',
+    icon: 'chart',
+  },
+  {
+    id: 'debt-to-gdp',
+    name: 'Debt-to-GDP · Hierarchy',
+    category: 'macro',
+    defaultW: 924, defaultH: 484, minW: 528, minH: 308,
+    resizable: true,
+    refreshInterval: 86400 * 7,
+    dataSources: [],
+    description: 'Gross govt debt / GDP ranked across the major economies — IMF Fiscal Monitor, colour-banded by stress level',
+    icon: 'chart',
+  },
+  {
+    id: 'treasury-holders',
+    name: 'Foreign Holders · US Treasuries',
+    category: 'macro',
+    defaultW: 792, defaultH: 264, minW: 528, minH: 220,
+    resizable: true,
+    refreshInterval: 86400 * 30,
+    dataSources: [],
+    description: 'Top 10 foreign holders of US Treasury debt — Treasury TIC data, official vs custodial flagged',
+    icon: 'chart',
+  },
+  {
+    id: 'debt-service',
+    name: 'Debt Service · Interest as % of Revenue',
+    category: 'macro',
+    defaultW: 660, defaultH: 264, minW: 440, minH: 220,
+    resizable: true,
+    refreshInterval: 86400 * 30,
+    dataSources: [],
+    description: 'Annual interest payments as a share of tax revenue — the debt-service trap across the 5 reserve sovereigns',
+    icon: 'chart',
+  },
+
   // ── Mining Intel ──
   // All mining panels share /api/mining-intel via useMiningIntel; refresh once daily.
   {

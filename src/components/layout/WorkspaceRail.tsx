@@ -22,6 +22,7 @@ import type { Tier } from '@/types';
 const PRESET_TIER: Record<string, Exclude<Tier, 'free'> | null> = {
   'default':           null,
   'full-data':         null,
+  'sovereign-debt':    null,  // Debt Bomb — free for everyone
   'macro-focus':       'general',
   'mining-focus':      'general',
   'us-focus':          'members',

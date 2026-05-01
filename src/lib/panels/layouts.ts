@@ -219,6 +219,42 @@ const UK_FOCUS_DARK: DashboardLayout = {
   panels: UK_FOCUS_PANELS,
 };
 
+// Sovereign Debt Countdown — five live debt clocks across the major reserve
+// currencies, paired with sovereign-debt-specific context: who is in debt
+// (debt-to-GDP hierarchy), who is owed (foreign Treasury holders), and at
+// what cost (debt-service burden). Central-bank balance sheets stay in
+// row 2 as the source of monetary expansion.
+// Canvas: 1452 × 1012. General tier (same as Macro Focus / Mining Focus).
+const SOVEREIGN_DEBT_PANELS = [
+  // Hero — five debt clocks ticking
+  { panelId: 'sovereign-debt-clock', x:    0, y:    0, w: 1452, h: 264, collapsed: false, resizable: true },
+  // Row 2 — printers (CB balance sheets) + debt hierarchy (G20 debt-to-GDP)
+  { panelId: 'cb-asset-chart',       x:    0, y:  264, w:  528, h: 484, collapsed: false, resizable: true },
+  { panelId: 'debt-to-gdp',          x:  528, y:  264, w:  924, h: 484, collapsed: false, resizable: true },
+  // Row 3 — who lends to America + what debt service costs each sovereign
+  { panelId: 'treasury-holders',     x:    0, y:  748, w:  792, h: 264, collapsed: false, resizable: true },
+  { panelId: 'debt-service',         x:  792, y:  748, w:  660, h: 264, collapsed: false, resizable: true },
+] satisfies LayoutPanelItem[];
+
+const SOVEREIGN_DEBT_PARCHMENT: DashboardLayout = {
+  id: 'sovereign-debt',
+  name: 'Debt Bomb',
+  description: 'Live debt clocks for the five reserve currencies, paired with the printing presses behind them',
+  panels: [
+    ...SOVEREIGN_DEBT_PANELS,
+    { panelId: 'h-separator-1812000000001', x:    0, y: 726, w: 1452, h: 44, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1812000000002', x:  506, y: 264, w:   44, h: 484, collapsed: false, resizable: true },
+    { panelId: 'v-separator-1812000000003', x:  770, y: 748, w:   44, h: 264, collapsed: false, resizable: true },
+  ],
+};
+
+const SOVEREIGN_DEBT_DARK: DashboardLayout = {
+  id: 'sovereign-debt',
+  name: 'Debt Bomb',
+  description: 'Live debt clocks for the five reserve currencies, paired with the printing presses behind them',
+  panels: SOVEREIGN_DEBT_PANELS,
+};
+
 const AI_PRESET: DashboardLayout = {
   id: 'ai',
   name: 'AI Analysis',
@@ -267,12 +303,13 @@ export const PARCHMENT_DEFAULT_LAYOUT: DashboardLayout = {
 export const PARCHMENT_PRESETS: DashboardLayout[] = [
   PARCHMENT_DEFAULT_LAYOUT,
   FULL_DATA_PARCHMENT,
-  MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
-  MINING_FOCUS_PRESET, // General tier — public miner balance sheets
-  US_FOCUS_PARCHMENT,  // Members tier
-  UK_FOCUS_PARCHMENT,  // Members tier
-  AI_PRESET,           // Members tier
-  ONCHAIN_PRESET,      // Members tier
+  SOVEREIGN_DEBT_PARCHMENT,   // General tier — Debt Bomb (sits below Full Data)
+  MACRO_FOCUS_PRESET,         // General tier
+  MINING_FOCUS_PRESET,        // General tier — public miner balance sheets
+  US_FOCUS_PARCHMENT,         // Members tier
+  UK_FOCUS_PARCHMENT,         // Members tier
+  AI_PRESET,                  // Members tier
+  ONCHAIN_PRESET,             // Members tier
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -307,12 +344,13 @@ export const DARK_DEFAULT_LAYOUT: DashboardLayout = {
 export const DARK_PRESETS: DashboardLayout[] = [
   DARK_DEFAULT_LAYOUT,
   FULL_DATA_DARK,
-  MACRO_FOCUS_PRESET,  // General tier — listed first among the paid views
-  MINING_FOCUS_PRESET, // General tier — public miner balance sheets
-  US_FOCUS_DARK,       // Members tier
-  UK_FOCUS_DARK,       // Members tier
-  AI_PRESET,           // Members tier
-  ONCHAIN_PRESET,      // Members tier
+  SOVEREIGN_DEBT_DARK,   // General tier — Debt Bomb (sits below Full Data)
+  MACRO_FOCUS_PRESET,    // General tier
+  MINING_FOCUS_PRESET,   // General tier — public miner balance sheets
+  US_FOCUS_DARK,         // Members tier
+  UK_FOCUS_DARK,         // Members tier
+  AI_PRESET,             // Members tier
+  ONCHAIN_PRESET,        // Members tier
 ];
 
 // ══════════════════════════════════════════════════════════

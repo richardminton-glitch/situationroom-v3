@@ -36,6 +36,7 @@ import type { Theme, Tier } from '@/types';
 const LOCKED_VIEWS: Record<string, { requiredTier: Exclude<Tier, 'free'>; name: string; description: string }> = {
   'macro-focus':      { requiredTier: 'general', name: 'Macro Focus',       description: 'Central bank balance sheet composition, 10-year policy rate history, inflation monitor across G7 nations, and macro context behind every number.' },
   'mining-focus':     { requiredTier: 'general', name: 'Mining Focus',      description: 'Public miner balance sheets, hash economics, capitulation pressure, and the security outlook behind Bitcoin\u2019s mining base.' },
+  // Debt Bomb is intentionally NOT listed here \u2014 it's free for all users (no tier gate).
   'us-focus':         { requiredTier: 'members', name: 'US Focus',          description: 'US-led intelligence \u2014 10y\u20133m yield-curve spread, ISM Manufacturing PMI, dollar/gold/oil, CNN Fear & Greed, whale flows.' },
   'uk-focus':         { requiredTier: 'members', name: 'UK Focus',          description: 'UK-led intelligence \u2014 BTC priced in GBP, FTSE & GBP/USD, BOE policy rate, sterling-side macro context.' },
   'onchain-deep-dive':{ requiredTier: 'members', name: 'On-Chain Deep Dive',description: 'UTXO age distribution, long-term vs short-term holder supply, value of coin days destroyed, and supply at cost basis — the complete holder behaviour picture.' },
@@ -292,8 +293,10 @@ export default function DashboardPage() {
   }
 
   const lockedView = activeCustomId ? null : LOCKED_VIEWS[activePreset];
+  // Presets free to everyone, including anonymous visitors.
+  const PUBLIC_PRESETS = new Set(['default', 'sovereign-debt']);
   const isLocked = !user
-    ? activePreset !== 'default' && !activeCustomId
+    ? !PUBLIC_PRESETS.has(activePreset) && !activeCustomId
     : !!lockedView && !hasAccess(userTier, lockedView.requiredTier);
 
   return (
