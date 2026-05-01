@@ -8,7 +8,7 @@
  * badge (free users see them but can't navigate).
  */
 
-import { Atom, ChartLine, Drop, Gauge, HardHat, MapTrifold, Stack, TreeStructure, Waveform, Eye } from '@phosphor-icons/react';
+import { Atom, ChartLine, Drop, Gauge, HardHat, MapTrifold, Stack, TreeStructure, Waveform, Eye, Percent } from '@phosphor-icons/react';
 import { SectionRailFrame, useRailCollapsed } from './SectionRailFrame';
 import { RailLink } from './RailLink';
 
@@ -52,6 +52,12 @@ export function ToolsRail() {
           href="/tools/global-liquidity"
           label="Global Liquidity"
           icon={<Drop size={ICON_SIZE} />}
+          requiredTier="members"
+        />
+        <RailLink
+          href="/tools/real-yields"
+          label="Real Yields"
+          icon={<Percent size={ICON_SIZE} />}
           requiredTier="members"
         />
         <RailLink

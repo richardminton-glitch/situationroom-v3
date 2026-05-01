@@ -611,6 +611,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     description: 'Latest ISM PMI reading with regime label and 12-month sparkline — coincident cycle tell',
     icon: 'chart',
   },
+  {
+    id: 'real-yields',
+    name: 'Real Yields · 10y TIPS',
+    category: 'macro',
+    defaultW: 348, defaultH: 264, minW: 280, minH: 220,
+    resizable: true,
+    refreshInterval: 86400, // 1 day — DFII10 updates once per business day
+    dataSources: ['fred'],
+    description: '10-year US TIPS yield (FRED DFII10) — 12-month sparkline with negative-yield band shaded; the regime in which BTC has earned its return',
+    icon: 'chart',
+  },
 
   // ── Mining Intel ──
   // All mining panels share /api/mining-intel via useMiningIntel; refresh once daily.

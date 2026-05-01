@@ -68,6 +68,14 @@ export const NAV_ROUTES: NavRoute[] = [
     description: 'Cycle position gauge',
   },
   {
+    href: '/tools/real-yields',
+    label: 'Real Yields',
+    section: 'Tools',
+    requiredTier: 'members',
+    keywords: ['real', 'yields', 'tips', 'inflation', 'macro', 'rates', 'dfii10'],
+    description: '10y TIPS yield vs BTC returns — the regime where Bitcoin earns',
+  },
+  {
     href: '/tools/mining',
     label: 'Mining Intel',
     section: 'Tools',

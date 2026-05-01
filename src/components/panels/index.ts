@@ -45,6 +45,7 @@ import { GlobalLiquidityPanel } from './GlobalLiquidityPanel';
 import { PMIPanel } from './PMIPanel';
 import { YieldSpreadPanel } from './YieldSpreadPanel';
 import { GiltSpreadPanel } from './GiltSpreadPanel';
+import { RealYieldsPanel } from './RealYieldsPanel';
 import { UkCpiPanel } from './UkCpiPanel';
 import { HashRibbonPanel } from './HashRibbonPanel';
 import { PuellMultiplePanel } from './PuellMultiplePanel';
@@ -109,6 +110,7 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'pmi-cycle':         PMIPanel,
   'yield-spread':      YieldSpreadPanel,
   'gilt-spread':       GiltSpreadPanel,
+  'real-yields':       RealYieldsPanel,
   'uk-cpi':            UkCpiPanel,
   'hash-ribbon':       HashRibbonPanel,
   'puell-multiple':    PuellMultiplePanel,
