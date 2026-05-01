@@ -33,6 +33,7 @@ import { EconomicEventsPanel } from './EconomicEventsPanel';
 import { InflationChartPanel } from './InflationChartPanel';
 import { CentralBankRatesPanel } from './CentralBankRatesPanel';
 import { CentralBankAssetPanel } from './CentralBankAssetPanel';
+import { EpochAlmanacPanel } from './EpochAlmanacPanel';
 import { UTXOAgeDistributionPanel } from './UTXOAgeDistributionPanel';
 import { LTHSTHSupplyPanel } from './LTHSTHSupplyPanel';
 import { CoinDaysDestroyedPanel } from './CoinDaysDestroyedPanel';
@@ -96,6 +97,7 @@ export const PANEL_COMPONENTS: Record<string, ComponentType> = {
   'inflation-chart': InflationChartPanel,
   'cb-rates-chart': CentralBankRatesPanel,
   'cb-asset-chart': CentralBankAssetPanel,
+  'epoch-almanac': EpochAlmanacPanel,
   'utxo-age-dist':  UTXOAgeDistributionPanel,
   'lth-sth-supply':  LTHSTHSupplyPanel,
   'cdd':             CoinDaysDestroyedPanel,

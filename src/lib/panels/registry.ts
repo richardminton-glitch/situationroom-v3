@@ -350,6 +350,17 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
     icon: 'chart',
   },
   {
+    id: 'epoch-almanac',
+    name: 'Epoch Almanac',
+    category: 'bitcoin',
+    defaultW: 528, defaultH: 770, minW: 440, minH: 700,
+    resizable: true,
+    refreshInterval: 60,
+    dataSources: ['btcNetwork', 'btcMarket'],
+    description: 'Halving countdown, difficulty epoch, supply progress and last block — a documentary view of the timechain',
+    icon: 'bitcoin',
+  },
+  {
     id: 'cb-rates-chart',
     name: 'Central Bank Rates',
     category: 'macro',
