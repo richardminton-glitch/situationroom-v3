@@ -24,7 +24,7 @@ const PAD_B = 36;
 const W = 880;
 const H = 360;
 
-type SeriesKey = 'contributed' | 'isaPot' | 'cpiNeeded' | 'rpiNeeded' | 'm4Needed' | 'spxValue';
+type SeriesKey = 'contributed' | 'isaPot' | 'cpiNeeded' | 'rpiNeeded' | 'm4Needed' | 'spxValue' | 'ftseValue' | 'btcValue';
 
 interface SeriesDef {
   key:    SeriesKey;
@@ -36,33 +36,48 @@ interface SeriesDef {
 }
 
 const SERIES: SeriesDef[] = [
-  { key: 'contributed', label: 'Nominal contributions', colour: '#7a8290', hint: 'what you put in',                   width: 1.0, dash: '4 3' },
-  { key: 'isaPot',      label: 'Cash ISA pot',          colour: '#4aa57a', hint: 'compounded at typical Cash ISA rate', width: 1.7 },
-  { key: 'cpiNeeded',   label: 'CPI-protected',         colour: '#d68a3c', hint: 'what you need to hold purchasing power', width: 1.4 },
-  { key: 'rpiNeeded',   label: 'RPI-protected',         colour: '#c97a3c', hint: 'RPI is a stickier inflation gauge',  width: 1.4 },
-  { key: 'm4Needed',    label: 'M4 broad money',        colour: '#a466d6', hint: 'share of total UK money supply',     width: 1.4 },
-  { key: 'spxValue',    label: 'S&P 500 (GBP TR)',      colour: '#5da9d6', hint: 'invested in US equities instead',    width: 1.7 },
+  { key: 'contributed', label: 'Nominal contributions', colour: '#7a8290', hint: 'what you put in',                          width: 1.0, dash: '4 3' },
+  { key: 'isaPot',      label: 'Cash ISA pot',          colour: '#4aa57a', hint: 'compounded at typical Cash ISA rate',      width: 1.7 },
+  { key: 'cpiNeeded',   label: 'CPI-protected',         colour: '#d68a3c', hint: 'what you need to hold purchasing power',   width: 1.4 },
+  { key: 'rpiNeeded',   label: 'RPI-protected',         colour: '#c97a3c', hint: 'RPI is a stickier inflation gauge',        width: 1.4 },
+  { key: 'm4Needed',    label: 'M4 broad money',        colour: '#a466d6', hint: 'share of total UK money supply',           width: 1.4 },
+  { key: 'spxValue',    label: 'S&P 500 (GBP TR)',      colour: '#5da9d6', hint: 'invested in US equities instead',          width: 1.7 },
+  { key: 'ftseValue',   label: 'FTSE 100 (TR)',         colour: '#4ab8a5', hint: 'invested in UK blue chips instead',        width: 1.7 },
+  { key: 'btcValue',    label: 'Bitcoin',               colour: '#f7931a', hint: 'BTC from 2010/11 onwards',                 width: 1.9 },
 ];
 
 function fmtCurrency(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return '£' + (n / 1_000_000).toFixed(2) + 'M';
-  if (Math.abs(n) >= 1_000)     return '£' + Math.round(n).toLocaleString();
+  if (Math.abs(n) >= 1_000_000_000) return '£' + (n / 1_000_000_000).toFixed(2) + 'B';
+  if (Math.abs(n) >= 1_000_000)     return '£' + (n / 1_000_000).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1_000)         return '£' + Math.round(n).toLocaleString();
   return '£' + n.toFixed(0);
 }
 
 function fmtAxis(n: number): string {
-  if (n >= 1_000_000) return '£' + (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return '£' + Math.round(n / 1_000) + 'k';
+  if (n >= 1_000_000_000) return '£' + (n / 1_000_000_000).toFixed(1) + 'B';
+  if (n >= 1_000_000)     return '£' + (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)         return '£' + Math.round(n / 1_000) + 'k';
   return '£' + n.toFixed(0);
 }
 
 export interface CashIsaChartProps {
-  series: CashIsaSeriesPoint[];
+  series:       CashIsaSeriesPoint[];
+  /** When false, BTC is excluded from the chart entirely (no line, no
+   *  legend pill, no contribution to the y-axis scale). Toggled by the
+   *  parent room so the BTC stat card can light up in sync. */
+  showBitcoin?: boolean;
 }
 
-export function CashIsaChart({ series }: CashIsaChartProps) {
+export function CashIsaChart({ series, showBitcoin = false }: CashIsaChartProps) {
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [hidden, setHidden] = useState<Set<SeriesKey>>(new Set());
+
+  // Visible series — BTC is gated by the showBitcoin prop, every other
+  // series respects the legend's per-pill hidden set.
+  const visibleSeries = useMemo(
+    () => SERIES.filter((s) => s.key !== 'btcValue' || showBitcoin),
+    [showBitcoin],
+  );
 
   const xMin = series[0].startYear;
   const xMax = series[series.length - 1].startYear;
@@ -70,17 +85,18 @@ export function CashIsaChart({ series }: CashIsaChartProps) {
   const yMax = useMemo(() => {
     let max = 0;
     for (const p of series) {
-      for (const s of SERIES) {
+      for (const s of visibleSeries) {
         if (hidden.has(s.key)) continue;
         const v = p[s.key];
         if (v > max) max = v;
       }
     }
+    if (max === 0) return 1;
     // Round to a tidy ceiling.
     const mag = Math.pow(10, Math.floor(Math.log10(max)));
     const step = mag / 2;
     return Math.ceil(max / step) * step;
-  }, [series, hidden]);
+  }, [series, hidden, visibleSeries]);
 
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
@@ -107,14 +123,14 @@ export function CashIsaChart({ series }: CashIsaChartProps) {
   if (xTicks[xTicks.length - 1] !== xMax) xTicks.push(xMax);
 
   const paths = useMemo(() => {
-    return SERIES.map((s) => {
+    return visibleSeries.map((s) => {
       if (hidden.has(s.key)) return { ...s, d: '' };
       const d = series
         .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.startYear).toFixed(1)} ${yOf(p[s.key]).toFixed(1)}`)
         .join(' ');
       return { ...s, d };
     });
-  }, [series, hidden, yMax]);
+  }, [series, hidden, yMax, visibleSeries]);
 
   const hoverPoint = useMemo(() => {
     if (hoverX === null || hoverX < PAD_L || hoverX > W - PAD_R) return null;
@@ -229,7 +245,7 @@ export function CashIsaChart({ series }: CashIsaChartProps) {
               y1={PAD_T} y2={H - PAD_B}
               stroke="var(--text-muted)" strokeWidth={0.75} opacity={0.5}
             />
-            {SERIES.filter((s) => !hidden.has(s.key)).map((s) => (
+            {visibleSeries.filter((s) => !hidden.has(s.key)).map((s) => (
               <circle
                 key={`h-${s.key}`}
                 cx={xOf(hoverPoint.startYear)}
@@ -263,7 +279,7 @@ export function CashIsaChart({ series }: CashIsaChartProps) {
         display: 'flex', flexWrap: 'wrap', gap: 14,
         marginTop: 10, fontSize: 10, fontFamily: FONT_MONO,
       }}>
-        {SERIES.map((s) => {
+        {visibleSeries.map((s) => {
           const off = hidden.has(s.key);
           return (
             <button
@@ -301,7 +317,7 @@ export function CashIsaChart({ series }: CashIsaChartProps) {
             <span style={{ color: 'var(--text-primary)' }}>
               {hoverPoint.taxYear === 'start' ? 'pre-launch' : hoverPoint.taxYear}
             </span>
-            {SERIES.filter((s) => !hidden.has(s.key)).map((s) => (
+            {visibleSeries.filter((s) => !hidden.has(s.key)).map((s) => (
               <span key={`r-${s.key}`}>
                 <span style={{ color: 'var(--text-muted)' }}>{s.label}</span>{' '}
                 <span style={{ color: s.colour, fontWeight: 600 }}>

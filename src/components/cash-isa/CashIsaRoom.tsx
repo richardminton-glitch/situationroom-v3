@@ -21,8 +21,9 @@ const FONT_MONO = "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace";
 function fmtCurrency(n: number): string {
   const sign = n < 0 ? '−' : '';
   const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${sign}£${(abs / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000)     return `${sign}£${Math.round(abs).toLocaleString()}`;
+  if (abs >= 1_000_000_000) return `${sign}£${(abs / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000)     return `${sign}£${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000)         return `${sign}£${Math.round(abs).toLocaleString()}`;
   return `${sign}£${abs.toFixed(0)}`;
 }
 
@@ -32,8 +33,9 @@ function fmtPct(n: number): string {
 }
 
 export function CashIsaRoom() {
-  const [data,  setData]  = useState<CashIsaPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data,        setData]        = useState<CashIsaPayload | null>(null);
+  const [error,       setError]       = useState<string | null>(null);
+  const [showBitcoin, setShowBitcoin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,6 +175,20 @@ export function CashIsaRoom() {
               hint={`${fmtPct(sum.oppCostPctVsSpx)} · SPX ×${sum.spxMultiplier.toFixed(2)}`}
               accent={sum.oppCostVsSpx < 0 ? '#c04848' : '#4aa57a'}
             />
+            <Stat
+              label="vs FTSE 100 (TR)"
+              value={fmtCurrency(sum.oppCostVsFtse)}
+              hint={`${fmtPct(sum.oppCostPctVsFtse)} · FTSE ×${sum.ftseMultiplier.toFixed(2)}`}
+              accent={sum.oppCostVsFtse < 0 ? '#c04848' : '#4aa57a'}
+            />
+            {showBitcoin && (
+              <Stat
+                label="vs Bitcoin (from 2010)"
+                value={fmtCurrency(sum.oppCostVsBtc)}
+                hint={`${fmtPct(sum.oppCostPctVsBtc)} · BTC ×${sum.btcMultiplier.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                accent={sum.oppCostVsBtc < 0 ? '#f7931a' : '#4aa57a'}
+              />
+            )}
           </div>
         )}
 
@@ -183,6 +199,39 @@ export function CashIsaRoom() {
           padding: '16px 20px',
           marginBottom: 20,
         }}>
+          {/* Bitcoin toggle — gated separately from the legend pills because
+              BTC dominates the y-axis by orders of magnitude and we want
+              both the chart line and the BTC stat card to switch in sync. */}
+          {data && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, marginBottom: 14, flexWrap: 'wrap',
+            }}>
+              <div style={{
+                fontSize: 9, letterSpacing: '0.16em', color: 'var(--text-muted)',
+                fontFamily: FONT_MONO,
+              }}>
+                {showBitcoin
+                  ? 'BITCOIN OVERLAY ACTIVE · Y-AXIS RESCALED'
+                  : 'OPTIONAL · OVERLAY BITCOIN FOR THE SAME CONTRIBUTION SCHEDULE'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBitcoin((v) => !v)}
+                style={{
+                  fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.12em',
+                  padding: '6px 14px', cursor: 'pointer',
+                  border: `1px solid ${showBitcoin ? '#f7931a' : 'var(--border-primary)'}`,
+                  background: showBitcoin ? 'rgba(247,147,26,0.12)' : 'transparent',
+                  color: showBitcoin ? '#f7931a' : 'var(--text-secondary)',
+                  textTransform: 'uppercase', fontWeight: 600,
+                }}
+              >
+                {showBitcoin ? '× HIDE BITCOIN' : '+ SHOW BITCOIN'}
+              </button>
+            </div>
+          )}
+
           {!data && !error && (
             <div style={{
               padding: '60px 0', textAlign: 'center',
@@ -191,7 +240,7 @@ export function CashIsaRoom() {
               LOADING CASH ISA SERIES...
             </div>
           )}
-          {data && <CashIsaChart series={data.series} />}
+          {data && <CashIsaChart series={data.series} showBitcoin={showBitcoin} />}
         </div>
 
         <Section title="Why a Cash ISA still loses you money">
@@ -242,9 +291,10 @@ export function CashIsaRoom() {
             marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--border-subtle)',
             lineHeight: 1.7,
           }}>
-            DATA &middot; HMRC ISA SCHEDULE &middot; ONS CPI (CDKO) &middot; ONS RPI (CHAW) &middot; BoE M4 (LPMAUYM) &middot; SHILLER SPX TR × GBP/USD
+            DATA &middot; HMRC ISA SCHEDULE &middot; ONS CPI (CDKO) &middot; ONS RPI (CHAW) &middot; BoE M4 (LPMAUYM)
+            &middot; SHILLER SPX TR × GBP/USD &middot; FTSE 100 TR &middot; COINGECKO BTC
             <br />
-            METHOD &middot; ANNUAL CONTRIBUTION + COMPOUND AT EACH YEAR&apos;S RATE &middot; ALL LINES ORIGIN AT 0
+            METHOD &middot; ANNUAL CONTRIBUTION + COMPOUND AT EACH YEAR&apos;S RATE &middot; BTC FROM 2010/11
             <br />
             UPDATED &middot; {new Date(data.generatedAt).toISOString().slice(0, 10)}
           </div>
