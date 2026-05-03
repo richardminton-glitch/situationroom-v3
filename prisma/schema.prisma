@@ -61,17 +61,35 @@ model User {
   // ── Bot Room / TradingView ──────────────────────────────────────────────────
   tvChartState Json? @map("tv_chart_state")  // TradingView saved chart state (indicators, drawings, interval, etc.)
 
-  sessions    Session[]
-  pinCodes    PinCode[]
-  layouts     UserLayout[]
-  watchlists  UserWatchlist[]
-  bookmarks   UserBookmark[]
-  preferences UserPreference[]
-  payments    SubscriptionPayment[]
-  sharesOwned DashboardShare[] @relation("SharesOwned")
-  sharesBound DashboardShare[] @relation("SharesBound")
+  sessions          Session[]
+  pinCodes          PinCode[]
+  layouts           UserLayout[]
+  watchlists        UserWatchlist[]
+  bookmarks         UserBookmark[]
+  preferences       UserPreference[]
+  payments          SubscriptionPayment[]
+  sharesOwned       DashboardShare[] @relation("SharesOwned")
+  sharesBound       DashboardShare[] @relation("SharesBound")
+  vienneSchoolProgress VienneSchoolProgress?
 
   @@map("users")
+}
+
+// ── Vienna School curriculum progress ────────────────────────────────────────
+// One row per user. modulesCompleted is the array of slugs whose field test
+// has been passed (≥2/3). graduationDate is set the first time all 6 are
+// complete. booksRead is reserved for the reading-ladder checkbox feature
+// (deferred — currently always empty).
+model VienneSchoolProgress {
+  userId            String   @id @map("user_id")
+  modulesCompleted  String[] @default([]) @map("modules_completed")
+  booksRead         String[] @default([]) @map("books_read")
+  graduationDate    DateTime? @map("graduation_date")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("vienne_school_progress")
 }
 
 model NostrChallenge {

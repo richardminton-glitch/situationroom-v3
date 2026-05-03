@@ -21,6 +21,7 @@ import { usePathname } from 'next/navigation';
 import {
   Crosshair,
   Diamond,
+  GraduationCap,
   Heart,
   List,
   MagnifyingGlass,
@@ -71,6 +72,12 @@ const DESTINATIONS: Destination[] = [
     matches: (p) => p.startsWith('/rooms'),
     icon:    <Crosshair size={14} />,
     hasRail: true,
+  },
+  {
+    label:   'Schoolroom',
+    href:    '/vienna-school',
+    matches: (p) => p.startsWith('/vienna-school'),
+    icon:    <GraduationCap size={14} />,
   },
   {
     label:   'Support',
