@@ -16,7 +16,7 @@ export function BtcSatsHeroPanel() {
     : 0;
 
   return (
-    <div className="flex items-baseline justify-center gap-3 py-1">
+    <div className="flex items-baseline justify-center gap-2 py-1">
       <span
         className="font-bold"
         style={{ fontFamily: 'var(--font-data)', color: 'var(--text-primary)', fontSize: '26px' }}
@@ -24,8 +24,18 @@ export function BtcSatsHeroPanel() {
         {sats.toLocaleString('en-US')}
       </span>
       <span
+        style={{
+          fontFamily: 'var(--font-data)',
+          color: 'var(--text-muted)',
+          fontSize: '11px',
+          letterSpacing: '0.04em',
+        }}
+      >
+        sats/$
+      </span>
+      <span
         className="font-medium"
-        style={{ fontFamily: 'var(--font-data)', color: pctColor(satsChange), fontSize: '20px' }}
+        style={{ fontFamily: 'var(--font-data)', color: pctColor(satsChange), fontSize: '20px', marginLeft: '4px' }}
       >
         {formatPct(satsChange)}
       </span>

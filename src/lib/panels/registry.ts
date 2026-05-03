@@ -89,7 +89,7 @@ export const PANEL_REGISTRY: PanelRegistryEntry[] = [
   },
   {
     id: 'btc-sats-hero',
-    name: 'Moscow Time',
+    name: 'Moscow Time — 24hr',
     category: 'bitcoin',
     defaultW: 260, defaultH: 120, minW: 200, minH: 100,
     resizable: false,
