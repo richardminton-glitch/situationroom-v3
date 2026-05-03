@@ -177,3 +177,29 @@ export async function announceDonation(
     'donation_received',
   );
 }
+
+/**
+ * `thank you anon-1234 for the 10,000 sats trading pool donation`
+ *
+ * Pool donations top up the bot account that funds the AI trading
+ * engine — distinct from general donations to the ops account.
+ * Dedup is keyed to the LNM deposit id (or invoice paymentId) so
+ * the same deposit can't announce twice across the cron + browser
+ * poll + LNURL detection paths.
+ */
+export async function announcePoolDonation(
+  amountSats: number,
+  paymentId: string,
+  displayName?: string | null,
+): Promise<void> {
+  const eventKey = `pool_donation_${paymentId}`;
+  if (await isDuplicate('pool_donation_received', eventKey)) return;
+
+  const from = displayName && displayName.trim().length > 0
+    ? displayName
+    : 'an anonymous supporter';
+  await postBotMessage(
+    `thank you ${from} for the ${formatSats(amountSats)} trading pool donation`,
+    'pool_donation_received',
+  );
+}

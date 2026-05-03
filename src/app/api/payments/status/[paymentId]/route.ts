@@ -18,6 +18,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { getOpsClient, getBotClient } from '@/lib/lnm/client';
 import { parseMemo, activateTier, recordDonation } from '@/lib/lnm/payments';
+import { announcePoolDonation } from '@/lib/chat/announcements';
 import { TIER_BILLING } from '@/lib/auth/tier';
 
 export async function GET(
@@ -61,6 +62,18 @@ export async function GET(
             where: { id: payment.id },
             data:  { status: 'confirmed', activatedAt: new Date() },
           });
+          // Announce in the ops room. Dedup keyed to payment.id so the
+          // browser-poll path here and the cron path in /confirm can't
+          // double-post the same deposit.
+          try {
+            const name = user.chatDisplayName?.trim();
+            const displayName = name && name.length > 0
+              ? name
+              : `anon-${user.id.slice(0, 4)}`;
+            await announcePoolDonation(payment.amountSats, payment.id, displayName);
+          } catch (err) {
+            console.error('[payments/status] announcePoolDonation failed:', err);
+          }
         } else {
           const parsed = parseMemo(deposit.comment ?? payment.memo);
 

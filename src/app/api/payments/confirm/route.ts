@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getOpsClient, getBotClient } from '@/lib/lnm/client';
 import { parseMemo, activateTier, recordDonation, processExpiredSubscriptions } from '@/lib/lnm/payments';
+import { announcePoolDonation } from '@/lib/chat/announcements';
 import { TIER_BILLING } from '@/lib/auth/tier';
 
 export const dynamic = 'force-dynamic';
@@ -128,6 +129,23 @@ async function runConfirm(request: NextRequest) {
           where: { id: payment.id },
           data:  { status: 'confirmed', activatedAt: new Date() },
         });
+        // Announce in the ops room. Look up the donor's pseudonym so the
+        // thank-you can credit them. Dedup is keyed to the payment id
+        // inside announcePoolDonation so the cron + browser-poll paths
+        // can't double-post.
+        try {
+          const donor = await prisma.user.findUnique({
+            where: { id: payment.userId },
+            select: { id: true, chatDisplayName: true },
+          });
+          const name = donor?.chatDisplayName?.trim();
+          const displayName = name && name.length > 0
+            ? name
+            : donor ? `anon-${donor.id.slice(0, 4)}` : null;
+          await announcePoolDonation(payment.amountSats, payment.id, displayName);
+        } catch (err) {
+          console.error('[confirm] announcePoolDonation failed:', err);
+        }
         confirmed++;
         continue;
       }

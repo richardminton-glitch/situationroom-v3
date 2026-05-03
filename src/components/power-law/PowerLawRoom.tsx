@@ -305,19 +305,20 @@ export function PowerLawRoom() {
 
         <Section title="Methodology">
           <p style={paraStyle}>
-            We pull the full BTC daily history (CoinGecko + local CSV
-            seed). For each day we compute days-since-genesis from
-            2009-01-03. We then fit log<sub>10</sub>(price) = α + β
-            &middot; log<sub>10</sub>(days) by ordinary least squares. The
+            The construction follows Giovanni Santostasi&apos;s
+            <em> Bitcoin Power Law Theory</em>. For each day we compute
+            days-since-genesis from 2009-01-03 and fit
+            log<sub>10</sub>(price) = α + β &middot; log<sub>10</sub>(days)
+            by ordinary least squares across the full daily history. The
             residuals &mdash; daily distance above or below the fit
             &mdash; have a maximum and a minimum: those become the
             resistance and support offsets, in log space.
           </p>
           <p style={paraStyle}>
-            The model refits whenever the cache expires (24h). New
-            all-time highs widen the resistance band; new lows widen
-            support. The fit is therefore <em>descriptive</em> of the
-            data we have, not a static line drawn in 2018.
+            The model refits as new data arrives. New all-time highs
+            widen the resistance band; new lows widen support. The fit
+            is therefore <em>descriptive</em> of the data we have, not a
+            static line drawn in 2018.
           </p>
         </Section>
 

@@ -13,6 +13,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getOpsClient } from '@/lib/lnm/client';
 import { prisma } from '@/lib/db';
 import { buildDonationMemo } from '@/lib/lnm/payments';
+import { announceDonation } from '@/lib/chat/announcements';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!existing) {
-          await prisma.subscriptionPayment.create({
+          const created = await prisma.subscriptionPayment.create({
             data: {
               userId: user.id,
               tier: 'donation',
@@ -62,6 +63,19 @@ export async function GET(request: NextRequest) {
             },
           });
           console.log(`[payments/deposit-check] Recorded LNURL donation: ${latest.amount} sats`);
+
+          // Announce in the ops room. Dedup is keyed to the LNM deposit id
+          // inside announceDonation so the cron path or another browser poll
+          // can't double-post. Best-effort attribution to the polling user.
+          const name = user.chatDisplayName?.trim();
+          const displayName = name && name.length > 0
+            ? name
+            : `anon-${user.id.slice(0, 4)}`;
+          try {
+            await announceDonation(latest.amount, created.id, displayName);
+          } catch (err) {
+            console.error('[payments/deposit-check] announceDonation failed:', err);
+          }
         }
       }
 
