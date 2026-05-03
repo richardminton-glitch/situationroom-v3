@@ -12,19 +12,21 @@ import { MODULE_BY_SLUG } from '@/content/vienna-school';
 const TITLE = 'The Origin · The Vienna School';
 const DESC  = 'Vienna, 1871. Carl Menger publishes Principles of Economics and a 150-year intellectual lineage begins. Module 1 of the Situation Room\'s Vienna School curriculum.';
 
+// openGraph.images and twitter.images intentionally omitted — Next 16's
+// file-convention `opengraph-image.tsx` injects the hashed URL into both
+// at build time. Specifying images here would override the convention
+// with a literal (un-hashed) path that returns 404.
 export const metadata = {
   title:       TITLE,
   description: DESC,
   openGraph: {
     title:       TITLE,
     description: DESC,
-    images:      [{ url: '/vienna-school/origin/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card:        'summary_large_image' as const,
     title:       TITLE,
     description: DESC,
-    images:      ['/vienna-school/origin/opengraph-image'],
   },
 };
 

@@ -16,17 +16,8 @@ const DESC  = 'Why no committee can run an economy. Hayek\'s dispersed-knowledge
 export const metadata = {
   title:       TITLE,
   description: DESC,
-  openGraph: {
-    title:       TITLE,
-    description: DESC,
-    images:      [{ url: '/vienna-school/knowledge-problem/opengraph-image', width: 1200, height: 630 }],
-  },
-  twitter: {
-    card:        'summary_large_image' as const,
-    title:       TITLE,
-    description: DESC,
-    images:      ['/vienna-school/knowledge-problem/opengraph-image'],
-  },
+  openGraph: { title: TITLE, description: DESC },
+  twitter:    { card: 'summary_large_image' as const, title: TITLE, description: DESC },
 };
 
 export default function KnowledgeProblemModulePage() {

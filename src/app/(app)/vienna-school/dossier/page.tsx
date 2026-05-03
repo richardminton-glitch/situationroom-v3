@@ -6,17 +6,8 @@ const DESC  = 'Your personal Vienna School dossier — modules passed, books tic
 export const metadata = {
   title:       TITLE,
   description: DESC,
-  openGraph: {
-    title:       TITLE,
-    description: DESC,
-    images:      [{ url: '/vienna-school/opengraph-image', width: 1200, height: 630 }],
-  },
-  twitter: {
-    card:        'summary_large_image' as const,
-    title:       TITLE,
-    description: DESC,
-    images:      ['/vienna-school/opengraph-image'],
-  },
+  openGraph: { title: TITLE, description: DESC },
+  twitter:    { card: 'summary_large_image' as const, title: TITLE, description: DESC },
 };
 
 export default function DossierPage() {

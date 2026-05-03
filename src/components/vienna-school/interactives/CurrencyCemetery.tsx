@@ -79,22 +79,65 @@ export function CurrencyCemetery() {
       style={{
         border:     '1px solid var(--border-primary)',
         background: 'var(--bg-card)',
-        padding:    '24px 28px',
         marginTop:  20,
+        overflow:   'hidden',
       }}
     >
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-        <div>
-          <p style={{ fontFamily: MONO_FONT, fontSize: 9, letterSpacing: '0.18em', color: 'var(--text-muted)', margin: 0 }}>
+      {/* ── Atmospheric banner — actual graveyard, then the data ── */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio: '21 / 6',
+        maxHeight: 220,
+        overflow: 'hidden',
+        backgroundColor: '#1a1a1a',
+      }}>
+        <img
+          src="/images/vienna-school/module-3-currency-cemetery.png"
+          alt="Rows of weathered grave markers receding into mist — a fiat-currency cemetery."
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+        {/* Vignette + bottom fade into the panel body */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.05) 50%, var(--bg-card) 100%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Title overlay */}
+        <div style={{
+          position: 'absolute',
+          left: '50%', transform: 'translateX(-50%)',
+          bottom: 16,
+          width: 'calc(100% - 56px)',
+          maxWidth: 760,
+          textAlign: 'center',
+          color: '#F8F1E3',
+        }}>
+          <p style={{
+            fontFamily: MONO_FONT, fontSize: 10, letterSpacing: '0.22em',
+            margin: 0, marginBottom: 6, opacity: 0.9,
+          }}>
             INTERACTIVE · CURRENCY CEMETERY
           </p>
-          <h3 style={{ fontFamily: HEADING_FONT, fontSize: 22, color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: 600 }}>
-            {filtered.length} dead fiat currencies. Lifespan: {averageLifespanYears()} yrs (mean), {medianLifespanYears()} yrs (median).
+          <h3 style={{
+            fontFamily: HEADING_FONT, fontSize: 26, fontWeight: 700,
+            margin: 0, lineHeight: 1.15, letterSpacing: '-0.005em',
+            textShadow: '0 2px 12px rgba(0,0,0,0.7)',
+          }}>
+            {filtered.length} dead fiat currencies.
           </h3>
+          <p style={{
+            fontFamily: BODY_FONT, fontStyle: 'italic',
+            fontSize: 14, opacity: 0.92,
+            margin: '4px 0 0 0',
+            textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+          }}>
+            Lifespan: {averageLifespanYears()} yrs (mean), {medianLifespanYears()} yrs (median).
+          </p>
         </div>
       </div>
 
+      <div style={{ padding: '20px 28px 24px' }}>
       <p style={{
         fontFamily: BODY_FONT, fontSize: 14, fontStyle: 'italic',
         color: 'var(--text-secondary)', lineHeight: 1.55,
@@ -228,6 +271,7 @@ export function CurrencyCemetery() {
       }}>
         SAMPLE OF {TOTAL_CURRENCIES} ENTRIES · 1769–2021 · HOVER A HEADSTONE FOR CAUSE OF DEATH
       </p>
+      </div>
     </div>
   );
 }
