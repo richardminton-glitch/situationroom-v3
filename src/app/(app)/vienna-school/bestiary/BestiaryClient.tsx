@@ -35,30 +35,63 @@ export function BestiaryClient() {
 
   return (
     <div style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100%' }}>
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <header style={{ maxWidth: 980, margin: '0 auto', padding: '40px 24px 24px' }}>
-        <p style={{ fontFamily: MONO_FONT, fontSize: 10, letterSpacing: '0.22em', color: 'var(--text-muted)', margin: 0 }}>
-          <Link href="/vienna-school" style={{ color: 'inherit', textDecoration: 'none' }}>
-            ← THE VIENNA SCHOOL
-          </Link>
-          <span style={{ margin: '0 8px' }}>·</span>
-          BESTIARY
-        </p>
-        <h1 style={{
-          fontFamily: HEADING_FONT, fontSize: 44, fontWeight: 700,
-          color: 'var(--text-primary)', margin: '8px 0 0 0',
-          lineHeight: 1.1, letterSpacing: '-0.01em',
+      {/* ── Atmospheric banner ─────────────────────────────────── */}
+      <div style={{
+        position:        'relative',
+        width:           '100%',
+        aspectRatio:     '21 / 7',
+        maxHeight:       300,
+        overflow:        'hidden',
+        backgroundColor: '#1a1a1a',
+      }}>
+        <img
+          src="/images/vienna-school/bestiary-specimens.png"
+          alt="Three objects arranged in a row on dark wood like museum specimens — the Bestiary."
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.10) 50%, var(--bg-primary) 100%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute',
+          left:     '50%',
+          transform:'translateX(-50%)',
+          bottom:   24,
+          width:    'calc(100% - 48px)',
+          maxWidth: 880,
+          color:    '#F8F1E3',
         }}>
-          The Bestiary
-        </h1>
-        <p style={{
-          fontFamily: BODY_FONT, fontStyle: 'italic',
-          fontSize: 18, color: 'var(--text-secondary)',
-          margin: '8px 0 0 0', lineHeight: 1.5, maxWidth: 640,
-        }}>
-          A glossary of Austrian-school terms. Hover any of these in a
-          module text to summon the entry; or browse the lot here.
-        </p>
+          <p style={{
+            fontFamily: MONO_FONT, fontSize: 10, letterSpacing: '0.22em',
+            margin: 0, marginBottom: 8, opacity: 0.85,
+          }}>
+            <Link href="/vienna-school" style={{ color: 'inherit', textDecoration: 'none' }}>
+              ← THE VIENNA SCHOOL
+            </Link>
+            <span style={{ margin: '0 8px' }}>·</span>
+            BESTIARY
+          </p>
+          <h1 style={{
+            fontFamily: HEADING_FONT, fontSize: 48, fontWeight: 700,
+            margin: 0, lineHeight: 1.05, letterSpacing: '-0.015em',
+            textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+          }}>
+            The Bestiary
+          </h1>
+          <p style={{
+            fontFamily: BODY_FONT, fontStyle: 'italic',
+            fontSize: 17, margin: '6px 0 0 0', opacity: 0.92,
+            textShadow: '0 1px 6px rgba(0,0,0,0.5)',
+          }}>
+            A glossary of Austrian-school terms — hovered from any module text, or browsed in full here.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Search ──────────────────────────────────────────────── */}
+      <header style={{ maxWidth: 980, margin: '0 auto', padding: '24px 24px 8px' }}>
 
         {/* Search box */}
         <div style={{

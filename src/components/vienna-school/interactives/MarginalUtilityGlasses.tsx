@@ -85,12 +85,50 @@ export function MarginalUtilityGlasses() {
       style={{
         border:     '1px solid var(--border-primary)',
         background: 'var(--bg-card)',
-        padding:    '24px 28px',
         marginTop:  20,
+        overflow:   'hidden',
       }}
     >
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
-        <div>
+      {/* Atmospheric banner — frames the desert-thirst thought experiment */}
+      <div style={{
+        position: 'relative', width: '100%',
+        aspectRatio: '21 / 6', maxHeight: 220,
+        overflow: 'hidden', backgroundColor: '#1a1a1a',
+      }}>
+        <img
+          src="/images/vienna-school/module-2-water-desert.png"
+          alt="A single glass of water on cracked desert ground — the marginal-utility thought experiment."
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.05) 50%, var(--bg-card) 100%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+          bottom: 16, width: 'calc(100% - 56px)', maxWidth: 760,
+          textAlign: 'center', color: '#F8F1E3',
+        }}>
+          <p style={{
+            fontFamily: MONO_FONT, fontSize: 10, letterSpacing: '0.22em',
+            margin: 0, marginBottom: 6, opacity: 0.9,
+          }}>
+            INTERACTIVE · MARGINAL UTILITY
+          </p>
+          <h3 style={{
+            fontFamily: HEADING_FONT, fontSize: 26, fontWeight: 700,
+            margin: 0, lineHeight: 1.15, letterSpacing: '-0.005em',
+            textShadow: '0 2px 12px rgba(0,0,0,0.7)',
+          }}>
+            Allocate five glasses. Watch utility decline at the margin.
+          </h3>
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 28px 24px' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'none' }}>
           <p style={{ fontFamily: MONO_FONT, fontSize: 9, letterSpacing: '0.18em', color: 'var(--text-muted)', margin: 0 }}>
             INTERACTIVE · MARGINAL UTILITY
           </p>
@@ -295,6 +333,7 @@ export function MarginalUtilityGlasses() {
               : 'All five glasses allocated. Total utility 24. Now try removing the drinking-water use and watch every remaining unit revalue.'
         }
       </p>
+      </div>
     </div>
   );
 }
