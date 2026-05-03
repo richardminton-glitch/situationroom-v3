@@ -454,25 +454,28 @@ function ModuleNav({ prev, next }: { prev: ModuleStub | null; next: ModuleStub |
           </div>
         </div>
       ) : (
-        <div style={{
+        <Link href="/vienna-school" style={{
           padding:    '14px 18px',
-          border:     '1px dashed var(--border-subtle)',
-          background: 'transparent',
+          border:     '1px solid var(--accent-primary)',
+          background: 'var(--bg-card)',
+          textDecoration: 'none',
+          display:    'block',
           textAlign:  'right',
         }}>
           <div style={{
             fontFamily: MONO_FONT, fontSize: 9, letterSpacing: '0.18em',
-            color: 'var(--text-muted)', marginBottom: 4,
+            color: 'var(--accent-primary)', marginBottom: 4,
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
           }}>
-            CURRICULUM COMPLETE
+            CURRICULUM COMPLETE <CaretRight size={11} />
           </div>
           <div style={{
             fontFamily: HEADING_FONT, fontSize: 17, fontWeight: 600,
-            color: 'var(--text-secondary)', fontStyle: 'italic',
+            color: 'var(--text-primary)',
           }}>
             Return to the index
           </div>
-        </div>
+        </Link>
       )}
     </nav>
   );
