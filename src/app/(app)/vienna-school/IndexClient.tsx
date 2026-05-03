@@ -67,10 +67,10 @@ export function VienneSchoolIndexClient() {
         }}>
           Most readers arriving here are Bitcoin-curious but unfamiliar with
           the 150-year tradition that explains why sound money matters in the
-          first place. Work through these six modules in order — about an hour
-          each — and the rest of the Situation Room will read differently.
-          Every chart will have a frame around it. Every policy headline will
-          have a translation.
+          first place. Work through these six modules in order — 15 to 25
+          minutes each — and the rest of the Situation Room will read
+          differently. Every chart will have a frame around it. Every policy
+          headline will have a translation.
         </p>
 
         <div style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
